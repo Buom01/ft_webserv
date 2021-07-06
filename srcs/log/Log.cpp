@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 15:50:29 by badam             #+#    #+#             */
-/*   Updated: 2021/07/06 16:31:03 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/06 23:27:31 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,5 +56,19 @@ class	Log
 			if (infos.length())
 				std::cout << ": " << infos;
 			std::cout << std::endl;
+		}
+
+		void	warn(std::string warn_str)
+		{
+			std::cout
+				<< COLOR_WARNING << "[WARNING] " << COLOR_RESET << warn_str
+				<< std::endl;
+		}
+
+		void	fail(std::string error_str)
+		{
+			std::cout
+				<< COLOR_ERROR << "[ERROR] " << COLOR_RESET << error_str
+				<< std::endl;
 		}
 };
