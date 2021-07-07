@@ -6,9 +6,11 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 16:08:34 by badam             #+#    #+#             */
-/*   Updated: 2021/07/06 23:27:07 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/07 13:30:46 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+#include <errno.h>
 
 #include "Log.hpp"
 
@@ -25,5 +27,7 @@ int	main(void)
 	logger.log(500, "/server-error");
 	logger.log(500, "/server-error/oops", "Oops!");
 	logger.warn("Simple warn");
+	logger.warn("Simple warn", EBADMSG);
 	logger.fail("Critical error");
+	logger.fail("Critical error", EBADMSG);
 }
