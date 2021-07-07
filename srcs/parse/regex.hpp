@@ -19,8 +19,10 @@ class Regex
 {
 	private:
 		size_t	_ContainerSize;
+		match_t	*__match;
 	public:
-		Regex() : _ContainerSize(0) {}
+		Regex() : _ContainerSize(0), __match(NULL) {}
+		~Regex() { delete [] __match; }
 	private:
 		bool compile_regex (regex_t * r, const char * regex_text)
 		{
@@ -34,13 +36,13 @@ class Regex
 			}
 			return false;
 		}
-		match_t * match_regex (regex_t * r, const char * to_match)
+		void match_regex (regex_t * r, const char * to_match)
 		{
 			const char * p = to_match;
 			const int n_matches = r->re_nsub + 1;
 			_ContainerSize = n_matches;
 			regmatch_t m[n_matches];
-			match_t *__match = new match_t[n_matches];
+			__match = new match_t[n_matches];
 			while (1)
 			{
 				int i = 0;
@@ -64,7 +66,6 @@ class Regex
 				}
 				p += m[0].rm_eo;
 			}
-			return __match;
 		}
 	public:
 		/**
@@ -73,19 +74,25 @@ class Regex
 		size_t GetSize() const { return _ContainerSize; }
 
 		/**
-		 * 	Return tab of regex_t
+		 * 	Return match_t[] of last generate tab of regex_t
+		 */
+		match_t *GetMatch() const { return __match; }
+
+		/**
+		 * 	Found occurence(s) in string
 		 * 	@param line : line to search occurence
 		 * 	@param regex : regex rule
 		 */
-		match_t *Match(std::string line, std::string regex)
+		void Match(std::string line, std::string regex)
 		{
+			if (__match != NULL)
+				delete [] __match;
 			regex_t r;
 			const char * regex_text = regex.c_str();
 			const char * find_text = line.c_str();
 			compile_regex(&r, regex_text);
-			match_t *__match = match_regex(&r, find_text);
+			match_regex(&r, find_text);
 			regfree (&r);
-			return (__match);
 		}
 };
 

@@ -32,10 +32,10 @@ class Parse
 			
 			while (getline(CONFIG, _line))
 			{
-				match_t *tab = regex.Match(_line, "^.\\w*\\b");
+				regex.Match(_line, "^.\\w*\\b");
 				for (size_t x = 0; x < regex.GetSize(); x++)
 				{
-					std::cout << "-" << tab[x].occurence << "-" << tab[x].start << "-" << tab[x].end << std::endl;
+					std::cout << "-" << regex.GetMatch()[x].occurence << "-" << regex.GetMatch()[x].start << "-" << regex.GetMatch()[x].end << std::endl;
 				}
 			}
 			CONFIG.close();
