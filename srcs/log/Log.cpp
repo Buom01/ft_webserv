@@ -6,10 +6,11 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 15:50:29 by badam             #+#    #+#             */
-/*   Updated: 2021/07/06 23:27:31 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/07 13:31:14 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include <cstring>
 #include <string>
 #include <iostream>
 #include "Log.hpp"
@@ -58,17 +59,21 @@ class	Log
 			std::cout << std::endl;
 		}
 
-		void	warn(std::string warn_str)
+		void	warn(std::string warn_str, int error_nb= -1)
 		{
 			std::cout
-				<< COLOR_WARNING << "[WARNING] " << COLOR_RESET << warn_str
-				<< std::endl;
+				<< COLOR_WARNING << "[WARNING] " << COLOR_RESET << warn_str;
+			if (error_nb >= 0)
+				std::cout << ": " << strerror(error_nb);
+			std::cout << std::endl;
 		}
 
-		void	fail(std::string error_str)
+		void	fail(std::string error_str, int error_nb = -1)
 		{
 			std::cout
-				<< COLOR_ERROR << "[ERROR] " << COLOR_RESET << error_str
-				<< std::endl;
+				<< COLOR_ERROR << "[ERROR] " << COLOR_RESET << error_str;
+			if (error_nb >= 0)
+				std::cout << ": " << strerror(error_nb);
+			std::cout << std::endl;
 		}
 };
