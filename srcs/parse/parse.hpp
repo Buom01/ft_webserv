@@ -151,8 +151,8 @@ class Parse
 				}
 			}
 		}
-	public:
-		Parse(std::string config_path) : _configPath(config_path)
+
+		void StartParsing()
 		{
 			fillVector();
 			CONFIG.open(_configPath.c_str());
@@ -164,6 +164,11 @@ class Parse
 			if (ParsingResult[0].first != "server")
 				throw IncorrectConfig("Config file not begin with a new server block");
 			createStructTreeOfConfig();
+		}
+	public:
+		Parse(std::string config_path) : _configPath(config_path)
+		{
+			StartParsing();
 			/*for (std::vector<s_server>::iterator it = Configuration.begin(); it != Configuration.end(); it++)
 			{
 				std::cout << "Global options" << std::endl;
@@ -180,9 +185,20 @@ class Parse
 			}*/
 		}
 	public:
-		std::vector<s_server> GetConfiguration()
-		{ return Configuration; }
-
+		/**
+		 * 	Get current configuration, iterable with iterator
+		 */
+		std::vector<s_server> GetConfiguration() { return Configuration; }
+		/**
+		 * 	Change link of config file, and auto update configuration.
+		 * 	Iterator created with last configuration change is invalid.
+		 * 	@param config_path: relative link to configuration path
+		 */
+		void setConfig(std::string config_path)
+		{
+			_configPath = config_path;
+			StartParsing();
+		}
 	public:
 		virtual ~Parse() {}
 		class	IncorrectConfig : virtual public std::exception
@@ -196,7 +212,6 @@ class Parse
 				IncorrectConfig &operator=(IncorrectConfig const &newObject);
 				virtual const char* what() const throw() { return e; }
 		};
-
 		std::string& trim(std::string& str, char type = 0, std::string chars = " \t\n\r\f\v")
 		{
 			if (type == 0)
