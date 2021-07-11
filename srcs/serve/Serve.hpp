@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2021/07/08 16:21:55 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/10 19:38:58 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,6 +37,8 @@ typedef struct server_address_s
 	sockaddr_t		*sockaddr;
 	socklen_t		len;
 } server_address_t;
+
+typedef	std::vector<server_address_t>	addresses_t;
 
 typedef	void (*middleware_t)(Request&, Response&);
 

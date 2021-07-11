@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:42:27 by badam             #+#    #+#             */
-/*   Updated: 2021/07/08 15:07:32 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/09 21:08:41 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,8 @@
 
 # include <string>
 # include <map>
+
+# define SERVER_BUFFER_SIZE 100
 
 /*
 ** From https://datatracker.ietf.org/doc/html/rfc7231#section-4

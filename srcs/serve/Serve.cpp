@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 18:32:48 by badam             #+#    #+#             */
-/*   Updated: 2021/07/08 16:39:43 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/10 19:40:03 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,11 +28,11 @@ typedef std::vector<server_link_t>	chain_t;
 
 class	Serve
 {
-	Log								_logger;
-	int								_fd;
-	std::vector<server_address_t>	_addresses;
-	chain_t							_response_chain;
-	chain_t							_error_chain;
+	Log				_logger;
+	int				_fd;
+	addresses_t		_addresses;
+	chain_t			_response_chain;
+	chain_t			_error_chain;
 
 	public:
 		Serve(void)
@@ -77,8 +77,8 @@ class	Serve
 
 		void	begin(void)
 		{
-			auto				it	= _addresses.begin();
-			server_address_t	addr;
+			addresses_t::iterator	it		= _addresses.begin();
+			server_address_t		addr;
 
 			if (listen(_fd, 1) == -1)
 				throw new ServerSocketException("Socket failed to listen");
@@ -115,8 +115,8 @@ class	Serve
 
 		void	execChain(chain_t &chain, Request &req, Response &res)
 		{
-			auto			it		= chain.begin();
-			server_link_t	link;
+			chain_t::iterator	it		= chain.begin();
+			server_link_t		link;
 
 			while (it != chain.end())
 			{
@@ -160,10 +160,10 @@ class	Serve
 
 		int		accept(void)
 		{
-			int					connection	= -1;
-			auto				it			= _addresses.begin();
-			std::stringstream	error;
-			server_address_t	addr;
+			int						connection	= -1;
+			addresses_t::iterator	it			= _addresses.begin();
+			std::stringstream		error;
+			server_address_t		addr;
 
 			while (it != _addresses.end() && connection == -1)
 			{

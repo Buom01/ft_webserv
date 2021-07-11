@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:28:53 by badam             #+#    #+#             */
-/*   Updated: 2021/07/08 16:16:13 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/09 21:30:04 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@ class Request
 	public:
 		server_address_s	addr;
 		int					fd;
+		char				buff[SERVER_BUFFER_SIZE];
 		std::string			raw;
 		
 		method_t			method;
@@ -29,5 +30,7 @@ class Request
 			addr(address),
 			fd(connection),
 			method(M_UNKNOWN)
-		{}
+		{
+			bzero(&buff, sizeof(buff));
+		}
 };
