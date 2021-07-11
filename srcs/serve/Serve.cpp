@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 18:32:48 by badam             #+#    #+#             */
-/*   Updated: 2021/07/10 19:40:03 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/11 18:43:22 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,7 +109,7 @@ class	Serve
 		{
 			return (
 				(link.method == M_UNKNOWN || link.method == req.method)
-				&& link.pathname.compare(req.pathname) >= 0
+				&& link.pathname.compare(req.pathname) <= 0
 			);
 		}
 
@@ -125,6 +125,8 @@ class	Serve
 					link.middleware(req, res);
 				++it;
 			}
+			if (!res.sent)
+				_logger.warn("Chain finished without sending data");
 		}
 
 		void	exec(int connection, server_address_t &addr)
@@ -138,6 +140,7 @@ class	Serve
 			}
 			catch (const std::exception &e)
 			{
+				_logger.fail(e.what());
 				res.error = &e;
 
 				try

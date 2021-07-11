@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:28:53 by badam             #+#    #+#             */
-/*   Updated: 2021/07/09 21:30:04 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/11 18:39:35 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,13 +23,19 @@ class Request
 		
 		method_t			method;
 		std::string			pathname;
+		std::string			http_version;
 		headers_t			headers;
 		std::string			content;
 
 		Request(int connection, server_address_t &address) :
 			addr(address),
 			fd(connection),
-			method(M_UNKNOWN)
+			raw(),
+			method(M_UNKNOWN),
+			pathname(),
+			http_version(),
+			headers(),
+			content()
 		{
 			bzero(&buff, sizeof(buff));
 		}

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:52:37 by badam             #+#    #+#             */
-/*   Updated: 2021/07/08 16:40:29 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/11 18:32:53 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,11 +25,15 @@ class Response
 		http_code_t				code;
 		headers_t				headers;
 		std::string				body;
+		bool					sent;
 
 		Response(int connection, server_address_t &address, Log &_logger) :
 			logger(_logger),
 			addr(address),
 			fd(connection),
-			code(C_UNKNOWN)
+			code(C_UNKNOWN),
+			headers(),
+			body(""),
+			sent(false)
 		{}
 };
