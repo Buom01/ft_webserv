@@ -6,12 +6,12 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:28:53 by badam             #+#    #+#             */
-/*   Updated: 2021/07/11 18:39:35 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 01:25:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Serve.hpp"
-#include "Serve_common.hpp"
+
 
 class Request
 {
@@ -24,7 +24,7 @@ class Request
 		method_t			method;
 		std::string			pathname;
 		std::string			http_version;
-		headers_t			headers;
+		Header				headers;
 		std::string			content;
 
 		Request(int connection, server_address_t &address) :

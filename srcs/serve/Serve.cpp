@@ -6,19 +6,17 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 18:32:48 by badam             #+#    #+#             */
-/*   Updated: 2021/07/11 18:43:22 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 01:42:10 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-
 #include "../log/Log.hpp"
-#include "Request.hpp"
-#include "Response.hpp"
+#include "Serve.hpp"
 
 
 typedef struct server_link_s
 {
-	method_t		method;
+	method_t		methods;
 	std::string		pathname;
 	middleware_t	middleware;
 } server_link_t;
@@ -91,24 +89,25 @@ class	Serve
 			}
 		}
 
-		void	use(middleware_t middleware, flag_t flag = F_NORMAL)
+		void	use(middleware_t middleware, chain_flag_t flag = F_NORMAL,
+					method_t methods = M_ALL)
 		{
 			server_link_t	link;
 
-			link.method = M_UNKNOWN;
+			link.methods = methods;
 			link.pathname = "";
 			link.middleware = middleware;
 
-			if (flag == F_NORMAL || flag == F_BOTH)
+			if (flag & F_NORMAL)
 				_response_chain.push_back(link);
-			if (flag == F_ERROR || flag == F_BOTH)
+			if (flag & F_ERROR)
 				_error_chain.push_back(link);
 		}
 
 		bool	canUseLink(server_link_t &link, Request &req)
 		{
 			return (
-				(link.method == M_UNKNOWN || link.method == req.method)
+				( req.method == M_UNKNOWN  || (link.methods & req.method) )
 				&& link.pathname.compare(req.pathname) <= 0
 			);
 		}
@@ -118,7 +117,7 @@ class	Serve
 			chain_t::iterator	it		= chain.begin();
 			server_link_t		link;
 
-			while (it != chain.end())
+			while (it != chain.end() && !res.sent)
 			{
 				link = *it;
 				if (canUseLink(link, req))
