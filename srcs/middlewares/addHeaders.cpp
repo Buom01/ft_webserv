@@ -1,42 +1,22 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   App.test.cpp                                       :+:      :+:    :+:   */
+/*   addHeaders.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2021/07/11 20:57:29 by badam            ###   ########.fr       */
+/*   Created: 2021/07/11 20:26:43 by badam             #+#    #+#             */
+/*   Updated: 2021/07/11 20:36:54 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <unistd.h>
-
-#include "../serve/Serve.hpp"
 #include "../serve/Request.hpp"
 #include "../serve/Response.hpp"
-#include "parseStartLine.hpp"
-#include "addHeaders.hpp"
-#include "sendResponse.hpp"
 
-void	test_middleware(Request &, Response &res)
+void	addHeaders(Request &req, Response &res)
 {
-	res.code = C_OK;
-	res.body = "TEST";
-}
-
-int	main(void)
-{
-	Serve app;
-
-	app.bind("0.0.0.0", 8888);
-
-	app.use(&parseStartLine);
-	app.use(&test_middleware);
-	app.use(&addHeaders, F_BOTH);
-	app.use(&sendResponse, F_BOTH);
-
-	app.begin();
-	while (app.accept())
-		usleep(1);
+	res.headers.Set("Server", "FT_WebServ_by_cbertran_and_badam");
+	res.headers.Set("Content-Length", res.body.length());
+	if (res.code == C_OK && res.body.length() == 0)
+		res.code = C_NO_CONTENT;
 }
