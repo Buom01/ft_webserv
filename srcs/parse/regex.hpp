@@ -38,6 +38,7 @@ class Regex
 		}
 		void match_regex (regex_t * r, const char * to_match)
 		{
+			std::string	temp1 = to_match;
 			const char * p = to_match;
 			const int n_matches = r->re_nsub + 1;
 			_ContainerSize = n_matches;
@@ -57,7 +58,6 @@ class Regex
 						break;
 					start = m[i].rm_so + (p - to_match);
 					finish = m[i].rm_eo + (p - to_match);
-					std::string temp1 = to_match + start;
 					std::string temp2 = temp1.substr(start, (finish - start));
 					__match[i].start = start;
 					__match[i].end = finish;
