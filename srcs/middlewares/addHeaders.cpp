@@ -6,12 +6,11 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/11 20:26:43 by badam             #+#    #+#             */
-/*   Updated: 2021/07/11 20:36:54 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 01:46:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../serve/Request.hpp"
-#include "../serve/Response.hpp"
+#include "../serve/Serve.hpp"
 
 void	addHeaders(Request &req, Response &res)
 {

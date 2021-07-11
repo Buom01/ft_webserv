@@ -6,15 +6,13 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2021/07/11 20:57:29 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 01:46:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <unistd.h>
 
 #include "../serve/Serve.hpp"
-#include "../serve/Request.hpp"
-#include "../serve/Response.hpp"
 #include "parseStartLine.hpp"
 #include "addHeaders.hpp"
 #include "sendResponse.hpp"

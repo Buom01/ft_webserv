@@ -6,12 +6,11 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/11 19:09:27 by badam             #+#    #+#             */
-/*   Updated: 2021/07/11 21:21:53 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 01:46:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../serve/Request.hpp"
-#include "../serve/Response.hpp"
+#include "../serve/Serve.hpp"
 
 void	sendResponse(Request &req, Response &res)
 {

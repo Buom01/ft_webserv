@@ -6,13 +6,11 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/09 14:32:57 by badam             #+#    #+#             */
-/*   Updated: 2021/07/11 18:47:59 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 01:46:34 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../serve/Serve.hpp"
-#include "../serve/Request.hpp"
-#include "../serve/Response.hpp"
 #include "../parse/get_next_line/get_next_line.hpp"
 #include "../parse/regex.hpp"
 
