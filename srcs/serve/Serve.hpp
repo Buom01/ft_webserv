@@ -6,7 +6,11 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
+<<<<<<< HEAD
 /*   Updated: 2021/07/12 17:48:28 by cbertran         ###   ########.fr       */
+=======
+/*   Updated: 2021/07/12 15:09:54 by badam            ###   ########.fr       */
+>>>>>>> 99f31ec36b46181e7ff28a5faf034f2102d7de8b
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,9 +26,15 @@
 # include <sstream>
 # include <string>
 # include <vector>
+<<<<<<< HEAD
 # include "Header.hpp"
 # include "Log.hpp"
 # define SERVER_BUFFER_SIZE 2048
+=======
+
+# define SERVER_BUFFER_SIZE 2048
+
+>>>>>>> 99f31ec36b46181e7ff28a5faf034f2102d7de8b
 
 class Request;
 class Response;
