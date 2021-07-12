@@ -1,17 +1,17 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   get_next_line.hpp                                  :+:      :+:    :+:   */
+/*   GNL.hpp                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/12/04 17:06:14 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 15:21:21 by cbertran         ###   ########.fr       */
+/*   Updated: 2021/07/12 19:21:33 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef GET_NEXT_LINE_HPP
-# define GET_NEXT_LINE_HPP
+#ifndef __GNL_HPP
+# define __GNL_HPP
 # include <string>
 # include <stdlib.h>
 # include <unistd.h>
@@ -125,7 +125,7 @@ int		get_next_line(int fd, char **line, char *buffer, size_t buffer_size)
 	return (eof > 0 ? 1 : eof);
 }
 
-int		get_next_linestring(int fd, std::string &line, char *buff, size_t size)
+int		get_next_line_string(int fd, std::string &line, char *buff, size_t size)
 {
 	int		ret;
 	char	*c_line;
