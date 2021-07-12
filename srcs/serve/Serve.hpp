@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 01:36:59 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 15:09:54 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@
 # include <unistd.h>
 # include <vector>
 
-# define SERVER_BUFFER_SIZE 100
+# define SERVER_BUFFER_SIZE 2048
 
 
 class Request;

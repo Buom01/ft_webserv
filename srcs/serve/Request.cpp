@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:28:53 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 01:25:17 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 15:09:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,6 @@ class Request
 		server_address_s	addr;
 		int					fd;
 		char				buff[SERVER_BUFFER_SIZE];
-		std::string			raw;
 		
 		method_t			method;
 		std::string			pathname;
