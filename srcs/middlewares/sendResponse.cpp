@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/11 19:09:27 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 01:46:17 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 13:46:16 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,14 +15,16 @@
 void	sendResponse(Request &req, Response &res)
 {
 	std::stringstream	header;
-	headers_t::iterator	it			= res.headers.begin();
+//	auto				it			= res.headers.GetEveryHeader().begin();
 
 	header << "HTTP/1.1 " << res.code << std::endl;
-	while (it != res.headers.end())
+/*
+	while (it != res.headers.GetEveryHeader().end())
 	{
 		header << *it << std::endl;
 		++it;
 	}
+*/
 	header << std::endl;
 
 	::send(res.fd, header.str().c_str(), header.str().length(), MSG_DONTWAIT);

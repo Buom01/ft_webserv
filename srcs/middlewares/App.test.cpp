@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 01:46:17 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 13:21:44 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,8 +31,8 @@ int	main(void)
 
 	app.use(&parseStartLine);
 	app.use(&test_middleware);
-	app.use(&addHeaders, F_BOTH);
-	app.use(&sendResponse, F_BOTH);
+	app.use(&addHeaders, F_ALL);
+	app.use(&sendResponse, F_ALL);
 
 	app.begin();
 	while (app.accept())
