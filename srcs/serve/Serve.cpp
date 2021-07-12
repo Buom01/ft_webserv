@@ -6,19 +6,17 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 18:32:48 by badam             #+#    #+#             */
-/*   Updated: 2021/07/08 16:39:43 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 01:42:10 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-
 #include "../log/Log.hpp"
-#include "Request.hpp"
-#include "Response.hpp"
+#include "Serve.hpp"
 
 
 typedef struct server_link_s
 {
-	method_t		method;
+	method_t		methods;
 	std::string		pathname;
 	middleware_t	middleware;
 } server_link_t;
@@ -28,11 +26,11 @@ typedef std::vector<server_link_t>	chain_t;
 
 class	Serve
 {
-	Log								_logger;
-	int								_fd;
-	std::vector<server_address_t>	_addresses;
-	chain_t							_response_chain;
-	chain_t							_error_chain;
+	Log				_logger;
+	int				_fd;
+	addresses_t		_addresses;
+	chain_t			_response_chain;
+	chain_t			_error_chain;
 
 	public:
 		Serve(void)
@@ -77,8 +75,8 @@ class	Serve
 
 		void	begin(void)
 		{
-			auto				it	= _addresses.begin();
-			server_address_t	addr;
+			addresses_t::iterator	it		= _addresses.begin();
+			server_address_t		addr;
 
 			if (listen(_fd, 1) == -1)
 				throw new ServerSocketException("Socket failed to listen");
@@ -91,40 +89,43 @@ class	Serve
 			}
 		}
 
-		void	use(middleware_t middleware, flag_t flag = F_NORMAL)
+		void	use(middleware_t middleware, chain_flag_t flag = F_NORMAL,
+					method_t methods = M_ALL)
 		{
 			server_link_t	link;
 
-			link.method = M_UNKNOWN;
+			link.methods = methods;
 			link.pathname = "";
 			link.middleware = middleware;
 
-			if (flag == F_NORMAL || flag == F_BOTH)
+			if (flag & F_NORMAL)
 				_response_chain.push_back(link);
-			if (flag == F_ERROR || flag == F_BOTH)
+			if (flag & F_ERROR)
 				_error_chain.push_back(link);
 		}
 
 		bool	canUseLink(server_link_t &link, Request &req)
 		{
 			return (
-				(link.method == M_UNKNOWN || link.method == req.method)
-				&& link.pathname.compare(req.pathname) >= 0
+				( req.method == M_UNKNOWN  || (link.methods & req.method) )
+				&& link.pathname.compare(req.pathname) <= 0
 			);
 		}
 
 		void	execChain(chain_t &chain, Request &req, Response &res)
 		{
-			auto			it		= chain.begin();
-			server_link_t	link;
+			chain_t::iterator	it		= chain.begin();
+			server_link_t		link;
 
-			while (it != chain.end())
+			while (it != chain.end() && !res.sent)
 			{
 				link = *it;
 				if (canUseLink(link, req))
 					link.middleware(req, res);
 				++it;
 			}
+			if (!res.sent)
+				_logger.warn("Chain finished without sending data");
 		}
 
 		void	exec(int connection, server_address_t &addr)
@@ -138,6 +139,7 @@ class	Serve
 			}
 			catch (const std::exception &e)
 			{
+				_logger.fail(e.what());
 				res.error = &e;
 
 				try
@@ -160,10 +162,10 @@ class	Serve
 
 		int		accept(void)
 		{
-			int					connection	= -1;
-			auto				it			= _addresses.begin();
-			std::stringstream	error;
-			server_address_t	addr;
+			int						connection	= -1;
+			addresses_t::iterator	it			= _addresses.begin();
+			std::stringstream		error;
+			server_address_t		addr;
 
 			while (it != _addresses.end() && connection == -1)
 			{

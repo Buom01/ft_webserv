@@ -6,13 +6,11 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2021/07/08 16:42:37 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 01:14:48 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Serve.hpp"
-#include "Request.hpp"
-#include "Response.hpp"
 
 
 void	test_middleware(Request &req, Response &res)
