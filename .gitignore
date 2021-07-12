@@ -62,6 +62,7 @@
 *.i*86
 *.x86_64
 *.hex
+webserv
 
 # Debug files
 *.dSYM/
@@ -77,3 +78,10 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Text editor
+*.swp
+*.vim
+
+# Backups
+*.bk*
