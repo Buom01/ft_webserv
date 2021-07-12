@@ -1,24 +1,24 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Header.cpp                                         :+:      :+:    :+:   */
+/*   Header.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 14:41:25 by cbertran          #+#    #+#             */
-/*   Updated: 2021/07/12 14:42:03 by cbertran         ###   ########.fr       */
+/*   Updated: 2021/07/12 15:57:37 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef __PARSE_HEADER
 # define __PARSE_HEADER
-# include "../parse/regex.hpp"
 # include <iostream>
 # include <utility>
 # include <string>
 # include <algorithm>
 # include <vector>
 # include <map>
+# include "Regex.hpp"
 
 /** Types of headers
  *	Host

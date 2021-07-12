@@ -3,17 +3,15 @@
 /*                                                        :::      ::::::::   */
 /*   Log.test.cpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
+/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 16:08:34 by badam             #+#    #+#             */
-/*   Updated: 2021/07/07 13:30:46 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 17:34:39 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <errno.h>
-
 #include "Log.hpp"
-
+#include <errno.h>
 
 int	main(void)
 {

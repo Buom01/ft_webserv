@@ -3,14 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   sendResponse.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
+/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/11 19:09:27 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 13:46:16 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 17:25:03 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../serve/Serve.hpp"
+#ifndef SENDRESPONSE_CPP
+# define SENDRESPONSE_CPP
+# include "Serve.hpp"
 
 void	sendResponse(Request &req, Response &res)
 {
@@ -33,3 +35,5 @@ void	sendResponse(Request &req, Response &res)
 	res.sent = true;
 	res.logger.log(res.code, req.pathname);
 }
+
+#endif

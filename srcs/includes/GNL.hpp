@@ -1,16 +1,20 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   get_next_line.cpp                                  :+:      :+:    :+:   */
+/*   get_next_line.hpp                                  :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: badam <marvin@42.fr>                       +#+  +:+       +#+        */
+/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2019/12/04 17:06:05 by badam             #+#    #+#             */
-/*   Updated: 2021/07/09 21:00:16 by badam            ###   ########.fr       */
+/*   Created: 2019/12/04 17:06:14 by badam             #+#    #+#             */
+/*   Updated: 2021/07/12 15:21:21 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "get_next_line.hpp"
+#ifndef GET_NEXT_LINE_HPP
+# define GET_NEXT_LINE_HPP
+# include <string>
+# include <stdlib.h>
+# include <unistd.h>
 
 static int		buff_strip_used(size_t len, char *buffer, size_t buffer_size)
 {
@@ -132,3 +136,5 @@ int		get_next_linestring(int fd, std::string &line, char *buff, size_t size)
 
 	return (ret);
 }
+
+#endif

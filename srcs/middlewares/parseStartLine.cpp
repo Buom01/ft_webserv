@@ -3,16 +3,18 @@
 /*                                                        :::      ::::::::   */
 /*   parseStartLine.cpp                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
+/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/09 14:32:57 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 01:46:34 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 17:47:20 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../serve/Serve.hpp"
-#include "../parse/get_next_line/get_next_line.hpp"
-#include "../parse/regex.hpp"
+#ifndef PARSESTARTLINE_CPP
+# define PARSESTARTLINE_CPP
+# include "Serve.hpp"
+# include "GNL.hpp"
+# include "Regex.hpp"
 
 /*
 ** It parse the request's start line, getting the method, the pathname,
@@ -60,3 +62,5 @@ void	parseStartLine(Request &req, Response &)
 	if (req.method == M_UNKNOWN)
 		throw new Serve::ServerSocketException("Unsupported method");
 }
+
+#endif

@@ -1,18 +1,21 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Response.cpp                                       :+:      :+:    :+:   */
+/*   Response.hpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
+/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/08 12:52:37 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 01:25:49 by badam            ###   ########.fr       */
+/*   Created: 2021/07/08 12:50:37 by badam             #+#    #+#             */
+/*   Updated: 2021/07/12 17:27:17 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../log/Log.hpp"
-#include "Serve.hpp"
-
+#ifndef RESPONSE_HPP
+# define RESPONSE_HPP
+# include <exception>
+# include "Log.hpp"
+# include "Serve.hpp"
+# include "Header.hpp"
 
 class Response
 {
@@ -37,3 +40,5 @@ class Response
 			sent(false)
 		{}
 };
+
+#endif

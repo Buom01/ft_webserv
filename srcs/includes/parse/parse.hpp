@@ -1,3 +1,5 @@
+#ifndef __PARSE
+# define __PARSE
 # include <iostream>
 # include <fstream>
 # include <cstring>
@@ -131,7 +133,6 @@ class Parse
 				if (it->first == "server")
 				{
 					_iterator _ServerEndBlock = it;
-					int x = 1;
 					while (_ServerEndBlock != ParsingResult.end())
 					{
 						if (!IsLocationBlock && _ServerEndBlock->first == "}")
@@ -222,3 +223,5 @@ class Parse
 				return leftTrim(str, chars);
 		}
 };
+
+#endif

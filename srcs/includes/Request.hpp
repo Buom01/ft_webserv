@@ -1,17 +1,19 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Request.cpp                                        :+:      :+:    :+:   */
+/*   Request.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
+/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/08 12:28:53 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 01:25:17 by badam            ###   ########.fr       */
+/*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
+/*   Updated: 2021/07/12 15:54:36 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Serve.hpp"
-
+#ifndef REQUEST_HPP
+# define REQUEST_HPP
+# include "Header.hpp"
+# include "Serve.hpp"
 
 class Request
 {
@@ -40,3 +42,5 @@ class Request
 			bzero(&buff, sizeof(buff));
 		}
 };
+
+#endif

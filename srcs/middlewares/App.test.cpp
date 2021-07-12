@@ -3,19 +3,18 @@
 /*                                                        :::      ::::::::   */
 /*   App.test.cpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
+/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 13:21:44 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 17:24:14 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <unistd.h>
-
-#include "../serve/Serve.hpp"
-#include "parseStartLine.hpp"
-#include "addHeaders.hpp"
-#include "sendResponse.hpp"
+# include <unistd.h>
+# include "../serve/Serve.hpp"
+# include "parseStartLine.hpp"
+# include "addHeaders.hpp"
+# include "sendResponse.hpp"
 
 void	test_middleware(Request &, Response &res)
 {

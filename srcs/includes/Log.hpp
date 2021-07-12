@@ -1,20 +1,27 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Log.cpp                                            :+:      :+:    :+:   */
+/*   Log.hpp                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/06 15:50:29 by badam             #+#    #+#             */
-/*   Updated: 2021/07/09 16:33:35 by cbertran         ###   ########.fr       */
+/*   Created: 2021/07/06 16:28:32 by badam             #+#    #+#             */
+/*   Updated: 2021/07/12 17:39:37 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <cstring>
-#include <string>
-#include <iostream>
-#include "Log.hpp"
-
+#ifndef LOG_HPP
+# define LOG_HPP
+# include <cstring>
+# include <string>
+# include <iostream>
+# define COLOR_RESET "\e[0m"
+# define COLOR_ERROR "\e[91m"
+# define COLOR_WARNING "\e[93m"
+# define COLOR_SERVER_ERROR "\e[91m"
+# define COLOR_CLIENT_ERROR "\e[91m"
+# define COLOR_REDIRECT "\e[95m"
+# define COLOR_SUCCESS "\e[92m"
 
 class	Log
 {
@@ -77,3 +84,5 @@ class	Log
 			std::cout << std::endl;
 		}
 };
+
+#endif
