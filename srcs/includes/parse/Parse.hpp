@@ -6,7 +6,7 @@
 # include <exception>
 # include <map>
 # include <vector>
-# include "regex.hpp"
+# include "Regex.hpp"
 
 struct s_server
 {

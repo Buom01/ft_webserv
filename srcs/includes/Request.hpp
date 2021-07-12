@@ -5,13 +5,8 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-<<<<<<< HEAD:srcs/includes/Request.hpp
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 15:54:36 by cbertran         ###   ########.fr       */
-=======
-/*   Created: 2021/07/08 12:28:53 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 15:09:17 by badam            ###   ########.fr       */
->>>>>>> 99f31ec36b46181e7ff28a5faf034f2102d7de8b:srcs/serve/Request.cpp
+/*   Updated: 2021/07/12 18:07:06 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,7 +31,6 @@ class Request
 		Request(int connection, server_address_t &address) :
 			addr(address),
 			fd(connection),
-			raw(),
 			method(M_UNKNOWN),
 			pathname(),
 			http_version(),
