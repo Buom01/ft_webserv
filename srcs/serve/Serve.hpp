@@ -6,13 +6,14 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 18:04:23 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 23:04:41 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVE_HPP
 # define SERVE_HPP
 # include <sys/types.h>
+# include <sys/epoll.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
 # include <arpa/inet.h>
@@ -25,23 +26,27 @@
 # include "Header.hpp"
 # include "Log.hpp"
 # define SERVER_BUFFER_SIZE 2048
+# define MAX_EVENTS 10
+# define LISTEN_BACKLOG 10
 
 class Request;
 class Response;
 
 typedef	struct sockaddr		sockaddr_t;
 typedef	struct sockaddr_in	sockaddr_in_t;
+typedef	struct epoll_event	epoll_event_t;
 
-typedef struct server_address_s
+typedef struct server_bind_s
 {
+	int				fd;
 	std::string		address;
 	int				port;
 	sockaddr_in_t	sockaddr_in;
 	sockaddr_t		*sockaddr;
 	socklen_t		len;
-} server_address_t;
+} server_bind_t;
 
-typedef	std::vector<server_address_t>	addresses_t;
+typedef	std::vector<server_bind_t>	binds_t;
 
 typedef	void (*middleware_t)(Request&, Response&);
 
@@ -138,64 +143,101 @@ typedef std::vector<server_link_t>	chain_t;
 class	Serve
 {
 	Log				_logger;
-	int				_fd;
-	addresses_t		_addresses;
+	binds_t			_binds;
+	int				_poll_fd;
 	chain_t			_response_chain;
 	chain_t			_error_chain;
 
 	public:
 		Serve(void)
 		{
-			if ((_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
-				throw new ServerSocketException();
 		}
 	
 		virtual ~Serve(void)
 		{
+			binds_t::iterator	it		= _binds.begin();
+			
+			while (it != _binds.end())
+			{
+				try
+				{
+					close((*it).fd);
+				}
+				catch(...)
+				{}
+
+				++it;
+			}
 			try
 			{
-				if (_fd >= 0)
-					close(_fd);
+				if (_poll_fd >= 0)
+					::close(_poll_fd);
 			}
 			catch(...)
 			{}
 		}
 
-		void	bind(std::string address, int port)
+	private:
+		server_bind_t	&_bindFromFD(int fd)
 		{
-			server_address_t	addr;
+			static server_bind_t	nullBind = {0};
+
+			
+			return (nullBind);
+		}
+
+	public:
+		void	bind(std::string address, int port)  // Should close on error
+		{
+			server_bind_t		bind;
+			int					opts	= 1;
 			std::stringstream	error;
 
-			bzero( &addr, sizeof(addr) );
-			addr.address = address;
-			addr.port = port;
-			addr.sockaddr_in.sin_family = AF_INET;
-			addr.sockaddr_in.sin_addr.s_addr = inet_addr(address.c_str());
-			addr.sockaddr_in.sin_port = htons(port);
-			addr.sockaddr = reinterpret_cast<sockaddr_t*>(&addr.sockaddr_in);
-			addr.len = sizeof(addr.sockaddr_in);
+			if ((bind.fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
+				throw new ServerSocketException("Socket creation failed");
+			if (setsockopt(bind.fd, SOL_SOCKET, SO_REUSEADDR, &opts, sizeof(opts)) == -1)
+				throw new ServerSocketException("Failed to set socket options");
 
-			if (::bind(_fd, addr.sockaddr, addr.len) == -1)
+			bind.address = address;
+			bind.port = port;
+			bind.sockaddr_in.sin_family = AF_INET;
+			bind.sockaddr_in.sin_addr.s_addr = inet_addr(address.c_str());
+			bind.sockaddr_in.sin_port = htons(port);
+			bind.sockaddr = reinterpret_cast<sockaddr_t*>(&bind.sockaddr_in);
+			bind.len = sizeof(bind.sockaddr_in);
+			if (::bind(bind.fd, bind.sockaddr, bind.len) == -1)
 			{
 				error << "Fail to bind " << address << " to port " << port;
 				_logger.fail(error.str(), errno);
 			}
 			else
-				_addresses.push_back(addr);
+				_binds.push_back(bind);
 		}
 
 		void	begin(void)
 		{
-			addresses_t::iterator	it		= _addresses.begin();
-			server_address_t		addr;
+			epoll_event_t		epoll_ev;
+			binds_t::iterator	it		= _binds.begin();
+			server_bind_t		bind;
 
-			if (listen(_fd, 1) == -1)
-				throw new ServerSocketException("Socket failed to listen");
+			if ((_poll_fd = epoll_create1(0)) == -1)
+				throw new ServerSocketException("EPOLL creation failed");
+
+			epoll_ev.events	= EPOLLIN | EPOLLOUT;
 			
-			while (it != _addresses.end())
+			while (it != _binds.end())
 			{
-				addr = *it;
-				_logger.greeting(addr.address, addr.port);
+				bind = *it;
+
+				if (listen(bind.fd, 1) == -1)
+					throw new ServerSocketException("Socket failed to listen");
+			
+				epoll_ev.data.fd	= bind.fd;
+				if (epoll_ctl(_poll_fd, EPOLL_CTL_ADD, bind.fd, &epoll_ev) == -1)
+					throw new ServerSocketException("EPOLL setup failed");
+		
+				_logger.greeting(bind.address, bind.port);
+
 				++it;
 			}
 		}
@@ -239,10 +281,10 @@ class	Serve
 				_logger.warn("Chain finished without sending data");
 		}
 
-		void	exec(int connection, server_address_t &addr)
+		void	exec(int connection, server_bind_t &bind)
 		{
-			Request 		req(connection, addr);
-			Response		res(connection, addr, _logger);
+			Request 		req(connection, bind);
+			Response		res(connection, _logger);
 
 			try
 			{
@@ -273,6 +315,40 @@ class	Serve
 
 		int		accept(void)
 		{
+			epoll_event_t	events[MAX_EVENTS];
+			int				ret;
+			int				fd;
+			server_bind_t	bind;
+			int				connection;
+
+			ret = epoll_wait(_poll_fd, events, MAX_EVENTS, 1);
+			if (ret > 0)
+			{
+				for (int i = 0; i < ret; ++i)
+				{
+					fd = events[i].data.fd;
+					connection	= ::accept(fd, NULL, NULL);
+
+					if (connection >= 0)
+					{
+						bind = _bindFromFD(fd);
+						exec(connection, bind);
+					}
+					else if (errno == EWOULDBLOCK)
+						_logger.warn("EWOULDBLOCK happened with EPOLL");
+					else
+						_logger.fail("Fail to grab connection", errno);
+				}
+			}
+			else if (ret < 0 && errno != EINTR)
+				_logger.fail("Unexpected stop while waiting EPOLL");
+
+			return (ret);
+		}
+
+/*
+		int		accept(void)
+		{
 			int						connection	= -1;
 			addresses_t::iterator	it			= _addresses.begin();
 			std::stringstream		error;
@@ -292,6 +368,7 @@ class	Serve
 
 			return (connection);
 		}
+*/
 
 		class	ServerException: public std::runtime_error
 		{

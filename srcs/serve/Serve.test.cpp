@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 01:14:48 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 19:48:31 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,15 +41,9 @@ int	main(void)
 
 	app.use(&test_middleware);
 	app.use(&test_error_middleware, F_ERROR);
+	//app.use(&crash_middleware, F_NORMAL);
 
 	app.begin();
-	while (app.accept() == -1)
-		;
-	while (app.accept() == -1)
-		;
-	app.use(&crash_middleware, F_NORMAL);
-	while (app.accept() == -1)
-		;
-	while (app.accept() == -1)
-		;
+	while (1)
+		app.accept();
 }

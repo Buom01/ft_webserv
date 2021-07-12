@@ -6,7 +6,7 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 18:07:06 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/12 20:55:16 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@
 class Request
 {
 	public:
-		server_address_s	addr;
+		server_bind_t		bind;
 		int					fd;
 		char				buff[SERVER_BUFFER_SIZE];
 		
@@ -28,8 +28,8 @@ class Request
 		Header				headers;
 		std::string			content;
 
-		Request(int connection, server_address_t &address) :
-			addr(address),
+		Request(int connection, server_bind_t &binding) :
+			bind(binding),
 			fd(connection),
 			method(M_UNKNOWN),
 			pathname(),
