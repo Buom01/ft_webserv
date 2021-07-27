@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 19:48:31 by badam            ###   ########.fr       */
+/*   Updated: 2021/07/27 18:52:24 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,9 +15,12 @@
 
 void	test_middleware(Request &req, Response &res)
 {
-	::send(res.fd, "SIMPLE\n", 7, MSG_DONTWAIT | MSG_EOR);
-	res.logger.log(res.code, req.pathname);
+	res.code = C_OK;
+	res.body = "SIMPLE\n";
+	::send(res.fd, res.body.c_str(), res.body.length(), MSG_DONTWAIT | MSG_EOR);
 	::close(res.fd);
+	res.sent = true;
+	res.logger.log(res.code, req.pathname);
 }
 
 void	crash_middleware(Request &, Response &)
@@ -38,6 +41,8 @@ int	main(void)
 	Serve app;
 
 	app.bind("0.0.0.0", 8888);
+	app.bind("localhost", 1337);
+	app.bind("failtestip", 8080);
 
 	app.use(&test_middleware);
 	app.use(&test_error_middleware, F_ERROR);

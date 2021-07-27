@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Serve.hpp                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 19:22:54 by cbertran         ###   ########.fr       */
+/*   Updated: 2021/07/27 19:00:11 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 # define SERVE_HPP
 # include <sys/types.h>
 # include <sys/epoll.h>
+# include <netdb.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
 # include <arpa/inet.h>
@@ -39,7 +40,8 @@ typedef	struct epoll_event	epoll_event_t;
 typedef struct server_bind_s
 {
 	int				fd;
-	std::string		address;
+	std::string		host;
+	std::string		ip;
 	int				port;
 	sockaddr_in_t	sockaddr_in;
 	sockaddr_t		*sockaddr;
@@ -159,13 +161,7 @@ class	Serve
 			
 			while (it != _binds.end())
 			{
-				try
-				{
-					close((*it).fd);
-				}
-				catch(...)
-				{}
-
+				_destroyBind(*it);
 				++it;
 			}
 			try
@@ -178,37 +174,99 @@ class	Serve
 		}
 
 	private:
+		void			_destroyBind(server_bind_t &bind)
+		{
+			try
+			{
+				if (bind.fd)
+					close(bind.fd);
+			}
+			catch(...)
+			{}
+		}
+
+		std::string		_netIpToStr(in_addr_t ip)
+		{
+			return (inet_ntoa(*reinterpret_cast<in_addr *>(&ip)));
+		}
+
 		server_bind_t	&_bindFromFD(int fd)
 		{
 			static server_bind_t	nullBind = {0};
+			binds_t::iterator		it		= _binds.begin();
 
+			while (it != _binds.end())
+			{
+				if (it->fd == fd)
+					return (*it);
+			}
 			
+			_logger.warn("Bind not found for gived FD");
 			return (nullBind);
 		}
 
-	public:
-		void	bind(std::string address, int port)  // Should close on error
+		in_addr_t		_ipFromHost(std::string host)
 		{
+			std::stringstream	error;
+			in_addr_t			ip;
+			struct hostent		*domain;
+
+			if ((ip = inet_addr(host.c_str())) == INADDR_NONE)
+			{
+				if ((domain = gethostbyname(host.c_str())) == NULL)
+				{
+					error << "\"" << host << "\" is not recognized as a valid IP v4 address or know host";
+					_logger.fail(error.str());
+					return (INADDR_NONE);
+				}
+				if (domain->h_addrtype != AF_INET)
+				{
+					error << "\"" << host << "\" is not IP v4";
+					_logger.fail(error.str());
+					return (INADDR_NONE);
+				}
+				if ((ip = *(reinterpret_cast<in_addr_t *>(domain->h_addr))) == INADDR_NONE)
+				{
+					error << "\"" << host << "\" is can't be resolved as a valid IP v4 address";
+					_logger.fail(error.str());
+					return (INADDR_NONE);
+				}
+			}
+
+			return (ip);
+		}
+
+	public:
+		void	bind(std::string host, int port)
+		{
+			in_addr_t			ip;
 			server_bind_t		bind;
 			int					opts	= 1;
 			std::stringstream	error;
 
+			if ((ip = _ipFromHost(host)) == INADDR_NONE)
+				return ;
 			if ((bind.fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
 				throw new ServerSocketException("Socket creation failed");
 			if (setsockopt(bind.fd, SOL_SOCKET, SO_REUSEADDR, &opts, sizeof(opts)) == -1)
+			{
+				_destroyBind(bind);
 				throw new ServerSocketException("Failed to set socket options");
+			}
 
-			bind.address = address;
+			bind.host = host;
+			bind.ip = _netIpToStr(ip);
 			bind.port = port;
 			bind.sockaddr_in.sin_family = AF_INET;
-			bind.sockaddr_in.sin_addr.s_addr = inet_addr(address.c_str());
+			bind.sockaddr_in.sin_addr.s_addr = ip;
 			bind.sockaddr_in.sin_port = htons(port);
 			bind.sockaddr = reinterpret_cast<sockaddr_t*>(&bind.sockaddr_in);
 			bind.len = sizeof(bind.sockaddr_in);
 			if (::bind(bind.fd, bind.sockaddr, bind.len) == -1)
 			{
-				error << "Fail to bind " << address << " to port " << port;
+				error << "Fail to bind " << host << " [" << bind.ip << "] to port " << port;
 				_logger.fail(error.str(), errno);
+				_destroyBind(bind);
 			}
 			else
 				_binds.push_back(bind);
@@ -236,7 +294,7 @@ class	Serve
 				if (epoll_ctl(_poll_fd, EPOLL_CTL_ADD, bind.fd, &epoll_ev) == -1)
 					throw new ServerSocketException("EPOLL setup failed");
 		
-				_logger.greeting(bind.address, bind.port);
+				_logger.greeting(bind.host, bind.port);
 
 				++it;
 			}
