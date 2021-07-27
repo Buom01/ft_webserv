@@ -6,7 +6,7 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 14:41:25 by cbertran          #+#    #+#             */
-/*   Updated: 2021/07/12 15:57:37 by cbertran         ###   ########.fr       */
+/*   Updated: 2021/07/12 19:15:27 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,6 +57,22 @@ class Header
 		_Container GetEveryHeader()
 		{ return _header; }
 		
+		/**
+		 * 	Get vector of every HTTP header in map
+		 */
+		std::vector<std::string> VectorOfEveryHeaders()
+		{
+			std::vector<std::string>	keys;
+			std::vector<std::string>	headers;
+			for (_Container::iterator it = _header.begin(); it != _header.end(); ++it)
+			{
+				if (std::find(keys.begin(), keys.end(), (*it).first) == keys.end())
+					keys.push_back((*it).first);
+			}
+			for (std::vector<std::string>::iterator it = keys.begin(); it != keys.end(); ++it)
+				headers.push_back(HTTPheader(*it));
+			return (headers);
+		}
 
 		/**
 		 * 	Return well formated string represent HTTP header

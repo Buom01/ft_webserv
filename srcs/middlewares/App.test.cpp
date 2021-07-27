@@ -6,15 +6,12 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 17:24:14 by cbertran         ###   ########.fr       */
+/*   Updated: 2021/07/12 19:15:53 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include <unistd.h>
-# include "../serve/Serve.hpp"
-# include "parseStartLine.hpp"
-# include "addHeaders.hpp"
-# include "sendResponse.hpp"
+# include "Serve.hpp"
 
 void	test_middleware(Request &, Response &res)
 {
@@ -29,8 +26,11 @@ int	main(void)
 	app.bind("0.0.0.0", 8888);
 
 	app.use(&parseStartLine);
+	app.use(&parseRequestHeaders);
+
 	app.use(&test_middleware);
-	app.use(&addHeaders, F_ALL);
+	
+	app.use(&addResponseHeaders, F_ALL);
 	app.use(&sendResponse, F_ALL);
 
 	app.begin();
