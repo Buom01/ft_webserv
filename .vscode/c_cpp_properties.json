@@ -6,6 +6,7 @@
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/srcs/includes/*",
                 "${workspaceFolder}/srcs/includes/parse/*",
+                "${workspaceFolder}/srcs/cgi/*",
                 "${workspaceFolder}/srcs/log/*",
                 "${workspaceFolder}/srcs/middlewares/*",
                 "${workspaceFolder}/srcs/serve/*"

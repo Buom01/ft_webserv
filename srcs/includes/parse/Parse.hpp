@@ -24,6 +24,15 @@ class Parse
 		std::vector<std::string> 							AutorizedFlag;
 		std::vector<std::pair<std::string, std::string> >	ParsingResult;
 		std::vector<s_server>								Configuration;
+	public:
+		Parse(const Parse &x) : _configPath(x._configPath), AutorizedFlag(x.AutorizedFlag), Configuration(x.Configuration) {}
+		Parse &operator=(const Parse &x)
+		{
+			_configPath = x._configPath;
+			AutorizedFlag = x.AutorizedFlag;
+			Configuration = x.Configuration;
+			return *this;
+		}
 	private:
 		Parse(void) {}
 		std::string& leftTrim(std::string& str, std::string& chars)
@@ -50,7 +59,7 @@ class Parse
 			AutorizedFlag.push_back("alias");
 			AutorizedFlag.push_back("cgi_pass");
 		}
-	public:
+	private:
 		void fillParsingResultVector()
 		{
 			std::string key;
@@ -167,24 +176,7 @@ class Parse
 			createStructTreeOfConfig();
 		}
 	public:
-		Parse(std::string config_path) : _configPath(config_path)
-		{
-			StartParsing();
-			/*for (std::vector<s_server>::iterator it = Configuration.begin(); it != Configuration.end(); it++)
-			{
-				std::cout << "Global options" << std::endl;
-				for (std::vector<std::pair<std::string, std::string> >::iterator it2 = it->options.begin(); it2 != it->options.end(); it2++)
-					std::cout << it2->first << "=" << it2->second << std::endl;
-				std::cout << "Location block(s)" << std::endl;
-				for (std::vector<std::map<std::string, std::string> >::iterator it2 = it->locations.begin(); it2 != it->locations.end(); it2++)
-				{
-					std::cout << "Location {" << std::endl;
-					for (std::map<std::string, std::string>::iterator it3 = it2->begin(); it3 != it2->end(); it3++)
-						std::cout << it3->first << "=" << it3->second << std::endl;
-					std::cout << "}" << std::endl;
-				}
-			}*/
-		}
+		Parse(std::string config_path) : _configPath(config_path) { StartParsing(); }
 	public:
 		/**
 		 * 	Get current configuration, iterable with iterator
@@ -199,6 +191,24 @@ class Parse
 		{
 			_configPath = config_path;
 			StartParsing();
+		}
+
+		void print()
+		{
+			for (std::vector<s_server>::iterator it = Configuration.begin(); it != Configuration.end(); it++)
+			{
+				std::cout << "Global options" << std::endl;
+				for (std::vector<std::pair<std::string, std::string> >::iterator it2 = it->options.begin(); it2 != it->options.end(); it2++)
+					std::cout << it2->first << "=" << it2->second << std::endl;
+				std::cout << "Location block(s)" << std::endl;
+				for (std::vector<std::map<std::string, std::string> >::iterator it2 = it->locations.begin(); it2 != it->locations.end(); it2++)
+				{
+					std::cout << "Location {" << std::endl;
+					for (std::map<std::string, std::string>::iterator it3 = it2->begin(); it3 != it2->end(); it3++)
+						std::cout << it3->first << "=" << it3->second << std::endl;
+					std::cout << "}" << std::endl;
+				}
+			}
 		}
 	public:
 		virtual ~Parse() {}

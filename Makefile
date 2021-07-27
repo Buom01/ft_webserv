@@ -6,7 +6,7 @@ SRCS		:=	main.cpp \
 
 OBJS		:=	$(SRCS:.cpp=.o)
 RM			:=	rm -f
-LIBRARY		?=	-I ./srcs/includes -I ./srcs/includes/parse -I ./srcs/serve
+LIBRARY		?=	-I ./srcs/includes -I ./srcs/includes/parse -I ./srcs/cgi -I ./srcs/serve
 CXXFLAGS	?=  -Wall -Werror -Wextra -std=c++98 $(LIBRARY)
 
 $(NAME): $(OBJS) $(SUBDIRS)
