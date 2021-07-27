@@ -3,15 +3,17 @@
 /*                                                        :::      ::::::::   */
 /*   App.test.cpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 19:15:53 by cbertran         ###   ########.fr       */
+/*   Updated: 2021/07/27 19:07:57 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include <unistd.h>
 # include "Serve.hpp"
+# include "read.cpp"
+# include "write.cpp"
 
 void	test_middleware(Request &, Response &res)
 {
@@ -34,6 +36,6 @@ int	main(void)
 	app.use(&sendResponse, F_ALL);
 
 	app.begin();
-	while (app.accept())
-		usleep(1);
+	while (1)
+		app.accept();
 }
