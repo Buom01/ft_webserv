@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   readHeaders.cpp                                    :+:      :+:    :+:   */
+/*   read.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2021/07/12 19:39:39 by cbertran         ###   ########.fr       */
+/*   Updated: 2021/07/27 20:47:23 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,7 +62,8 @@
 	void	parseRequestHeaders(Request &req, Response &)
 	{
 		std::string	line;
-		while (get_next_line_string(req.fd, line, req.buff, SERVER_BUFFER_SIZE) > 0)
+
+		while (get_next_line_string(req.fd, line, req.buff, SERVER_BUFFER_SIZE) > 0 && line.length())
 			req.headers.set(line);
 	}
 
