@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Header.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 14:41:25 by cbertran          #+#    #+#             */
-/*   Updated: 2021/07/12 19:15:27 by cbertran         ###   ########.fr       */
+/*   Updated: 2021/07/31 01:21:35 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,6 +41,29 @@ class Header
 		Regex			_regex;
 		_Container		_header;
 	private:
+		/**
+		 * 	Return parsed header containing key followed by value(s)
+		 *  or an empty vector if match failed.
+		 */
+		std::vector<std::string>	parseHeader(std::string raw)
+		{
+			match_t						*match;
+			std::string					key;
+			std::string					rawValue;
+			std::vector<std::string>	results;
+
+			if (!(match = _regex.Match(raw, "^([^ ]+): ([^,].*)$"))) return results;
+			key = toLowerCase(match[1].occurence);
+			rawValue = match[2].occurence;
+
+			results.push_back(key);
+			_regex.Init(" *([^,]+),? *", rawValue);
+			while ((match = _regex.Exec()))
+				results.push_back(match[1].occurence);
+			
+			return (results);
+		}
+
 		std::string toLowerCase(std::string const _string)
 		{
 			std::string ret = _string;
@@ -80,12 +103,7 @@ class Header
 		 */
 		std::string HTTPheader(_Container::iterator &it)
 		{
-			std::vector<std::string> HTTP = GetHeader(toLowerCase((*it).first));
-			std::string ret = toLowerCase((*it).first);
-			ret += ": ";
-			for (std::vector<std::string>::iterator it2 = HTTP.begin(); it2 != HTTP.end(); ++it2)
-				ret += *it2;
-			return ret;
+			return (HTTPheader((*it).first));
 		}
 		
 		/**
@@ -98,7 +116,11 @@ class Header
 			std::string ret = toLowerCase(search);
 			ret += ": ";
 			for (std::vector<std::string>::iterator it2 = HTTP.begin(); it2 != HTTP.end(); ++it2)
+			{
+				if (it2 != HTTP.begin())
+					ret += ",";
 				ret += *it2;
+			}
 			return ret;
 		}
 		
@@ -141,15 +163,14 @@ class Header
 		 */
 		bool add(std::string header)
 		{
-			std::string		key;
-			_regex.Match(header, "^(^[^ ]+): (.*)(;.*?)");
-			if (_regex.GetSize() < 3) return true;
-			key = toLowerCase(_regex.GetMatch()[1].occurence);
-			if (key.empty()) return true;
-			key = toLowerCase(key);
+			std::vector<std::string>	parsedHeader	= parseHeader(header);
+			std::string					key;
+			
+			if (parsedHeader.size() < 2) return true;
+			key = parsedHeader[0];
 			if (_header.count(key)) return true;
-			for (size_t x = 2; x < _regex.GetSize(); x++)
-				_header.insert(std::make_pair(key, _regex.GetMatch()[x].occurence));
+			for (size_t i = 1; i < parsedHeader.size(); ++i)
+				_header.insert(std::make_pair(key, parsedHeader[i]));
 			return false;
 		}
 		
@@ -160,15 +181,14 @@ class Header
 		 */
 		bool set(std::string header)
 		{
-			std::string		key;
-			_regex.Match(header, "^(^[^ ]+): (.*)(;.*?)");
-			if (_regex.GetSize() < 3) return true;
-			key = toLowerCase(_regex.GetMatch()[1].occurence);
-			if (key.empty()) return true;
-			key = toLowerCase(key);
-			if (!_header.count(key)) _header.erase(key);
-			for (size_t x = 2; x < _regex.GetSize(); x++)
-				_header.insert(std::make_pair(key, _regex.GetMatch()[x].occurence));
+			std::vector<std::string>	parsedHeader	= parseHeader(header);
+			std::string					key;
+			
+			if (parsedHeader.size() < 2) return true;
+			key = parsedHeader[0];
+			if (_header.count(key)) _header.erase(key);
+			for (size_t i = 1; i < parsedHeader.size(); ++i)
+				_header.insert(std::make_pair(key, parsedHeader[i]));
 			return false;
 		}		
 };
