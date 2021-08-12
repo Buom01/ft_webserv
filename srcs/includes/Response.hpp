@@ -6,7 +6,7 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:50:37 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 20:41:13 by badam            ###   ########.fr       */
+/*   Updated: 2021/08/02 11:08:23 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,7 @@ class Response
 		
 		http_code_t				code;
 		Header					headers;
-		std::string				body;
+		std::stringstream		body;
 		bool					sent;
 
 		Response(int connection, Log &_logger) :

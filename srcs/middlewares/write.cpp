@@ -6,7 +6,7 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2021/07/14 20:10:26 by cbertran         ###   ########.fr       */
+/*   Updated: 2021/08/12 16:54:53 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@ void	sendResponse(Request &req, Response &res)
 		header << *it << std::endl;
 	header << std::endl;
 	::send(res.fd, header.str().c_str(), header.str().length(), MSG_DONTWAIT);
-	::send(res.fd, res.body.c_str(), res.body.length(), MSG_DONTWAIT | MSG_EOR);
+	::send(res.fd, res.body.str().c_str(), res.body.str().length(), MSG_DONTWAIT | MSG_EOR);
 	::close(res.fd);
 	res.sent = true;
 	res.logger.log(res.code, req.pathname);
@@ -36,9 +36,9 @@ void	addResponseHeaders(Request &, Response &res)
 	std::stringstream	to_str;
 
 	h.set("Server: FT_WebServ");
-	to_str << res.body.length();
+	to_str << res.body.str().length();
 	h.set("Content-Length: " + to_str.str());
-	if (res.code == C_OK && res.body.length() == 0)
+	if (res.code == C_OK && res.body.str().length() == 0)
 		res.code = C_NO_CONTENT;
 }
 
