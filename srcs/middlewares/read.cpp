@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2021/07/27 20:47:23 by badam            ###   ########.fr       */
+/*   Updated: 2021/08/17 17:49:41 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 # include "GNL.hpp"
 # include "Serve.hpp"
 # include "Regex.hpp"
+# include "File.hpp"
 
 	void	parseStartLine(Request &req, Response &)
 	{
@@ -51,6 +52,7 @@
 			req.method = M_TRACE;
 
 		req.pathname = pathname;
+		req.trusted_pathname = sanitizeRelativePath(req.pathname);
 		req.http_version = http_version;
 
 		if (http_version != "1.0" && http_version != "1.1")
