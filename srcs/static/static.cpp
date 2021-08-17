@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2021/08/17 15:31:48 by badam            ###   ########.fr       */
+/*   Updated: 2021/08/17 17:42:42 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,9 +26,10 @@ struct	static_options_t
 
 const static_options_t			staticGetDefaultOptions(void)
 {
-	static static_options_t	defaultOptions	= {0};
+	static static_options_t	defaultOptions;
 
-	defaultOptions.root = "./staticfiles";
+	defaultOptions.root					= "./staticfiles";
+	defaultOptions.directory_listing	= false;
 	defaultOptions.indexes.push_back("index.html");
 	defaultOptions.indexes.push_back("index.htm");
 	defaultOptions.indexes.push_back("index.php");
