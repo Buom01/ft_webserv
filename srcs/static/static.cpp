@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2021/08/17 17:42:42 by badam            ###   ########.fr       */
+/*   Updated: 2021/08/17 17:48:47 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -98,7 +98,7 @@ void	serveStatic(Request &req, Response &res)
 	if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
 		return ;
 
-	std::string				path	= sanitizeRelativePath(req.pathname);
+	std::string				path	= req.trusted_pathname;
 	const static_options_t	options = getOptions();
 
 	path.insert(0, options.root);

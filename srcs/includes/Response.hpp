@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Response.hpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:50:37 by badam             #+#    #+#             */
-/*   Updated: 2021/08/02 11:08:23 by badam            ###   ########.fr       */
+/*   Updated: 2021/08/17 17:46:35 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ class Response
 		int						fd;
 		Log						&logger;
 		
+		std::string				used_file;
 		http_code_t				code;
 		Header					headers;
 		std::stringstream		body;
@@ -32,6 +33,7 @@ class Response
 		Response(int connection, Log &_logger) :
 			logger(_logger),
 			fd(connection),
+			used_file(""),
 			code(C_NOT_IMPLEMENTED),
 			headers(),
 			body(""),
