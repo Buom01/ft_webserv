@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2021/07/27 19:07:57 by badam            ###   ########.fr       */
+/*   Updated: 2022/01/06 19:14:15 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@
 void	test_middleware(Request &, Response &res)
 {
 	res.code = C_OK;
-	res.body = "TEST";
+	res.body << "TEST";
 }
 
 int	main(void)
