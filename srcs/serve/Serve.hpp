@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2021/07/27 19:00:11 by badam            ###   ########.fr       */
+/*   Updated: 2022/01/07 18:09:03 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,12 +24,14 @@
 # include <sstream>
 # include <string>
 # include <vector>
+# include "IMiddleware.hpp"
 # include "Header.hpp"
 # include "Log.hpp"
 # define SERVER_BUFFER_SIZE 2048
 # define MAX_EVENTS 10
 # define LISTEN_BACKLOG 10
 
+class IMiddleware;
 class Request;
 class Response;
 
@@ -49,8 +51,6 @@ typedef struct server_bind_s
 } server_bind_t;
 
 typedef	std::vector<server_bind_t>	binds_t;
-
-typedef	void (*middleware_t)(Request&, Response&);
 
 typedef enum chain_flag_e
 {
@@ -132,6 +132,12 @@ typedef enum http_code_e
 
 # include "Request.hpp"
 # include "Response.hpp"
+
+typedef struct	middleware_s
+{
+	IMiddleware	*obj;
+	void		(*fct)(Request&, Response&);
+}				middleware_t;
 
 typedef struct server_link_s
 {
@@ -300,14 +306,29 @@ class	Serve
 			}
 		}
 
-		void	use(middleware_t middleware, chain_flag_t flag = F_NORMAL,
-					method_t methods = M_ALL)
+		void	use(IMiddleware &middleware, chain_flag_t flag = F_NORMAL, method_t methods = M_ALL)
 		{
 			server_link_t	link;
 
 			link.methods = methods;
 			link.pathname = "";
-			link.middleware = middleware;
+			link.middleware.obj = &middleware;
+			link.middleware.fct = NULL;
+
+			if (flag & F_NORMAL)
+				_response_chain.push_back(link);
+			if (flag & F_ERROR)
+				_error_chain.push_back(link);
+		}
+
+		void	use(void (&middleware)(Request&, Response&), chain_flag_t flag = F_NORMAL, method_t methods = M_ALL)
+		{
+			server_link_t	link;
+
+			link.methods = methods;
+			link.pathname = "";
+			link.middleware.obj = NULL;
+			link.middleware.fct = &middleware;
 
 			if (flag & F_NORMAL)
 				_response_chain.push_back(link);
@@ -332,7 +353,12 @@ class	Serve
 			{
 				link = *it;
 				if (canUseLink(link, req))
-					link.middleware(req, res);
+				{
+					if (link.middleware.obj)
+						(*link.middleware.obj)(req, res);
+					else
+						(*link.middleware.fct)(req, res);
+				}
 				++it;
 			}
 			if (!res.sent)

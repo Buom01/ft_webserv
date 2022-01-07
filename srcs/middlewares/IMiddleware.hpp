@@ -1,41 +1,27 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   App.test.cpp                                       :+:      :+:    :+:   */
+/*   IMiddleware.hpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/01/07 17:24:03 by badam            ###   ########.fr       */
+/*   Created: 2022/01/07 15:51:27 by badam             #+#    #+#             */
+/*   Updated: 2022/01/07 16:35:12 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-# include <unistd.h>
+#ifndef IMIDDLEARE_HPP
+# define IMIDDLEARE_HPP
+
 # include "Serve.hpp"
-# include "read.cpp"
-# include "write.cpp"
 
-void	test_middleware(Request &, Response &res)
+class Request;
+class Response;
+
+class IMiddleware
 {
-	res.code = C_OK;
-	res.body << "TEST";
-}
+    public:
+        virtual void    operator()(Request &req, Response &res) = 0;
+};
 
-int	main(void)
-{
-	Serve app;
-
-	app.bind("0.0.0.0", 8888);
-
-	app.use(parseStartLine);
-	app.use(parseRequestHeaders);
-
-	app.use(test_middleware);
-	
-	app.use(addResponseHeaders, F_ALL);
-	app.use(sendResponse, F_ALL);
-
-	app.begin();
-	while (1)
-		app.accept();
-}
+#endif
