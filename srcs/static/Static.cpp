@@ -6,14 +6,15 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/01/07 17:18:35 by badam            ###   ########.fr       */
+/*   Updated: 2022/01/10 18:43:37 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef __STATIC_MIDDLEWARE_CPP
 # define __STATIC_MIDDLEWARE_CPP
 
-# include "Serve.hpp"
+# include "Response.hpp"
+# include "Request.hpp"
 # include "Regex.hpp"
 # include "File.hpp"
 # include "IMiddleware.hpp"
@@ -98,10 +99,10 @@ class Static: public IMiddleware
 		}
 
 	public:
-		void	operator()(Request &req, Response &res)
+		bool	operator()(Request &req, Response &res)
 		{
 			if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
-				return ;
+				return (true);
 
 			std::string				path	= sanitizeRelativePath(req.pathname);
 
@@ -138,6 +139,8 @@ class Static: public IMiddleware
 			}
 			else
 				res.code = C_NOT_FOUND;
+			
+			return (true);
 		}
 
 };
