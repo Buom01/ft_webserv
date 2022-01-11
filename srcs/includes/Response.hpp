@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:50:37 by badam             #+#    #+#             */
-/*   Updated: 2022/01/10 19:44:13 by badam            ###   ########.fr       */
+/*   Updated: 2022/01/11 13:29:57 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,7 +59,7 @@ class Response
 			sent(false)
 		{}
 
-		~Response()
+		virtual ~Response()
 		{}
 
 		Response 	&operator=(const Response &rhs)

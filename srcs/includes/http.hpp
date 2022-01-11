@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/10 18:19:19 by badam             #+#    #+#             */
-/*   Updated: 2022/01/10 19:43:46 by badam            ###   ########.fr       */
+/*   Updated: 2022/01/11 13:44:42 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -119,6 +119,5 @@ typedef enum http_code_e
 
 # define SERVER_BUFFER_SIZE 2048
 # define MAX_EVENTS 10
-# define LISTEN_BACKLOG 10
 
 #endif

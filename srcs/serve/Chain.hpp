@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/01/10 19:38:46 by badam            ###   ########.fr       */
+/*   Updated: 2022/01/11 14:05:25 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,7 @@ class	RunningChain
 		{}
 };
 
-typedef std::vector<RunningChain>    running_chains_t;
+typedef std::vector<RunningChain *>    running_chains_t;
 
 
 class   Chain
@@ -95,29 +95,34 @@ class   Chain
 			{
 				return _run(instance);
 			}
-			catch (const std::exception &e)
+			// catch (const std::exception &e)
+			// {
+			// 	instance.res.logger->fail(e.what());
+			// 	instance.res.error = &e;
+
+			// 	try
+			// 	{
+			// 		if (_error_chain)
+			// 			_error_chain->exec(instance.req, instance.res);  // Should replace the running instance
+			// 		else
+			// 			throw (CantHandleRequest());
+			// 	}
+			// 	catch(const std::exception &ce)
+			// 	{
+			// 		instance.res.logger->fail("Failed to answer");
+
+			// 		try
+			// 		{
+			// 			::close(instance.res.fd);
+			// 		}
+			// 		catch (...)
+			// 		{}
+			// 	}
+			// }
+			catch (...)
 			{
-				instance.res.logger->fail(e.what());
-				instance.res.error = &e;
+				instance.res.logger->fail("Unhandled exception");
 
-				try
-				{
-					if (_error_chain)
-						_error_chain->exec(instance.req, instance.res);
-					else
-						throw (CantHandleRequest());
-				}
-				catch(const std::exception &ce)
-				{
-					instance.res.logger->fail("Failed to answer");
-
-					try
-					{
-						::close(instance.res.fd);
-					}
-					catch (...)
-					{}
-				}
 				return (true);
 			}
 		}
@@ -164,28 +169,35 @@ class   Chain
         {
 			Request			req(connection, bind);
 			Response		res(connection, logger);
-            RunningChain	instance(req, res, _raw_chain.begin());
+            RunningChain	*instance	= new RunningChain(req, res, _raw_chain.begin());
 
-			if (!_exec_instance(instance))
+			if (!_exec_instance(*instance))
 				_running.push_back(instance);
         }
 		
         void	exec(Request &req, Response &res)
         {
-            RunningChain	instance(req, res, _raw_chain.begin());
+            RunningChain	*instance	= new RunningChain(req, res, _raw_chain.begin());
 
-			if (!_exec_instance(instance))
+			if (!_exec_instance(*instance))
 				_running.push_back(instance);
+			else
+				delete (instance);
         }
 
 		void	retake()
 		{
 			running_chains_t::iterator	it	= _running.begin();
 
+			std::cout << "Number of chain:" << _running.size() << std::endl;
+
 			while (it != _running.end())
 			{
-				if (_exec_instance(*it))
+				if (_exec_instance(**it))
+				{
+					delete *it;
 					it = _running.erase(it);
+				}
 				else
 					++it;
 			}
@@ -196,7 +208,7 @@ class   Chain
 			public:
 				virtual const char* what() const throw () 
 				{
-						return ("No more fallback error chain");
+					return ("No more fallback error chain");
 				}
 		};
 };

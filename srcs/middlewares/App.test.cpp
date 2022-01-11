@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/01/10 23:04:38 by badam            ###   ########.fr       */
+/*   Updated: 2022/01/11 14:05:52 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,11 @@ bool	test_breakchain(Request &req, Response &)
 	std::cout << "test_breakchain" << std::endl;
 
 	return (one_time_on_two = !one_time_on_two);
+}
+
+bool	test_throwchain(Request &req, Response &)
+{
+	throw new Serve::ServerSocketException("test_throwchain middleware");
 }
 
 bool	test_middleware(Request &, Response &res)
@@ -44,6 +49,7 @@ int	main(void)
 
 	app.use(test_breakchain);
 	app.use(test_middleware);
+	// app.use(test_throwchain);
 	
 	app.use(addResponseHeaders, F_ALL);
 	app.use(sendResponse, F_ALL);
@@ -53,5 +59,6 @@ int	main(void)
 	{
 		app.accept();
 		app.retake();
+		sleep(1);
 	}
 }

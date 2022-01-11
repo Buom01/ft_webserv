@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/01/10 22:51:45 by badam            ###   ########.fr       */
+/*   Updated: 2022/01/11 13:30:03 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,7 +62,7 @@ class Request
 			bzero(&buff, sizeof(buff));
 		}
 
-		~Request()
+		virtual ~Request()
 		{}
 
 		Request 	&operator=(const Request &rhs)
