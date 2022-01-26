@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2021/08/01 03:45:02 by badam            ###   ########.fr       */
+/*   Updated: 2022/01/10 18:23:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,23 +14,31 @@
 # include "Serve.hpp"
 # include "read.cpp"
 # include "write.cpp"
-# include "static.cpp"
+# include "Static.cpp"
 
 int	main(void)
 {
-	Serve app;
+	Serve 	app;
+	Static	serveStatic;
+
+	serveStatic.options.root				= "./staticfiles";
+	serveStatic.options.directory_listing	= false;
+	serveStatic.options.indexes.push_back("index.html");
 
 	app.bind("0.0.0.0", 8888);
 
-	app.use(&parseStartLine);
-	app.use(&parseRequestHeaders);
+	app.use(parseStartLine);
+	app.use(parseRequestHeaders);
 
-	app.use(&serveStatic);
+	app.use(serveStatic);
 	
-	app.use(&addResponseHeaders, F_ALL);
-	app.use(&sendResponse, F_ALL);
+	app.use(addResponseHeaders, F_ALL);
+	app.use(sendResponse, F_ALL);
 
 	app.begin();
 	while (1)
+	{
 		app.accept();
+		app.retake();
+	}
 }

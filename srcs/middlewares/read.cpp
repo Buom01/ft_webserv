@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2021/08/17 17:49:41 by badam            ###   ########.fr       */
+/*   Updated: 2022/01/10 19:35:22 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,11 +14,13 @@
 # define __READ_HEADERS_CPP
 # include <string>
 # include "GNL.hpp"
+# include "Request.hpp"
+# include "Response.hpp"
 # include "Serve.hpp"
 # include "Regex.hpp"
 # include "File.hpp"
 
-	void	parseStartLine(Request &req, Response &)
+	bool	parseStartLine(Request &req, Response &)
 	{
 		std::string	line;
 		Regex		regex;
@@ -59,14 +61,18 @@
 			throw new Serve::ServerSocketException("Unsupported HTTP version");
 		if (req.method == M_UNKNOWN)
 			throw new Serve::ServerSocketException("Unsupported method");
+
+		return (true);
 	}
 	
-	void	parseRequestHeaders(Request &req, Response &)
+	bool	parseRequestHeaders(Request &req, Response &)
 	{
 		std::string	line;
 
 		while (get_next_line_string(req.fd, line, req.buff, SERVER_BUFFER_SIZE) > 0 && line.length())
 			req.headers.set(line);
+
+		return (true);
 	}
 
 #endif

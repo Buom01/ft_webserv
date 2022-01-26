@@ -3,18 +3,20 @@
 /*                                                        :::      ::::::::   */
 /*   write.cpp                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2021/08/12 16:54:53 by badam            ###   ########.fr       */
+/*   Updated: 2022/01/10 19:36:28 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef __WRITE_HEADERS_CPP
 # define __WRITE_HEADERS_CPP
+# include "Request.hpp"
+# include "Response.hpp"
 # include "Serve.hpp"
 
-void	sendResponse(Request &req, Response &res)
+bool	sendResponse(Request &req, Response &res)
 {
 	std::stringstream			header;
 	std::vector<std::string>	ListHeaders = res.headers.VectorOfEveryHeaders();
@@ -27,10 +29,12 @@ void	sendResponse(Request &req, Response &res)
 	::send(res.fd, res.body.str().c_str(), res.body.str().length(), MSG_DONTWAIT | MSG_EOR);
 	::close(res.fd);
 	res.sent = true;
-	res.logger.log(res.code, req.pathname);
+	res.logger->log(res.code, req.pathname);
+	
+	return (true);
 }
 
-void	addResponseHeaders(Request &, Response &res)
+bool	addResponseHeaders(Request &, Response &res)
 {
 	Header				&h		= res.headers;
 	std::stringstream	to_str;
@@ -40,6 +44,8 @@ void	addResponseHeaders(Request &, Response &res)
 	h.set("Content-Length: " + to_str.str());
 	if (res.code == C_OK && res.body.str().length() == 0)
 		res.code = C_NO_CONTENT;
+	
+	return (true);
 }
 
 #endif
