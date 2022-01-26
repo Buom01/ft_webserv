@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/01/11 14:05:25 by badam            ###   ########.fr       */
+/*   Updated: 2022/01/27 00:13:24 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -188,8 +188,6 @@ class   Chain
 		void	retake()
 		{
 			running_chains_t::iterator	it	= _running.begin();
-
-			std::cout << "Number of chain:" << _running.size() << std::endl;
 
 			while (it != _running.end())
 			{
