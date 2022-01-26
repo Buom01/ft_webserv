@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/01/10 19:44:08 by badam            ###   ########.fr       */
+/*   Updated: 2022/01/27 00:09:49 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,23 +15,24 @@
 # include <exception>
 # include <string>
 # include <vector>
+# include "http.hpp"
 # include "IMiddleware.hpp"
 # include "Log.hpp"
+# include "Epoll.hpp"
 # include "Chain.hpp"
-# include "http.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
 
 class	Serve
 {
 	Log				_logger;
+	Epoll			_epoll;
 	binds_t			_binds;
-	int				_poll_fd;
 	Chain			_response_chain;
 	Chain			_error_chain;
 
 	public:
-		Serve(void)
+		Serve(void): _epoll(_logger)
 		{
 			_response_chain.setErrorChain(_error_chain);
 		}
@@ -45,13 +46,6 @@ class	Serve
 				_destroyBind(*it);
 				++it;
 			}
-			try
-			{
-				if (_poll_fd >= 0)
-					::close(_poll_fd);
-			}
-			catch(...)
-			{}
 		}
 
 	private:
@@ -155,16 +149,9 @@ class	Serve
 
 		void	begin(void)
 		{
-			epoll_event_t		epoll_ev;
 			binds_t::iterator	it		= _binds.begin();
 			server_bind_t		bind;
 
-			if ((_poll_fd = epoll_create1(0)) == -1)
-				throw new ServerSocketException("EPOLL creation failed");
-
-			bzero(&epoll_ev, sizeof(epoll_ev));
-			epoll_ev.events	= EPOLLIN | EPOLLOUT;
-			
 			while (it != _binds.end())
 			{
 				bind = *it;
@@ -172,10 +159,8 @@ class	Serve
 				if (listen(bind.fd, 1) == -1)
 					throw new ServerSocketException("Socket failed to listen");
 			
-				epoll_ev.data.fd	= bind.fd;
-				if (epoll_ctl(_poll_fd, EPOLL_CTL_ADD, bind.fd, &epoll_ev) == -1)
-					throw new ServerSocketException("EPOLL setup failed");
-		
+				_epoll.add(bind.fd);
+
 				_logger.greeting(bind.host, bind.port);
 
 				++it;
@@ -211,33 +196,30 @@ class	Serve
 
 		void	accept(void)
 		{
-			epoll_event_t	events[MAX_EVENTS];
-			int				ret;
-			int				fd;
-			server_bind_t	bind;
-			int				connection;
+			server_bind_t			bind;
+			epoll_fds_t				fds;
+			epoll_fds_t::iterator	it;
+			int						connection;
 
-			ret = epoll_wait(_poll_fd, events, MAX_EVENTS, 1);
-			if (ret > 0)
+			fds = _epoll.accept();
+			it = fds.begin();
+
+			while (it != fds.end())
 			{
-				for (int i = 0; i < ret; ++i)
-				{
-					fd = events[i].data.fd;
-					connection	= ::accept(fd, NULL, NULL);
+				connection	= ::accept(*it, NULL, NULL);
 
-					if (connection >= 0)
-					{
-						bind = _bindFromFD(fd);
-						exec(connection, bind);
-					}
-					else if (errno == EWOULDBLOCK)
-						_logger.warn("EWOULDBLOCK happened with EPOLL");
-					else
-						_logger.fail("Fail to grab connection", errno);
+				if (connection >= 0)
+				{
+					bind = _bindFromFD(*it);
+					exec(connection, bind);
 				}
+				else if (errno == EWOULDBLOCK)
+					_logger.warn("EWOULDBLOCK happened with EPOLL");
+				else
+					_logger.fail("Fail to grab connection", errno);
+
+				++it;
 			}
-			else if (ret < 0 && errno != EINTR)
-				_logger.fail("Unexpected stop while waiting EPOLL");
 		}
 
 		class	ServerException: public std::runtime_error
