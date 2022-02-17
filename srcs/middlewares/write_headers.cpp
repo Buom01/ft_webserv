@@ -1,44 +1,24 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   write.cpp                                          :+:      :+:    :+:   */
+/*   write_headers.cpp                                  :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/02/17 02:59:26 by badam            ###   ########.fr       */
+/*   Updated: 2022/02/17 22:02:01 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef __WRITE_HEADERS_CPP
 # define __WRITE_HEADERS_CPP
+
 # include "Request.hpp"
 # include "Response.hpp"
 # include "Serve.hpp"
 
-static inline bool	writeBuffer(int fd, std::string &str, unsigned long &size, Log *logger)
-{
-	int	ret;
+# include "utils/writeout.cpp"
 
-	if (size > str.length())
-		size = str.length();
-
-	ret = ::send(fd, str.c_str(), size, MSG_DONTWAIT | MSG_NOSIGNAL);
-
-	if (ret == -1)
-	{
-		// @TODO: Es-ce que ça veut dire qu'on doit re-attendre sur epoll ?
-		logger->warn("Failed to write buffer right now");
-		return (false);
-	}
-	else
-	{
-		str.erase(0, ret);
-		size -= ret;
-		return (true);
-	}
-
-}
 
 bool	addResponseHeaders(Request &, Response &res)
 {
@@ -90,7 +70,7 @@ bool	sendHeader(Request &req, Response &res)
 		
 		while(bufferSize)
 		{
-			if (!writeBuffer(res.fd, res.headers_buff, bufferSize, res.logger))
+			if (!writeBuffer(req, res, res.headers_buff, bufferSize))
 				return (false);
 		}
 	}
@@ -100,37 +80,5 @@ bool	sendHeader(Request &req, Response &res)
 	
 	return (true);
 }
-
-bool	sendBodyMockupFunction(Request &req, Response &res)
-{
-	if (req.closed())
-		return (true);
-	if (!req.await(EPOLLOUT))
-		return (false);
-
-	::send(res.fd, res.body.str().c_str(), res.body.str().length(), MSG_DONTWAIT | MSG_NOSIGNAL);
-	::close(res.fd);
-
-	res.sent = true;
-
-	return (true);
-}
-
-/*
-@Fait: Le sujet veux que l'envois se fasse aussi dans le même poll:
-- "poll (ou équivalent) doit vérifier la lecture et l’écriture en même temps"
-- "Il doit être non bloquant et n’utiliser qu’un seul poll(ou équivalent) pour toutes les E/S entre le client et le serveur (listen inclus)."
-
-
-@TODO:
-De plus on peut en générale savoir que le buffer du socket est saturé car send retounerais -1 avec errno à ERR_WOULDBLOCK, seulement:
-- "La vérification de la valeur de errno est strictement interdite après une opération de lecture ou d’écriture."
-Enfin, dans le cas où body peut être un fichier il y aura un autre epoll dédié à mettre en place
-
-=> Solution:
-- Si il retourne -1, se remttre dane l'epoll et attendre EPOLLOUT à nouveau (si ça marche ?? à priori c'est le but: https://stackoverflow.com/questions/3673828/proper-handling-of-ewouldblock-with-polling-on-a-non-blocking-socket)
-- Bien écouter sur EPOLLHUP ("closed")
-- Mettre un timeout
-*/
 
 #endif
