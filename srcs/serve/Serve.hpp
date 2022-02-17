@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 16:14:11 by badam            ###   ########.fr       */
+/*   Updated: 2022/02/17 23:52:47 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,14 +25,15 @@
 
 class	Serve
 {
-	Log				_logger;
 	Epoll			_epoll;
 	binds_t			_binds;
 	Chain			_response_chain;
 	Chain			_error_chain;
 
 	public:
-		Serve(void): _epoll(_logger)
+		Log				logger;
+
+		Serve(void): _epoll(logger)
 		{
 			_response_chain.setErrorChain(_error_chain);
 		}
@@ -76,7 +77,7 @@ class	Serve
 					return (*it);
 			}
 			
-			_logger.warn("Bind not found for gived FD");
+			logger.warn("Bind not found for gived FD");
 			return (nullBind);
 		}
 
@@ -104,19 +105,19 @@ class	Serve
 				if ((domain = gethostbyname(host.c_str())) == NULL)
 				{
 					error << "\"" << host << "\" is not recognized as a valid IP v4 address or know host";
-					_logger.fail(error.str());
+					logger.fail(error.str());
 					return (INADDR_NONE);
 				}
 				if (domain->h_addrtype != AF_INET)
 				{
 					error << "\"" << host << "\" is not IP v4";
-					_logger.fail(error.str());
+					logger.fail(error.str());
 					return (INADDR_NONE);
 				}
 				if ((ip = *(reinterpret_cast<in_addr_t *>(domain->h_addr))) == INADDR_NONE)
 				{
 					error << "\"" << host << "\" is can't be resolved as a valid IP v4 address";
-					_logger.fail(error.str());
+					logger.fail(error.str());
 					return (INADDR_NONE);
 				}
 			}
@@ -153,7 +154,7 @@ class	Serve
 			if (::bind(bind.fd, bind.sockaddr, bind.len) == -1)
 			{
 				error << "Fail to bind " << host << " [" << bind.ip << "] to port " << port;
-				_logger.fail(error.str(), errno);
+				logger.fail(error.str(), errno);
 				_destroyBind(bind);
 			}
 			else
@@ -174,7 +175,7 @@ class	Serve
 			
 				_epoll.add(bind.fd, ET_BIND, NULL);
 
-				_logger.greeting(bind.host, bind.port);
+				logger.greeting(bind.host, bind.port);
 
 				++it;
 			}
@@ -198,7 +199,7 @@ class	Serve
 
 		RunningChain	*exec(int connection, uint32_t events)
 		{
-			return (_response_chain.exec(connection, events, _logger));
+			return (_response_chain.exec(connection, events, logger));
 		}
 
 		bool	retake(RunningChain *instance, uint32_t events)
@@ -213,7 +214,7 @@ class	Serve
 		// 	if (_response_chain.retake(fd, events))
 		// 		return (true);
 
-		// 	_logger.warn("FD doesn't match with any instances");
+		// 	logger.warn("FD doesn't match with any instances");
 			
 		// 	return (false);
 		// }
@@ -257,9 +258,9 @@ class	Serve
 							_epoll.add(connection, ET_CONNECTION, chainInstance);
 					}
 					// else if (errno == EWOULDBLOCK)  // Le sujet interdit la lecture d'errno après lecture ou écriture
-					// 	_logger.warn("EWOULDBLOCK happened with EPOLL");
+					// 	logger.warn("EWOULDBLOCK happened with EPOLL");
 					else
-						_logger.fail("Fail to grab connection", errno);
+						logger.fail("Fail to grab connection", errno);
 				}
 
 				++it;
@@ -288,9 +289,9 @@ class	Serve
 		// 				exec(connection, bind, it->events);
 		// 			}
 		// 			else if (errno == EWOULDBLOCK)
-		// 				_logger.warn("EWOULDBLOCK happened with EPOLL");
+		// 				logger.warn("EWOULDBLOCK happened with EPOLL");
 		// 			else
-		// 				_logger.fail("Fail to grab connection", errno);
+		// 				logger.fail("Fail to grab connection", errno);
 		// 		}
 
 		// 		++it;

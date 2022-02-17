@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/01/10 18:43:37 by badam            ###   ########.fr       */
+/*   Updated: 2022/02/17 23:58:19 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,10 +17,12 @@
 # include "Request.hpp"
 # include "Regex.hpp"
 # include "File.hpp"
-# include "IMiddleware.hpp"
+# include "AEpoll.hpp"
 
-class Static: public IMiddleware
+class Static: public AEpoll
 {
+	typedef	AEpoll	_parent;
+
 	public:
 		typedef struct	options_s
 		{
@@ -32,7 +34,7 @@ class Static: public IMiddleware
 		options_t		options;
 
 
-		Static()
+		Static(Log &logger): _parent(logger)
 		{
 			options.root = "./";
 			options.directory_listing = false;
@@ -41,7 +43,7 @@ class Static: public IMiddleware
 			options.indexes.push_back("index.php");
 		}
 
-		Static(options_t opts)
+		Static(Log &logger, options_t opts): _parent(logger)
 		{
 			options = opts;
 		}

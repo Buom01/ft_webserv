@@ -6,20 +6,22 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/01/10 18:23:17 by badam            ###   ########.fr       */
+/*   Updated: 2022/02/17 23:54:24 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include <unistd.h>
+# include <time.h>
 # include "Serve.hpp"
 # include "read.cpp"
-# include "write.cpp"
+# include "write_headers.cpp"
+# include "write_body.cpp"
 # include "Static.cpp"
 
 int	main(void)
 {
 	Serve 	app;
-	Static	serveStatic;
+	Static	serveStatic(app.logger);
 
 	serveStatic.options.root				= "./staticfiles";
 	serveStatic.options.directory_listing	= false;
@@ -33,12 +35,14 @@ int	main(void)
 	app.use(serveStatic);
 	
 	app.use(addResponseHeaders, F_ALL);
-	app.use(sendResponse, F_ALL);
+	app.use(serializeHeaders, F_ALL);
+	app.use(sendHeader, F_ALL);
+	app.use(sendBodyMockupFunction, F_ALL);
 
 	app.begin();
 	while (1)
 	{
 		app.accept();
-		app.retake();
+		sleep(1);
 	}
 }
