@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/26 22:16:47 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 02:15:44 by badam            ###   ########.fr       */
+/*   Updated: 2022/02/17 22:59:59 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,8 @@ typedef	std::vector<epoll_event_t>	events_t;
 typedef enum	event_type_s
 {
 	ET_BIND = 0,
-	ET_CONNECTION
+	ET_CONNECTION,
+	ET_FILE
 }				event_type_t;
 
 typedef struct	event_data_s
@@ -59,7 +60,7 @@ class	Epoll
 			{}
 		}
 
-		void	add(int fd, event_type_t type, void *data)
+		void	add(int fd, event_type_t type, void *data, uint32_t events = EPOLLIN | EPOLLOUT)
 		{
 			epoll_event_t	*ev			= new epoll_event_t();
 			event_data_t	*ev_data	= new event_data_t();
@@ -70,7 +71,7 @@ class	Epoll
 			ev_data->type	= type;
 			ev_data->data	= data;
 
-			ev->events		= EPOLLIN | EPOLLOUT;
+			ev->events		= events;
 			ev->data.ptr	= ev_data;
 
 			_events.insert(std::pair<int, epoll_event_t*>(fd, ev));
