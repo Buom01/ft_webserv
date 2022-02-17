@@ -3,295 +3,301 @@
 /*                                                        :::      ::::::::   */
 /*   Serve.hpp                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 19:22:54 by cbertran         ###   ########.fr       */
+/*   Updated: 2022/02/17 16:14:11 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVE_HPP
 # define SERVE_HPP
-# include <sys/types.h>
-# include <sys/socket.h>
-# include <netinet/in.h>
-# include <arpa/inet.h>
-# include <errno.h>
-# include <unistd.h>
 # include <exception>
-# include <sstream>
 # include <string>
 # include <vector>
-# include "Header.hpp"
+# include "http.hpp"
+# include "IMiddleware.hpp"
 # include "Log.hpp"
-# define SERVER_BUFFER_SIZE 2048
-
-class Request;
-class Response;
-
-typedef	struct sockaddr		sockaddr_t;
-typedef	struct sockaddr_in	sockaddr_in_t;
-
-typedef struct server_address_s
-{
-	std::string		address;
-	int				port;
-	sockaddr_in_t	sockaddr_in;
-	sockaddr_t		*sockaddr;
-	socklen_t		len;
-} server_address_t;
-
-typedef	std::vector<server_address_t>	addresses_t;
-
-typedef	void (*middleware_t)(Request&, Response&);
-
-typedef enum chain_flag_e
-{
-	F_NONE		= 0,
-	F_NORMAL	= 1 << 0,
-	F_ERROR		= 1 << 1,
-	F_ALL		= F_NORMAL | F_ERROR
-} chain_flag_t;
-
-/*
-** From https://datatracker.ietf.org/doc/html/rfc7231#section-4
-*/
-typedef enum method_e
-{
-	M_UNKNOWN	= 0,
-	M_GET		= 1 << 0,
-	M_HEAD		= 1 << 1,
-	M_POST		= 1 << 2,
-	M_PUT		= 1 << 3,
-	M_DELETE	= 1 << 4,
-	M_CONNECT	= 1 << 5,
-	M_OPTIONS	= 1 << 6,
-	M_TRACE		= 1 << 7,
-	M_ALL		= M_GET | M_HEAD | M_POST | M_PUT | M_DELETE | M_CONNECT | M_OPTIONS | M_TRACE
-} method_t;
-
-/*
-** From https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
-*/
-typedef enum http_code_e
-{
-	C_UNKNOWN = 0,
-
-	C_CONTINUE = 100,
-	C_SWITCHING_PROTOCOLS = 101,
-
-	C_OK = 200,
-	C_CREATED = 201,
-	C_ACCEPTED = 202,
-	C_NON_AUTHORITATIVE_INFORMATION = 203,
-	C_NO_CONTENT = 204,
-	C_RESET_CONTENT = 205,
-	C_PARTIAL_CONTENT = 206,
-
-	C_MULTIPLE_CHOICE = 300,
-	C_MOVED_PERMANENTLY = 301,
-	C_FOUND = 302,
-	C_SEE_OTHER = 303,
-	C_NOT_MODIFIED = 304,
-	C_USE_PROXY = 305,
-	C_TEMPORARY_REDIRECT = 307,
-
-	C_BAD_REQUEST = 400,
-	C_UNAUTHORIZED = 401,
-	C_PAYMENT_REQUIRED = 402,
-	C_FORBIDDEN = 403,
-	C_NOT_FOUND = 404,
-	C_METHOD_NOT_ALLOWED = 405,
-	C_NOT_ACCEPTABLE = 406,
-	C_PROXY_AUTHENTICATION_REQUIRED = 407,
-	C_REQUEST_TIMEOUT = 408,
-	C_CONFLICT = 409,
-	C_GONE = 410,
-	C_LENGTH_REQUIRED = 411,
-	C_PRECONDITION_FAILED = 412,
-	C_REQUEST_ENTITY_TOO_LARGE = 413,
-	C_REQUEST_URI_TOO_LONG = 414,
-	C_UNSUPPORTED_MEDIA_TYPE = 415,
-	C_REQUEST_RANGE_NOT_SATISFIABLE = 416,
-	C_EXPECTATION_FAILED = 417,
-
-	C_INTERNAL_SERVER_ERROR = 500,
-	C_NOT_IMPLEMENTED = 501,
-	C_BAD_GATEWAY = 502,
-	C_SERVICE_UNAVAILABLE = 503,
-	C_GATEWAY_TIMEOUT = 504,
-	C_HTTP_VERSION_NOT_SUPPORTED = 505
-} http_code_t;
-
+# include "Epoll.hpp"
+# include "Chain.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
-
-typedef struct server_link_s
-{
-	method_t		methods;
-	std::string		pathname;
-	middleware_t	middleware;
-} server_link_t;
-
-typedef std::vector<server_link_t>	chain_t;
 
 class	Serve
 {
 	Log				_logger;
-	int				_fd;
-	addresses_t		_addresses;
-	chain_t			_response_chain;
-	chain_t			_error_chain;
+	Epoll			_epoll;
+	binds_t			_binds;
+	Chain			_response_chain;
+	Chain			_error_chain;
 
 	public:
-		Serve(void)
+		Serve(void): _epoll(_logger)
 		{
-			if ((_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
-				throw new ServerSocketException();
+			_response_chain.setErrorChain(_error_chain);
 		}
 	
 		virtual ~Serve(void)
 		{
+			binds_t::iterator	it		= _binds.begin();
+			
+			while (it != _binds.end())
+			{
+				_destroyBind(*it);
+				++it;
+			}
+		}
+
+	private:
+		void			_destroyBind(server_bind_t &bind)
+		{
 			try
 			{
-				if (_fd >= 0)
-					close(_fd);
+				if (bind.fd)
+					close(bind.fd);
 			}
 			catch(...)
 			{}
 		}
 
-		void	bind(std::string address, int port)
+		std::string		_netIpToStr(in_addr_t ip)
 		{
-			server_address_t	addr;
+			return (inet_ntoa(*reinterpret_cast<in_addr *>(&ip)));
+		}
+
+		server_bind_t	&_bindFromFD(int fd)
+		{
+			static server_bind_t	nullBind;
+			binds_t::iterator		it			= _binds.begin();
+
+			while (it != _binds.end())
+			{
+				if (it->fd == fd)
+					return (*it);
+			}
+			
+			_logger.warn("Bind not found for gived FD");
+			return (nullBind);
+		}
+
+		bool	_doesBelongToBinds(int fd)
+		{
+			binds_t::iterator		it		= _binds.begin();
+
+			while (it != _binds.end())
+			{
+				if (it->fd == fd)
+					return (true);
+			}
+			
+			return (false);
+		}
+
+		in_addr_t		_ipFromHost(std::string host)
+		{
+			std::stringstream	error;
+			in_addr_t			ip;
+			struct hostent		*domain;
+
+			if ((ip = inet_addr(host.c_str())) == INADDR_NONE)
+			{
+				if ((domain = gethostbyname(host.c_str())) == NULL)
+				{
+					error << "\"" << host << "\" is not recognized as a valid IP v4 address or know host";
+					_logger.fail(error.str());
+					return (INADDR_NONE);
+				}
+				if (domain->h_addrtype != AF_INET)
+				{
+					error << "\"" << host << "\" is not IP v4";
+					_logger.fail(error.str());
+					return (INADDR_NONE);
+				}
+				if ((ip = *(reinterpret_cast<in_addr_t *>(domain->h_addr))) == INADDR_NONE)
+				{
+					error << "\"" << host << "\" is can't be resolved as a valid IP v4 address";
+					_logger.fail(error.str());
+					return (INADDR_NONE);
+				}
+			}
+
+			return (ip);
+		}
+
+	public:
+		void	bind(std::string host, int port)
+		{
+			in_addr_t			ip;
+			server_bind_t		bind;
+			int					opts	= 1;
 			std::stringstream	error;
 
-			bzero( &addr, sizeof(addr) );
-			addr.address = address;
-			addr.port = port;
-			addr.sockaddr_in.sin_family = AF_INET;
-			addr.sockaddr_in.sin_addr.s_addr = inet_addr(address.c_str());
-			addr.sockaddr_in.sin_port = htons(port);
-			addr.sockaddr = reinterpret_cast<sockaddr_t*>(&addr.sockaddr_in);
-			addr.len = sizeof(addr.sockaddr_in);
-
-			if (::bind(_fd, addr.sockaddr, addr.len) == -1)
+			if ((ip = _ipFromHost(host)) == INADDR_NONE)
+				return ;
+			if ((bind.fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
+				throw new ServerSocketException("Socket creation failed");
+			if (setsockopt(bind.fd, SOL_SOCKET, SO_REUSEADDR, &opts, sizeof(opts)) == -1)
 			{
-				error << "Fail to bind " << address << " to port " << port;
+				_destroyBind(bind);
+				throw new ServerSocketException("Failed to set socket options");
+			}
+
+			bind.host = host;
+			bind.ip = _netIpToStr(ip);
+			bind.port = port;
+			bind.sockaddr_in.sin_family = AF_INET;
+			bind.sockaddr_in.sin_addr.s_addr = ip;
+			bind.sockaddr_in.sin_port = htons(port);
+			bind.sockaddr = reinterpret_cast<sockaddr_t*>(&bind.sockaddr_in);
+			bind.len = sizeof(bind.sockaddr_in);
+			if (::bind(bind.fd, bind.sockaddr, bind.len) == -1)
+			{
+				error << "Fail to bind " << host << " [" << bind.ip << "] to port " << port;
 				_logger.fail(error.str(), errno);
+				_destroyBind(bind);
 			}
 			else
-				_addresses.push_back(addr);
+				_binds.push_back(bind);
 		}
 
 		void	begin(void)
 		{
-			addresses_t::iterator	it		= _addresses.begin();
-			server_address_t		addr;
+			binds_t::iterator	it		= _binds.begin();
+			server_bind_t		bind;
 
-			if (listen(_fd, 1) == -1)
-				throw new ServerSocketException("Socket failed to listen");
+			while (it != _binds.end())
+			{
+				bind = *it;
+
+				if (listen(bind.fd, 1) == -1)
+					throw new ServerSocketException("Socket failed to listen");
 			
-			while (it != _addresses.end())
-			{
-				addr = *it;
-				_logger.greeting(addr.address, addr.port);
+				_epoll.add(bind.fd, ET_BIND, NULL);
+
+				_logger.greeting(bind.host, bind.port);
+
 				++it;
 			}
 		}
 
-		void	use(middleware_t middleware, chain_flag_t flag = F_NORMAL,
-					method_t methods = M_ALL)
+		void	use(IMiddleware &middleware, chain_flag_t flag = F_NORMAL, method_t methods = M_ALL)
 		{
-			server_link_t	link;
-
-			link.methods = methods;
-			link.pathname = "";
-			link.middleware = middleware;
-
 			if (flag & F_NORMAL)
-				_response_chain.push_back(link);
+				_response_chain.use(middleware, methods);
 			if (flag & F_ERROR)
-				_error_chain.push_back(link);
+				_error_chain.use(middleware, methods);
 		}
 
-		bool	canUseLink(server_link_t &link, Request &req)
+		void	use(bool (&middleware)(Request&, Response&), chain_flag_t flag = F_NORMAL, method_t methods = M_ALL)
 		{
-			return (
-				( req.method == M_UNKNOWN  || (link.methods & req.method) )
-				&& link.pathname.compare(req.pathname) <= 0
-			);
+			if (flag & F_NORMAL)
+				_response_chain.use(middleware, methods);
+			if (flag & F_ERROR)
+				_error_chain.use(middleware, methods);
 		}
 
-		void	execChain(chain_t &chain, Request &req, Response &res)
+		RunningChain	*exec(int connection, uint32_t events)
 		{
-			chain_t::iterator	it		= chain.begin();
-			server_link_t		link;
-
-			while (it != chain.end() && !res.sent)
-			{
-				link = *it;
-				if (canUseLink(link, req))
-					link.middleware(req, res);
-				++it;
-			}
-			if (!res.sent)
-				_logger.warn("Chain finished without sending data");
+			return (_response_chain.exec(connection, events, _logger));
 		}
 
-		void	exec(int connection, server_address_t &addr)
+		bool	retake(RunningChain *instance, uint32_t events)
 		{
-			Request 		req(connection, addr);
-			Response		res(connection, addr, _logger);
+			return (_response_chain.retake(instance, events));
+		}
 
-			try
-			{
-				execChain(_response_chain, req, res);
-			}
-			catch (const std::exception &e)
-			{
-				_logger.fail(e.what());
-				res.error = &e;
+		// bool	retake(int fd, uint32_t events)
+		// {
+		// 	if (_error_chain.retake(fd, events))
+		// 		return (true);
+		// 	if (_response_chain.retake(fd, events))
+		// 		return (true);
 
-				try
+		// 	_logger.warn("FD doesn't match with any instances");
+			
+		// 	return (false);
+		// }
+
+		void	retake()
+		{
+			_error_chain.retake();
+			_response_chain.retake();
+		}
+
+		void	accept(void)
+		{
+			events_t				events;
+			events_t::iterator		it;
+			int						connection;
+			RunningChain			*chainInstance;
+			event_data_t			data;
+
+			retake();
+
+			events = _epoll.accept();
+			it = events.begin();
+
+			while (it != events.end())
+			{
+				data = *static_cast<event_data_t *>(it->data.ptr);
+
+				if (data.type == ET_CONNECTION)
 				{
-					execChain(_error_chain, req, res);
+					retake(static_cast<RunningChain *>(data.data), it->events);
 				}
-				catch(const std::exception &ce)
+				else if (data.type == ET_BIND)
 				{
-					_logger.fail("Failed to answer");
+					connection	= ::accept(data.fd, NULL, NULL);
 
-					try
+					if (connection >= 0)
 					{
-						::close(connection);
+						chainInstance = exec(connection, 0);
+						
+						if (chainInstance)
+							_epoll.add(connection, ET_CONNECTION, chainInstance);
 					}
-					catch (...)
-					{}
+					// else if (errno == EWOULDBLOCK)  // Le sujet interdit la lecture d'errno après lecture ou écriture
+					// 	_logger.warn("EWOULDBLOCK happened with EPOLL");
+					else
+						_logger.fail("Fail to grab connection", errno);
 				}
-			}
-		}
 
-		int		accept(void)
-		{
-			int						connection	= -1;
-			addresses_t::iterator	it			= _addresses.begin();
-			std::stringstream		error;
-			server_address_t		addr;
-
-			while (it != _addresses.end() && connection == -1)
-			{
-				addr = *it;
-				connection = ::accept(_fd, addr.sockaddr, &addr.len);
-
-				if (connection >= 0)
-					exec(connection, addr);
-				else if (errno != EWOULDBLOCK)
-					_logger.fail("Fail to grab connection", errno);
 				++it;
 			}
-
-			return (connection);
 		}
+
+		// void	accept(void)
+		// {
+		// 	server_bind_t			bind;
+		// 	events_t				events;
+		// 	events_t::iterator		it;
+		// 	int						connection;
+
+		// 	events = _epoll.accept();
+		// 	it = events.begin();
+
+		// 	while (it != events.end())
+		// 	{
+		// 		if (!retake(it->data.fd, it->events))
+		// 		{
+		// 			connection	= ::accept(it->data.fd, NULL, NULL);
+
+		// 			if (connection >= 0)
+		// 			{
+		// 				bind = _bindFromFD(it->data.fd);
+		// 				exec(connection, bind, it->events);
+		// 			}
+		// 			else if (errno == EWOULDBLOCK)
+		// 				_logger.warn("EWOULDBLOCK happened with EPOLL");
+		// 			else
+		// 				_logger.fail("Fail to grab connection", errno);
+		// 		}
+
+		// 		++it;
+		// 	}
+
+		// 	retake();
+		// }
 
 		class	ServerException: public std::runtime_error
 		{

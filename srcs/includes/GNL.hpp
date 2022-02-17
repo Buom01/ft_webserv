@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   GNL.hpp                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/12/04 17:06:14 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 19:21:33 by cbertran         ###   ########.fr       */
+/*   Updated: 2021/07/27 20:45:58 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,9 @@ static int		buff_strip_used(size_t len, char *buffer, size_t buffer_size)
 	i = 0;
 	if (len < buffer_size && (buffer[len] == '\n' || buffer[len] == '\r'))
 	{
-		len++;
+		++len;
+		if ((buffer[len] == '\n' || buffer[len] == '\r') && buffer[len - 1] != buffer[len])
+			++len;
 		same_line = 0;
 	}
 	while (i + len < buffer_size)

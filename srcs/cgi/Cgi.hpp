@@ -3,14 +3,24 @@
 # include <sys/stat.h>
 # include <vector>
 # include <iostream>
+# include <fstream>
+# include <sstream>
+# include <cstdlib>
+
+# include <pthread.h>
+# include <sys/wait.h>
+# include <unistd.h>
+
+# include "Url.hpp"
 # include "Parse.hpp"
 # include "Regex.hpp"
+# include "Split.hpp"
 
 struct CGI_Instance
 {
 	std::string location;
 	std::string extension;
-	std::string	directory;
+	std::string	path;
 	bool		GET;
 	bool		PUT;
 	bool		POST;
@@ -42,7 +52,7 @@ class CGI
 				end = str.find(" ", start);
 				token = str.substr(start, end - start);
 				if (position == 1) instance.extension = token;
-				else if (position == 2) instance.directory = token;
+				else if (position == 2) instance.path = token;
 				else
 				{
 					if (token == "GET") instance.GET = true;
@@ -78,25 +88,130 @@ class CGI
 		CGI(const Parse& Parse) : _Parse(Parse) { createCGIvector(); }
 		~CGI() {}
 
-		void UpdateCGI(const Parse& Parse)
+		/**
+		 * 	Update CGI if configuration file change
+		 * 	@param Parse: reference to new Parse object 
+		 */
+		void updateCGI(const Parse& Parse)
 		{
 			_Parse = Parse;
 			createCGIvector();
 		}
 
+		/**
+		 *	Print CGI config for debug
+		 */
 		void printCGI()
 		{
 			for (std::vector<CGI_Instance>::iterator it = _CGI.begin(); it != _CGI.end(); ++it)
 			{
 				std::cout << it->location << " {" << std::endl;
 				std::cout << "Extension:" << it->extension << "|" << std::endl;
-				std::cout << "Directory:" << it->directory << "|" << std::endl;
+				std::cout << "path:" << it->path << "|" << std::endl;
 				std::cout << "GET:" << it->GET << "|" << std::endl;
 				std::cout << "PUT:" << it->PUT << "|" << std::endl;
 				std::cout << "POST:" << it->POST << "|" << std::endl;
 				std::cout << "DELETE:" << it->DELETE << "|" << std::endl;
 				std::cout << "}" << std::endl;
 			}
+		}
+	
+	// fork system part
+	private:
+		std::string getBlob(std::string filepath)
+		{
+			std::ifstream		in;
+			std::ostringstream	sstr;
+			in.open(filepath.c_str());
+			sstr << in.rdbuf();
+			return sstr.str();
+		}
+
+		int start(std::string filePath, std::string executablePath, char **envp)
+		{
+			pid_t		child;
+			int			status;
+			int			pipe_fd[2];
+			std::string	raw = getBlob(filePath);
+
+			if (pipe(pipe_fd) == -1)
+			{
+				std::cerr << "Pipe creation failed" << std::endl;
+				return 1;
+			}
+			child = fork();
+			if (child == -1)
+			{
+				std::cerr << "Fork creation failed" << std::endl;
+				return 1;
+			}
+			else if (child == 0)
+			{
+				close(pipe_fd[0]);
+				std::vector<char> blob(raw.begin(), raw.end()); blob.push_back('\0');
+				char *argv[1]; argv[0] = &blob[0]; argv[1] = NULL;
+				if (execve(executablePath.c_str(), argv, envp) == -1)
+				{
+					std::cerr << "Execve failed" << std::endl;
+					close(pipe_fd[1]);
+					exit(-1);
+				}
+				close(pipe_fd[1]);
+				exit(0);
+			}
+			else
+			{
+				close(pipe_fd[1]);
+				wait(&status);
+				close(pipe_fd[0]);
+			}
+			return 0;
+		}
+	public:
+		/**
+		 * 	Check if cgi exist in this location. Execute script and return generate data. 
+		 *  Return null if failed.
+		 * 	@param location: complete url
+		 */
+		std::string execute(std::string location, char **envp)
+		{
+			URL			_url(location);
+			Regex		regex;
+			std::string	_path = "";
+			std::string	_file_name;
+			std::string	_file_extension;
+			std::vector<std::string> directory = split(_url.pathname(), "/");
+			size_t x = 0;
+			for (std::vector<std::string>::iterator it = directory.begin(); it != directory.end(); ++it)
+			{
+				if (x < directory.size() - 1)
+				{
+					_path += *it;
+					_path += "/";
+				}
+				else if (x < directory.size() && x >= directory.size() - 1)
+					_file_name = *it;
+				x++;
+			}; _path.erase(_path.size() - 1);
+			if (!_file_name.empty())
+			{
+				regex.Match(_file_name, "(.*)\\.(.*)");
+				if (regex.GetSize() > 2)
+				{
+					_file_name = regex.GetMatch()[1].occurence;
+					_file_extension = "." + regex.GetMatch()[2].occurence;
+				}
+				else
+					_file_extension = "*";
+			}
+			for (std::vector<CGI_Instance>::iterator it = _CGI.begin(); it != _CGI.end(); ++it)
+			{
+				if (it->location == _path && it->extension == _file_extension)
+				{
+					std::cout << start(_url.pathname(), _path, envp) << std::endl;
+				}
+			}
+			return "Nope";
 		}
 };
 
