@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 16:03:24 by badam            ###   ########.fr       */
+/*   Updated: 2022/02/17 22:47:57 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,10 +109,19 @@ class Request
 			}
 		}
 
-		void	fire(uint32_t _events)
+		bool	fire(uint32_t _events)
 		{
-			std::cout << "Fire !" << std::endl;
-			events = events | _events;
+			if (!(~events & _events))
+			{
+				std::cout << "Ignored fire" << std::endl;
+				return (false);
+			}
+			else
+			{
+				std::cout << "Fire !" << std::endl;
+				events = events | _events;
+				return (true);
+			}
 		}
 
 		void	unfire(uint32_t _events)

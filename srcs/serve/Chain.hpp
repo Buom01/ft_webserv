@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 02:50:36 by badam            ###   ########.fr       */
+/*   Updated: 2022/02/17 21:58:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -233,8 +233,7 @@ class   Chain
 
 		bool	retake(RunningChain *instance, uint32_t events)
 		{
-			instance->req.fire(events);
-			if (instance->state == CS_AWAIT_EVENT)
+			if (instance->req.fire(events) && instance->state == CS_AWAIT_EVENT)
 			{
 				instance->state = CS_OTHER;
 				
