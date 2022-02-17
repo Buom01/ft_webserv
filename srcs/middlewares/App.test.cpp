@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/01/11 14:05:52 by badam            ###   ########.fr       */
+/*   Updated: 2022/02/17 02:38:57 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@
 # include "read.cpp"
 # include "write.cpp"
 
-bool	test_breakchain(Request &req, Response &)
+bool	test_breakchain(Request &, Response &)
 {
 	static bool	one_time_on_two	= true;
 
@@ -25,7 +25,7 @@ bool	test_breakchain(Request &req, Response &)
 	return (one_time_on_two = !one_time_on_two);
 }
 
-bool	test_throwchain(Request &req, Response &)
+bool	test_throwchain(Request &, Response &)
 {
 	throw new Serve::ServerSocketException("test_throwchain middleware");
 }
@@ -47,18 +47,19 @@ int	main(void)
 	app.use(parseStartLine);
 	app.use(parseRequestHeaders);
 
-	app.use(test_breakchain);
+	// app.use(test_breakchain);
 	app.use(test_middleware);
 	// app.use(test_throwchain);
-	
+
 	app.use(addResponseHeaders, F_ALL);
-	app.use(sendResponse, F_ALL);
+	app.use(serializeHeaders, F_ALL);
+	app.use(sendHeader, F_ALL);
+	app.use(sendBodyMockupFunction, F_ALL);
 
 	app.begin();
 	while (1)
 	{
 		app.accept();
-		app.retake();
 		sleep(1);
 	}
 }

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/01/27 20:31:45 by badam            ###   ########.fr       */
+/*   Updated: 2022/02/17 02:31:31 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,11 @@ bool	parseStartLine(Request &req, Response &)
 {
 	std::string	line;
 	Regex		regex;
+
+	if (req.closed())
+		return (true);
+	if (!req.await(EPOLLIN))
+		return (false);
 
 	if (get_next_line_string(req.fd, line, req.buff, SERVER_BUFFER_SIZE) < 0)
 		return (false);
@@ -72,6 +77,11 @@ bool	parseStartLine(Request &req, Response &)
 bool	parseRequestHeaders(Request &req, Response &)
 {
 	std::string	line;
+
+	if (req.closed())
+		return (true);
+	if (!req.await(EPOLLIN))
+		return (false);
 
 	while (get_next_line_string(req.fd, line, req.buff, SERVER_BUFFER_SIZE) > 0 && line.length())
 	{

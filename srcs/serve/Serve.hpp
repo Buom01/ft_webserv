@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/01/27 00:09:49 by badam            ###   ########.fr       */
+/*   Updated: 2022/02/17 16:14:11 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,8 +67,8 @@ class	Serve
 
 		server_bind_t	&_bindFromFD(int fd)
 		{
-			static server_bind_t	nullBind = {0};
-			binds_t::iterator		it		= _binds.begin();
+			static server_bind_t	nullBind;
+			binds_t::iterator		it			= _binds.begin();
 
 			while (it != _binds.end())
 			{
@@ -78,6 +78,19 @@ class	Serve
 			
 			_logger.warn("Bind not found for gived FD");
 			return (nullBind);
+		}
+
+		bool	_doesBelongToBinds(int fd)
+		{
+			binds_t::iterator		it		= _binds.begin();
+
+			while (it != _binds.end())
+			{
+				if (it->fd == fd)
+					return (true);
+			}
+			
+			return (false);
 		}
 
 		in_addr_t		_ipFromHost(std::string host)
@@ -159,7 +172,7 @@ class	Serve
 				if (listen(bind.fd, 1) == -1)
 					throw new ServerSocketException("Socket failed to listen");
 			
-				_epoll.add(bind.fd);
+				_epoll.add(bind.fd, ET_BIND, NULL);
 
 				_logger.greeting(bind.host, bind.port);
 
@@ -183,10 +196,27 @@ class	Serve
 				_error_chain.use(middleware, methods);
 		}
 
-		void	exec(int connection, server_bind_t &bind)
+		RunningChain	*exec(int connection, uint32_t events)
 		{
-			_response_chain.exec(connection, bind, _logger);
+			return (_response_chain.exec(connection, events, _logger));
 		}
+
+		bool	retake(RunningChain *instance, uint32_t events)
+		{
+			return (_response_chain.retake(instance, events));
+		}
+
+		// bool	retake(int fd, uint32_t events)
+		// {
+		// 	if (_error_chain.retake(fd, events))
+		// 		return (true);
+		// 	if (_response_chain.retake(fd, events))
+		// 		return (true);
+
+		// 	_logger.warn("FD doesn't match with any instances");
+			
+		// 	return (false);
+		// }
 
 		void	retake()
 		{
@@ -196,31 +226,78 @@ class	Serve
 
 		void	accept(void)
 		{
-			server_bind_t			bind;
-			epoll_fds_t				fds;
-			epoll_fds_t::iterator	it;
+			events_t				events;
+			events_t::iterator		it;
 			int						connection;
+			RunningChain			*chainInstance;
+			event_data_t			data;
 
-			fds = _epoll.accept();
-			it = fds.begin();
+			retake();
 
-			while (it != fds.end())
+			events = _epoll.accept();
+			it = events.begin();
+
+			while (it != events.end())
 			{
-				connection	= ::accept(*it, NULL, NULL);
+				data = *static_cast<event_data_t *>(it->data.ptr);
 
-				if (connection >= 0)
+				if (data.type == ET_CONNECTION)
 				{
-					bind = _bindFromFD(*it);
-					exec(connection, bind);
+					retake(static_cast<RunningChain *>(data.data), it->events);
 				}
-				else if (errno == EWOULDBLOCK)
-					_logger.warn("EWOULDBLOCK happened with EPOLL");
-				else
-					_logger.fail("Fail to grab connection", errno);
+				else if (data.type == ET_BIND)
+				{
+					connection	= ::accept(data.fd, NULL, NULL);
+
+					if (connection >= 0)
+					{
+						chainInstance = exec(connection, 0);
+						
+						if (chainInstance)
+							_epoll.add(connection, ET_CONNECTION, chainInstance);
+					}
+					// else if (errno == EWOULDBLOCK)  // Le sujet interdit la lecture d'errno après lecture ou écriture
+					// 	_logger.warn("EWOULDBLOCK happened with EPOLL");
+					else
+						_logger.fail("Fail to grab connection", errno);
+				}
 
 				++it;
 			}
 		}
+
+		// void	accept(void)
+		// {
+		// 	server_bind_t			bind;
+		// 	events_t				events;
+		// 	events_t::iterator		it;
+		// 	int						connection;
+
+		// 	events = _epoll.accept();
+		// 	it = events.begin();
+
+		// 	while (it != events.end())
+		// 	{
+		// 		if (!retake(it->data.fd, it->events))
+		// 		{
+		// 			connection	= ::accept(it->data.fd, NULL, NULL);
+
+		// 			if (connection >= 0)
+		// 			{
+		// 				bind = _bindFromFD(it->data.fd);
+		// 				exec(connection, bind, it->events);
+		// 			}
+		// 			else if (errno == EWOULDBLOCK)
+		// 				_logger.warn("EWOULDBLOCK happened with EPOLL");
+		// 			else
+		// 				_logger.fail("Fail to grab connection", errno);
+		// 		}
+
+		// 		++it;
+		// 	}
+
+		// 	retake();
+		// }
 
 		class	ServerException: public std::runtime_error
 		{
