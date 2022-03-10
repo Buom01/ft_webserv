@@ -1,11 +1,16 @@
 #ifndef __REGEX
 # define __REGEX
+# define TEMP 2048
+# define NO_FLAG 0
+# define GLOBAL_FLAG 1
 # include <sys/types.h>
 # include <regex.h>
 # include <iostream>
 # include <fstream>
+# include <algorithm>
 # include <cstring>
 # include <exception>
+# include <vector>
 
 struct match_t
 {
@@ -20,15 +25,15 @@ class Regex
 	private:
 		const char	*_line;
 		const char	*_pos;
+		const char 	*_reg;
+		int			_size_line;
+		size_t		_size;
 		regex_t		_regex;
 		match_t		*__match;
 
 	public:
-		Regex() : _line(NULL), _pos(NULL), _regex(), __match(NULL) {}
-		Regex(const std::string &regex, const std::string &line) : _regex(), __match(NULL)
-		{
-			Init(regex, line);
-		}
+		Regex() : _line(NULL), _pos(NULL), _reg(NULL), _regex(), __match(NULL) {}
+		Regex(const std::string &regex, const std::string &line) : _regex(), __match(NULL) { init(regex, line); }
 		~Regex()
 		{
 			if (_regex.re_nsub)
@@ -40,7 +45,7 @@ class Regex
 	private:
 		bool compile_regex (regex_t * r, const char * regex_text)
 		{
-			int status = regcomp (r, regex_text, REG_EXTENDED|REG_NEWLINE);
+			int status = regcomp (r, regex_text, REG_EXTENDED | REG_NEWLINE);
 			if (status != 0)
 			{
 				char error_message[0x1000];
@@ -51,57 +56,12 @@ class Regex
 			return false;
 		}
 
-		match_t *match_regex (regex_t * r, const char * to_match)
-		{
-			const size_t n_matches = GetSize();
-			regmatch_t m[n_matches];
-			if (__match)
-				delete [] __match;
-			__match = new match_t[n_matches];
-			if (!regexec (r, _pos, n_matches, m, 0))
-			{
-				size_t i = 0;
-				for (i = 0; i < n_matches; ++i)
-				{
-					int start;
-					int finish;
-					if (m[i].rm_so == -1)
-						break;
-					start = m[i].rm_so + (_pos - to_match);
-					finish = m[i].rm_eo + (_pos - to_match);
-					__match[i].start = start;
-					__match[i].end = finish;
-					__match[i].width = (finish - start);
-					__match[i].occurence = std::string(to_match, start, (finish - start));
-				}
-				_pos += m[0].rm_eo;
-				return (__match);
-			}
-			return (NULL);
-		}
-
-	public:
-		/**
-		 * 	Return size of last generate tab of regex_t
-		 */
-		size_t GetSize() const { return (_regex.re_nsub + 1); }
-
-		/**
-		 *	Return match_t[] containing the match followed by groups
-		 *	or NULL if there are no more match
-		 *  of the last call to Exec or Match
-		 */
-		match_t *GetMatch() const { return __match; }
-
-		/**
-		 * 	Initialize the regex and prepare the line
-		 * 	@param line : line to search occurence
-		 * 	@param regex : regex rule
-		 */
-		void Init(const std::string &regex, const std::string &line)
+		void init(const std::string &regex, const std::string &line)
 		{
 			_line = line.c_str();
 			_pos = line.c_str();
+			_reg = regex.c_str();
+			_size_line = static_cast<int>(line.size());
 			if (_regex.re_nsub)
 				regfree(&_regex);
 			compile_regex(&_regex, regex.c_str());
@@ -112,24 +72,92 @@ class Regex
 			}
 		}
 
+		match_t	*parse(regex_t *r, const char *to_match, int flag)
+		{
+			size_t 					n_matches = _regex.re_nsub + 1;
+			std::vector<match_t>	matches;
+			regmatch_t				pmatch[n_matches];
+			match_t					temp;
+			
+			for (size_t x = 0; regexec(r, _pos, n_matches, pmatch , 0) == 0 ; x++)
+			{
+				if (x > 0 && flag != GLOBAL_FLAG)
+					break;
+				for (size_t pass = 0; pass < n_matches; pass++)
+				{
+					++_size;
+					temp.start = pmatch[pass].rm_so + (_pos - to_match);
+					temp.end = pmatch[pass].rm_eo + (_pos - to_match);
+					if (temp.end > _size_line)
+						temp.end = _size_line;
+					temp.width = temp.end - temp.start;
+					temp.occurence = std::string(_pos + pmatch[pass].rm_so, temp.width);
+					matches.push_back(temp);
+				}
+				_pos += pmatch[0].rm_eo;
+			}
+
+			_size = matches.size();
+			if (__match)
+				delete [] __match;
+			__match = new match_t[matches.size()];
+
+			for (size_t x = 0; x < _size; x++)
+			{
+				__match[x].end = matches[x].end;
+				__match[x].occurence = matches[x].occurence;
+				__match[x].start = matches[x].start;
+				__match[x].width = matches[x].width;
+			}
+			return __match;
+		}
+	public:
 		/**
-		 * 	Found next occurence in string
-		 *	Return match_t[] containing the match followed by groups
-		 *	or NULL if there are no more match
+		 * Get the number of occurrences in the array
+		 * @return (size_t)
 		 */
-		match_t	*Exec()	{ return match_regex(&_regex, _line); }
+		size_t size() const { return _size; }
 
 		/**
-		 * 	Found occurence(s) in string
-		 * 	@param line : line to search occurence
-		 * 	@param regex : regex rule
-		 *  Return match_t[] containing the match followed by groups
-		 *	or NULL if there are no match
+		 *	Get the array of occurrences
+		 *	@return (match_t[]) array containing the match(s)
+		 *	If error, match_t[1].occurence.empty() is true
 		 */
-		match_t *Match(const std::string line, const std::string regex)
+		match_t *match() const { return __match; }
+
+		/// Print occurrences in a valid json format
+		void	print()
 		{
-			Init(regex, line);
-			return Exec();
+			std::cout << "[" << std::endl;
+			for (size_t x = 0; x < _size; x++)
+			{
+				std::replace(__match[x].occurence.begin(), __match[x].occurence.end(),'\t',' ');
+				std::cout << "  {" << std::endl;
+				std::cout << "     \"Start\"     : " << "\"" << __match[x].start << "\"," << std::endl;
+				std::cout << "     \"End\"       : " << "\"" << __match[x].end << "\"," << std::endl;
+				std::cout << "     \"Width\"     : " << "\"" << __match[x].width << "\"," << std::endl;
+				std::cout << "     \"Occurence\" : " << "\"" << __match[x].occurence << "\"" << std::endl;
+				std::cout << "  }";
+				if (x < _size - 1)
+					std::cout << ",";
+				std::cout << std::endl;
+			} 
+			std::cout << "]" << std::endl;
+		}
+
+		/**
+		 * 	Found all occurences in string
+		 * 	@param line (std::string) line to search occurence
+		 * 	@param regex (std::string) regex rules
+		 * 	@param flag (int) by default regex stop at first occurence,
+		 * 	pass FLAG_GLOBAL for get all occurences in string
+		 *  @return match_t[size()] containing the matchs
+		 */
+		match_t *exec(const std::string line, const std::string regex, int flag = NO_FLAG)
+		{
+			init(regex, line);
+			parse(&_regex, _line, flag);
+			return __match;
 		}
 };
 

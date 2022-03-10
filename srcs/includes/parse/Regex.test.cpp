@@ -1,42 +1,25 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Regex.test.cpp                                     :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/11 14:49:27 by badam             #+#    #+#             */
-/*   Updated: 2021/07/30 22:32:09 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "Regex.hpp"
 
 int	main(int argc, char **argv)
 {
 	Regex	regex;
-	size_t	i		= 0;
 
 	if (argc < 3)
 	{
+		std::cout << "Regex tester" << std::endl;
 		std::cout << "Usage: [TEXT] [REGEX]" << std::endl;
-		return (0);
+		return 1;
 	}
 	argv++;
 	std::cout << "Testing: \"" << argv[0] << "\"" << std::endl;
 	std::cout << "With: \"" << argv[1] << "\"" << std::endl;
-	regex.Match(argv[0], argv[1]);
+	
+	std::cout << "With no flag:" << std::endl;
+	regex.exec(std::string(argv[0]), std::string(argv[1]));
+	regex.print();
 
-	std::cout << "Found " << regex.GetSize() << " matches." << std::endl;
-	std::cout << "[" << std::endl;
-	while (i < regex.GetSize())
-	{
-		std::cout << "\t\"" << regex.GetMatch()[i].occurence << "\"";
-
-		if (++i < regex.GetSize())
-			std::cout << "," << std::endl;
-		else
-			std::cout << std::endl;
-	}
-	std::cout << "]" << std::endl;
+	std::cout << "With GLOBAL_FLAG:" << std::endl;
+	regex.exec(std::string(argv[0]), std::string(argv[1]), GLOBAL_FLAG);
+	regex.print();
+	return 0;
 }

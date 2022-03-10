@@ -149,7 +149,9 @@ class CGI
 			{
 				close(pipe_fd[0]);
 				std::vector<char> blob(raw.begin(), raw.end()); blob.push_back('\0');
-				char *argv[1]; argv[0] = &blob[0]; argv[1] = NULL;
+				char *argv[2];
+				argv[0] = &blob[0];
+				argv[1] = NULL;
 				if (execve(executablePath.c_str(), argv, envp) == -1)
 				{
 					std::cerr << "Execve failed" << std::endl;
