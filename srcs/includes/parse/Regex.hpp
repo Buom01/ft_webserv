@@ -17,6 +17,7 @@ struct match_t
 	int			start;
 	int			end;
 	int			width;
+	std::string	group;
 	std::string	occurence;
 };
 
@@ -78,21 +79,27 @@ class Regex
 			std::vector<match_t>	matches;
 			regmatch_t				pmatch[n_matches];
 			match_t					temp;
-			
+			std::string				tempGroup;
+
 			for (size_t x = 0; regexec(r, _pos, n_matches, pmatch , 0) == 0 ; x++)
 			{
 				if (x > 0 && flag != GLOBAL_FLAG)
 					break;
 				for (size_t pass = 0; pass < n_matches; pass++)
 				{
-					++_size;
 					temp.start = pmatch[pass].rm_so + (_pos - to_match);
 					temp.end = pmatch[pass].rm_eo + (_pos - to_match);
 					if (temp.end > _size_line)
 						temp.end = _size_line;
 					temp.width = temp.end - temp.start;
 					temp.occurence = std::string(_pos + pmatch[pass].rm_so, temp.width);
-					matches.push_back(temp);
+					if (pass > 0)
+					{
+						temp.group = tempGroup;
+						matches.push_back(temp);
+					}
+					else
+						tempGroup = temp.occurence;
 				}
 				_pos += pmatch[0].rm_eo;
 			}
@@ -104,6 +111,7 @@ class Regex
 
 			for (size_t x = 0; x < _size; x++)
 			{
+				__match[x].group = matches[x].group;
 				__match[x].end = matches[x].end;
 				__match[x].occurence = matches[x].occurence;
 				__match[x].start = matches[x].start;
@@ -125,18 +133,23 @@ class Regex
 		 */
 		match_t *match() const { return __match; }
 
-		/// Print occurrences in a valid json format
+		/**
+		 *	Print occurrences in a valid json format
+		 *	Replace tab with space
+		 */
 		void	print()
 		{
 			std::cout << "[" << std::endl;
 			for (size_t x = 0; x < _size; x++)
 			{
 				std::replace(__match[x].occurence.begin(), __match[x].occurence.end(),'\t',' ');
+				std::replace(__match[x].group.begin(), __match[x].group.end(),'\t',' ');
 				std::cout << "  {" << std::endl;
-				std::cout << "     \"Start\"     : " << "\"" << __match[x].start << "\"," << std::endl;
-				std::cout << "     \"End\"       : " << "\"" << __match[x].end << "\"," << std::endl;
-				std::cout << "     \"Width\"     : " << "\"" << __match[x].width << "\"," << std::endl;
-				std::cout << "     \"Occurence\" : " << "\"" << __match[x].occurence << "\"" << std::endl;
+				std::cout << "     \"Group\"     : \"" << __match[x].group		<< "\","	<< std::endl;
+				std::cout << "     \"Start\"     : \"" << __match[x].start		<< "\","	<< std::endl;
+				std::cout << "     \"End\"       : \"" << __match[x].end		<< "\","	<< std::endl;
+				std::cout << "     \"Width\"     : \"" << __match[x].width		<< "\","	<< std::endl;
+				std::cout << "     \"Occurence\" : \"" << __match[x].occurence	<< "\""		<< std::endl;
 				std::cout << "  }";
 				if (x < _size - 1)
 					std::cout << ",";
