@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Header.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
+/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 14:41:25 by cbertran          #+#    #+#             */
-/*   Updated: 2021/07/31 01:21:35 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/10 14:58:33 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,15 +52,15 @@ class Header
 			std::string					rawValue;
 			std::vector<std::string>	results;
 
-			if (!(match = _regex.Match(raw, "^([^ ]+): ([^,].*)$"))) return results;
+			if (!(match = _regex.exec(raw, "^([^ ]+): ([^,].*)$", GLOBAL_FLAG))) return results;
 			key = toLowerCase(match[1].occurence);
 			rawValue = match[2].occurence;
 
 			results.push_back(key);
-			_regex.Init(" *([^,]+),? *", rawValue);
-			while ((match = _regex.Exec()))
-				results.push_back(match[1].occurence);
 			
+			_regex.exec(rawValue, " *([^,]+),? *", GLOBAL_FLAG);
+			for (size_t x = 0; x < _regex.size(); x++)
+				results.push_back(_regex.match()[x]);
 			return (results);
 		}
 

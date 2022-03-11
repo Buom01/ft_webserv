@@ -129,7 +129,7 @@ class Regex
 		/**
 		 *	Get the array of occurrences
 		 *	@return (match_t[]) array containing the match(s)
-		 *	If error, match_t[1].occurence.empty() is true
+		 *	If no match, size() is zero
 		 */
 		match_t *match() const { return __match; }
 

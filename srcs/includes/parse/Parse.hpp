@@ -1,14 +1,19 @@
 #ifndef __PARSE
 # define __PARSE
-# define REGEX_SIZE 13
+# define REGEX_SIZE 12
+# define NO_KEY "NO_KEY"
+# include <algorithm>
 # include <iostream>
+# include <sstream>
 # include <fstream>
 # include <cstring>
-# include <cstdarg>
+# include <cstdio>
 # include <exception>
 # include <map>
 # include <vector>
 # include <string>
+# include <bits/stdc++.h>
+# include <sys/stat.h>
 # include <arpa/inet.h>
 # include "Regex.hpp"
 # include "nullptr_t.hpp"
@@ -24,9 +29,9 @@ struct s_defineRegex
 	{ "endLocation", "^[ \t]*(});*$", false },
 	{ "alias", "^[ \t]*alias[ \t]+([-a-zA-Z0-9_.\\/]+);$", true },
 	{ "allow", "^[ \t]*allow[ \t]+(.*);$", true },
-	{ "autoindex", "^[ \t]*autoindex[ \t]+(on|off);$", true },
+	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);$", true },
 	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)(\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);$", true },
-	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+([0-9]*)(b|k|m|g);$", true },
+	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);$", true },
 	{ "error_page", "^[ \t]*error_page[ \t]+([0-9 ]*)(\\/.*);$", false },
 	{ "index", "^[ \t]*index[ \t]+(.*);$", true },
 	{ "root", "^[ \t]*root[ \t]+(\\/.*);$", true },
@@ -72,7 +77,7 @@ struct ParseTypedef
 	{
 		std::vector<std::string>	extensions;
 		std::string					path;
-		s_allow						methods;							
+		s_allow						allow;							
 	};
 
 	/**
@@ -81,8 +86,8 @@ struct ParseTypedef
 	 */
 	struct s_clientBodyBufferSize
 	{
-		int		bits;
-		int		size;
+		long int	bits;
+		long int	size;
 	};
 
 	/**
@@ -108,13 +113,13 @@ struct ParseTypedef
 	class	IncorrectConfig : virtual public std::exception
 	{
 		private:
-			const char *e;
+			const std::string e;
 		public:
 			IncorrectConfig(void);
-			IncorrectConfig(const char *_e) : e(_e) {};
+			IncorrectConfig(const std::string _e) : e(_e) {};
 			IncorrectConfig(IncorrectConfig const &copy);
 			IncorrectConfig &operator=(IncorrectConfig const &newObject);
-			virtual const char* what() const throw() { return e; }
+			virtual const char* what() const throw() { return e.c_str(); }
 	};
 };
 
@@ -136,7 +141,7 @@ class Parse : public ParseTypedef
 		{
 			optionsVec locationTemp;
 			std::string line;
-			// bool isLocationBlock = false;
+			bool isLocationBlock = false;
 
 			stream.open(configFilePath.c_str());
 			stream.exceptions(std::ifstream::badbit);
@@ -148,19 +153,8 @@ class Parse : public ParseTypedef
 					continue;
 				for (int i = 0; i < REGEX_SIZE; i++)
 				{
-					Regex.matchOne(line, REGEX[i].regex);
-					
-					for (size_t x = 0; x < Regex.size(); x++)
-					{
-						std::cout << ">>> " << REGEX[i].name << std::endl;
-						std::cout << "Start:" << Regex.match()[x].start << std::endl;
-						std::cout << "End:" << Regex.match()[x].end << std::endl;
-						std::cout << "Width:" << Regex.match()[x].width << std::endl;
-						std::cout << "Occurence:" << Regex.match()[x].occurence << std::endl;
-						std::cout << "===================================" << std::endl;
-					}
-					
-					/*if (Regex.match()[0].occurence.size() <= 0)
+					Regex.exec(line, REGEX[i].regex, GLOBAL_FLAG);
+					if (Regex.size() == 0)
 						continue;
 					if (REGEX[i].name == "endLocation")
 					{
@@ -173,9 +167,9 @@ class Parse : public ParseTypedef
 						if (!isLocationBlock)
 							isLocationBlock = true;
 						defaultVector ret;
-						for (size_t m = 1; m < Regex.size(); m++)
+						for (size_t m = 0; m < Regex.size(); m++)
 							if (!Regex.match()[m].occurence.empty())
-								ret.push_back(trim(Regex.GetMatch()[m].occurence));
+								ret.push_back(trim(Regex.match()[m].occurence));
 						stringPair newPair = std::make_pair(REGEX[i].name, ret);
 
 						if (REGEX[i].noDuplication)
@@ -189,9 +183,9 @@ class Parse : public ParseTypedef
 					else
 					{
 						defaultVector ret;
-						for (size_t m = 1; m < Regex.GetSize(); m++)
-							if (!Regex.GetMatch()[m].occurence.empty())
-								ret.push_back(trim(Regex.GetMatch()[m].occurence));
+						for (size_t m = 0; m < Regex.size(); m++)
+							if (!Regex.match()[m].occurence.empty())
+								ret.push_back(trim(Regex.match()[m].occurence));
 						stringPair newPair = std::make_pair(REGEX[i].name, ret);
 
 						if (REGEX[i].noDuplication)
@@ -202,7 +196,7 @@ class Parse : public ParseTypedef
 						}
 						options.push_back(std::make_pair(REGEX[i].name, ret));
 					}
-					break;*/
+					break;
 				}
 			}
 			stream.close();
@@ -234,7 +228,17 @@ class Parse : public ParseTypedef
 			for (optionsIt it = toSearch.begin(); it != toSearch.end(); it++)
 				if (it->first == key)
 					return it->second;
-			return defaultVector();
+			return defaultVector(1, NO_KEY);
+		}
+
+		bool exist(const std::string name)
+		{
+			struct stat buf;
+			int ret = stat(name.c_str(), &buf);
+
+			if (ret == 0 && S_ISREG(buf.st_mode) == 1)
+				return true;
+			return false;
 		}
 	public:
 		/// Get vector of general options
@@ -256,77 +260,278 @@ class Parse : public ParseTypedef
 		std::string	alias(optionsVec vec)
 		{
 			defaultVector get = findKey("alias", vec);
+			if (get[0] == NO_KEY)
+				return std::string();
 			if (get.empty())
-				return "";
+				throw IncorrectConfig("rule 'alias': no argument is set");
 			return get[0];
 		}
-
-		s_allow	allow(optionsVec vec)
+	private:
+		void _allow(std::string str, std::string err, s_allow *allow)
 		{
-			defaultVector get = findKey("allow", vec);
-			s_allow allow;
-			std::string err;
-
-			allow.DELETE = false;
-			allow.GET = false;
-			allow.POST = false;
-			allow.PUT = false;
-			err = "rule 'allow': flag ";
-
-			/*Regex.matchAll(get[0], "([[:alnum:]]+)");
-
-			std::cout << get[0] << "-" << Regex.GetSize() << std::endl;
-			
-			for (size_t x = 1; x < Regex.GetSize(); x++)
+			Regex.exec(str, "([-a-zA-Z0-9_]+)", GLOBAL_FLAG);
+			for (size_t x = 0; x < Regex.size(); x++)
 			{
-				std::string occ = Regex.GetMatch()[x].occurence;
-				std::cout << ">>" << occ << std::endl;
+				std::string occ = Regex.match()[x].occurence;
 				if (occ == "DELETE")
 				{
-					if (allow.DELETE)
+					if (allow->DELETE)
 					{
 						err += "DELETE is already defined";
-						IncorrectConfig(err.c_str());
+						throw IncorrectConfig(err);
 					}
-					allow.DELETE = true;
+					allow->DELETE = true;
 				}
 				else if (occ == "GET")
 				{
-					if (allow.GET)
+					if (allow->GET)
 					{
 						err += "GET is already defined";
-						IncorrectConfig(err.c_str());
+						throw IncorrectConfig(err);
 					}
-					allow.GET = true;
+					allow->GET = true;
 				}
 				else if (occ == "POST")
 				{
-					if (allow.POST)
+					if (allow->POST)
 					{
 						err += "POST is already defined";
-						IncorrectConfig(err.c_str());
+						throw IncorrectConfig(err);
 					}
-					allow.POST = true;
+					allow->POST = true;
 				}
 				else if (occ == "PUT")
 				{
-					if (allow.PUT)
+					if (allow->PUT)
 					{
 						err += "PUT is already defined";
-						IncorrectConfig(err.c_str());
+						throw IncorrectConfig(err);
 					}
-					allow.PUT = true;
+					allow->PUT = true;
 				}
 				else
 				{
 					err += occ;
-					err += " is undefined";
-					IncorrectConfig(err.c_str());
+					err += " is incorrect";
+					throw IncorrectConfig(err);
 				}
-			}*/
+			}
+		}
+	public:
+		s_allow	allow(optionsVec vec)
+		{
+			defaultVector	get = findKey("allow", vec);
+			std::string		err = "rule 'allow': flag ";
+			s_allow			allow;
+			
+			allow.DELETE = false;
+			allow.GET = false;
+			allow.POST = false;
+			allow.PUT = false;
+			if (get[0] == NO_KEY)
+				return allow;
+			if (get.empty())
+				throw IncorrectConfig("rule 'allow': no argument is set");
+			_allow(get[0], "rule 'allow': flag ", &allow);
 			return allow;
 		}
+
+		s_autoindex autoindex(optionsVec vec)
+		{
+			defaultVector get = findKey("autoindex", vec);
+			s_autoindex autoindex;
+			std::string err = "rule 'autoindex': ";
+
+			autoindex.active = false;
+			if (!get.empty() && get[0] != NO_KEY)
+			{
+				if (get.size() > 1)
+				{
+					err += "there can be only one argument";
+					throw IncorrectConfig(err);
+				}
+				Regex.exec(get[0], "([-a-zA-Z0-9_]+)", GLOBAL_FLAG);
+				if (Regex.size() > 1)
+				{
+					err += "there can be only one argument";
+					throw IncorrectConfig(err);
+				}
+				if (Regex.match()[0].occurence != "on" && Regex.match()[0].occurence != "off")
+				{
+					err += "the argument can only be on or off, not ";
+					err += Regex.match()[0].occurence;
+					throw IncorrectConfig(err);
+				}
+				autoindex.active = (Regex.match()[0].occurence == "off") ? true : false;
+			}
+			return autoindex;
+		}
+		
+		s_cgi cgi(optionsVec vec)
+		{
+			defaultVector get = findKey("cgi", vec);
+			s_cgi cgi;
+			std::string err = "rule 'cgi': ";
+			
+			if (get.size() != 3)
+			{
+				err += "there must be at least [extension] [path to executable] [http request allowed]";
+				throw IncorrectConfig(err.c_str());
+			}
+			Regex.exec(get[0], "(\\.[a-zA-Z0-9_]+)", GLOBAL_FLAG);
+			for (size_t x = 0; x < Regex.size(); x++)
+				cgi.extensions.push_back(Regex.match()[x].occurence);
+
+			if (!exist(get[1]))
+			{
+				err += "the executable does not exist";
+				throw IncorrectConfig(err);
+			}
+			cgi.path = get[1];
+
+			cgi.allow.DELETE = false;
+			cgi.allow.GET = false;
+			cgi.allow.POST = false;
+			cgi.allow.PUT = false;
+			_allow(get[2], "rule 'cgi': flag ", &cgi.allow);
+			return cgi;
+		}
+	private:
+		bool isNumber(const std::string &str)
+		{
+			for (size_t x = 0; x < str.size(); x++)
+				if (std::isdigit(str[x] == 0))
+					return false;
+			return true;
+		}
+	public:
+		s_clientBodyBufferSize clientBodyBufferSize(optionsVec vec)
+		{
+			defaultVector get = findKey("client_body_buffer_size", vec);
+			s_clientBodyBufferSize client;
+
+			client.bits = 16000;
+			client.size = 2000;
+			if (!get.empty() && get[0] != NO_KEY)
+			{
+				long int temp = atol(get[0].c_str());
+				if (temp < 8)
+				{
+					std::string err = "rule 'client_body_buffer_size': the minimum must be 8 bits (one character), actual size is ";
+					std::stringstream strstream;
+					strstream << temp;
+					err += strstream.str();
+					throw IncorrectConfig(err);
+				}
+				if (get[1][0] == 'k')
+					temp *= 1000;
+				else if (get[1][0] == 'm')
+					temp *= 1000000;
+				else if (get[1][0] == 'g')
+					temp *= 1000000000;
+				client.bits = temp;
+				client.size = temp / 8;
+			}
+			return client;
+		}
+
+		typedef std::vector<s_errorPage>	errorPageVector;
+		errorPageVector errorPage(optionsVec vec)
+		{
+			std::vector<defaultVector>	errorsList;
+			errorPageVector				errors;
+			s_errorPage					temp;
+
+			for (optionsIt it = vec.begin(); it != vec.end(); it++)
+				if (it->first == "error_page")
+					errorsList.push_back(it->second);
+			if (errorsList.size() > 0)
+			{
+				for (std::vector<defaultVector>::iterator page = errorsList.begin(); page != errorsList.end(); page++)
+				{
+					Regex.exec((*page)[0], "(-?[0-9]+)", GLOBAL_FLAG);
+					for (size_t x = 0; x < Regex.size(); x++)
+						temp.codes.push_back(Regex.match()[x].occurence);
+					temp.path = trim((*page)[1]);
+					errors.push_back(temp);
+				}
+			}
+			return errors;
+		}
+
+		std::string index(optionsVec vec)
+		{
+			defaultVector	get = findKey("index", vec);
+			std::string		ret = "index.html";
+
+			if (get[0] == NO_KEY)
+				return ret;
+			Regex.exec(get[0], "([-a-zA-Z0-9_.]+)", GLOBAL_FLAG);
+			if (Regex.size() > 1)
+				throw IncorrectConfig("rule 'allow': only one file definition is allowed");
+			return Regex.match()[0].occurence;
+		}
+
+		std::string root(optionsVec vec)
+		{
+			defaultVector	get = findKey("root", vec);
+		
+			if (get[0] == NO_KEY)
+				throw IncorrectConfig("rule 'root': no rule is defined, the server can't work");
+			Regex.exec(get[0], "([-a-zA-Z0-9_./\\]+)", GLOBAL_FLAG);
+			if (Regex.size() > 1)
+				throw IncorrectConfig("rule 'root': only one directory definition is allowed");
+			return Regex.match()[0].occurence;
+		}
+
+		std::vector<std::string> server_name(optionsVec vec)
+		{
+			defaultVector				get = findKey("server_name", vec);
+			std::vector<std::string>	ret;
+
+			if (get[0] == NO_KEY)
+				ret.push_back("localhost");
+			else
+			{
+				Regex.exec(get[0], "([a-zA-Z0-9_.]+)", GLOBAL_FLAG);
+				for (size_t x = 0; x < Regex.size(); x++)
+					ret.push_back(Regex.match()[x].occurence);
+			}
+			return ret;
+		}
+	public:
+		s_listen	listen(optionsVec vec)
+		{
+			defaultVector				get = findKey("listen", vec);
+			std::vector<std::string>	temp;
+			std::string					ip = "127.0.0.1";
+			int							port = 80;
+			s_listen					ret;
+
+			if (get[0] != NO_KEY)
+			{
+				Regex.exec(get[0], "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?([0-9]+)?", GLOBAL_FLAG);
+				for (size_t x = 0; x < Regex.size(); x++)
+				{
+					if (Regex.match()[x].occurence.size() == 0)
+						continue;
+					temp.push_back(Regex.match()[x].occurence);
+				}
+				for (std::vector<std::string>::iterator it = temp.begin(); it != temp.end(); it++)
+				{
+					Regex.exec(ip, "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+)");
+					if (Regex.size() == 1)
+						ip = *it;
+					else
+						port = atoi((*it).c_str());
+				}
+			}
+			ret.ip = inet_addr(ip.c_str());
+			ret.port = htons(port);
+			return ret;
+		}
 	#pragma endregion Getter
+
 	#pragma region Print for debug
 	public:
 		inline void printConfig()
