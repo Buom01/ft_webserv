@@ -29,7 +29,8 @@ struct s_defineRegex
 	{ "server", "^[ \t]*(server)[ \t]*\\{?[ \t]*$", false },
 	{ "location", "^[ \t]*location[ \t]+([a-zA-Z0-9_/.]*)[ \t]*\\{*$", false},
 	{ "endBlock", "^[ \t]*(});*$", false },
-	{ "alias", "^[ \t]*alias[ \t]+([-a-zA-Z0-9_.\\/]+);$", true },
+
+	{ "alias", "^[ \t]*alias[ \t]+(.*);$", true },
 	{ "allow", "^[ \t]*allow[ \t]+(.*);$", true },
 	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);$", true },
 	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)(\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);$", true },
@@ -166,6 +167,7 @@ class Parse : public ParseTypedef
 					line = line.substr(0, commentPos);
 				if (isEmpty(line))
 					continue;
+				line = trim(line);
 				for (int i = 0; i < REGEX_SIZE; i++)
 				{
 					Regex.exec(line, REGEX[i].regex, GLOBAL_FLAG);
@@ -173,14 +175,14 @@ class Parse : public ParseTypedef
 						continue;
 					if (REGEX[i].name == "endBlock")
 					{
-						if (isLocationBlock == true)
+						if (isLocationBlock && isServerBlock)
 						{
 							serverTemp.locations.push_back(locationTemp);
 							locationTemp.first.clear();
 							locationTemp.second.clear();
 							isLocationBlock = false;
 						}
-						else if (isServerBlock == true)
+						else
 						{
 							servers.push_back(serverTemp);
 							serverTemp.locations.clear();
@@ -188,7 +190,6 @@ class Parse : public ParseTypedef
 							++serverTemp.id;
 							isServerBlock = false;
 						}
-						break;
 					}
 					else if (REGEX[i].name == "location")
 					{
@@ -196,10 +197,10 @@ class Parse : public ParseTypedef
 							throw IncorrectConfig("configuration: a location block cannot contain another one");
 						isLocationBlock = true;
 						locationTemp.first.clear();
+						locationTemp.second.clear();
 						for (size_t m = 0; m < Regex.size(); m++)
 							if (!Regex.match()[m].occurence.empty())
 								locationTemp.first += trim(Regex.match()[m].occurence);
-						break;
 					}
 					else if (REGEX[i].name == "server")
 					{
@@ -207,23 +208,34 @@ class Parse : public ParseTypedef
 							throw IncorrectConfig("configuration: a server block cannot contain another one");
 						asServerBlock = true;
 						isServerBlock = true;
-						break;
 					}
-					stringVector ret;
-					for (size_t m = 0; m < Regex.size(); m++)
-						if (!Regex.match()[m].occurence.empty())
-							ret.push_back(trim(Regex.match()[m].occurence));
-					pairOptions newPair = std::make_pair(REGEX[i].name, ret);
-					if (REGEX[i].noDuplication)
-					{
-						optionsVector::iterator it = find(serverTemp.options.begin(), serverTemp.options.end(), newPair);
-						if (it != serverTemp.options.end())
-							serverTemp.options.erase(it);
-					}
-					if (isLocationBlock)
-						locationTemp.second.push_back(newPair);
 					else
-						serverTemp.options.push_back(newPair);
+					{
+						stringVector ret;
+						for (size_t m = 0; m < Regex.size(); m++)
+							if (!Regex.match()[m].occurence.empty())
+								ret.push_back(trim(Regex.match()[m].occurence));
+						pairOptions newPair = std::make_pair(REGEX[i].name, ret);
+						if (REGEX[i].noDuplication)
+						{
+							if (isLocationBlock && isServerBlock)
+							{
+								optionsVector::iterator it = find(locationTemp.second.begin(),  locationTemp.second.end(), newPair);
+								if (it != locationTemp.second.end())
+									locationTemp.second.erase(it);
+							}
+							else
+							{
+								optionsVector::iterator it = find(serverTemp.options.begin(),  serverTemp.options.end(), newPair);
+								if (it != serverTemp.options.end())
+									serverTemp.options.erase(it);
+							}
+						}
+						if (isLocationBlock)
+							locationTemp.second.push_back(newPair);
+						else
+							serverTemp.options.push_back(newPair);
+					}
 					break;
 				}
 			}
@@ -326,11 +338,12 @@ class Parse : public ParseTypedef
 					return (*it).second;
 			return optionsVector();
 		}
-/*
+
 	public:
-		std::string	alias(optionsVec vec)
+		std::string	alias(optionsVector vec)
 		{
-			defaultVector get = findKey("alias", vec);
+			stringVector get = findKey("alias", vec);
+
 			if (get[0] == NO_KEY)
 				return std::string();
 			if (get.empty())
@@ -389,9 +402,9 @@ class Parse : public ParseTypedef
 			}
 		}
 	public:
-		s_allow	allow(optionsVec vec)
+		s_allow	allow(optionsVector vec)
 		{
-			defaultVector	get = findKey("allow", vec);
+			stringVector	get = findKey("allow", vec);
 			std::string		err = "rule 'allow': flag ";
 			s_allow			allow;
 			
@@ -407,9 +420,9 @@ class Parse : public ParseTypedef
 			return allow;
 		}
 
-		s_autoindex autoindex(optionsVec vec)
+		s_autoindex autoindex(optionsVector vec)
 		{
-			defaultVector get = findKey("autoindex", vec);
+			stringVector get = findKey("autoindex", vec);
 			s_autoindex autoindex;
 			std::string err = "rule 'autoindex': ";
 
@@ -437,10 +450,10 @@ class Parse : public ParseTypedef
 			}
 			return autoindex;
 		}
-		
-		s_cgi cgi(optionsVec vec)
+	
+		s_cgi cgi(optionsVector vec)
 		{
-			defaultVector get = findKey("cgi", vec);
+			stringVector get = findKey("cgi", vec);
 			s_cgi cgi;
 			std::string err = "rule 'cgi': ";
 			
@@ -467,6 +480,7 @@ class Parse : public ParseTypedef
 			_allow(get[2], "rule 'cgi': flag ", &cgi.allow);
 			return cgi;
 		}
+
 	private:
 		bool isNumber(const std::string &str)
 		{
@@ -476,9 +490,9 @@ class Parse : public ParseTypedef
 			return true;
 		}
 	public:
-		s_clientBodyBufferSize clientBodyBufferSize(optionsVec vec)
+		s_clientBodyBufferSize clientBodyBufferSize(optionsVector vec)
 		{
-			defaultVector get = findKey("client_body_buffer_size", vec);
+			stringVector get = findKey("client_body_buffer_size", vec);
 			s_clientBodyBufferSize client;
 
 			client.bits = 16000;
@@ -507,18 +521,18 @@ class Parse : public ParseTypedef
 		}
 
 		typedef std::vector<s_errorPage>	errorPageVector;
-		errorPageVector errorPage(optionsVec vec)
+		errorPageVector errorPage(optionsVector vec)
 		{
-			std::vector<defaultVector>	errorsList;
+			std::vector<stringVector>	errorsList;
 			errorPageVector				errors;
 			s_errorPage					temp;
 
-			for (optionsIt it = vec.begin(); it != vec.end(); it++)
+			for (optionsVector::iterator it = vec.begin(); it != vec.end(); it++)
 				if (it->first == "error_page")
 					errorsList.push_back(it->second);
 			if (errorsList.size() > 0)
 			{
-				for (std::vector<defaultVector>::iterator page = errorsList.begin(); page != errorsList.end(); page++)
+				for (std::vector<stringVector>::iterator page = errorsList.begin(); page != errorsList.end(); page++)
 				{
 					Regex.exec((*page)[0], "(-?[0-9]+)", GLOBAL_FLAG);
 					for (size_t x = 0; x < Regex.size(); x++)
@@ -530,9 +544,9 @@ class Parse : public ParseTypedef
 			return errors;
 		}
 
-		std::string index(optionsVec vec)
+		std::string index(optionsVector vec)
 		{
-			defaultVector	get = findKey("index", vec);
+			stringVector	get = findKey("index", vec);
 			std::string		ret = "index.html";
 
 			if (get[0] == NO_KEY)
@@ -543,9 +557,9 @@ class Parse : public ParseTypedef
 			return Regex.match()[0].occurence;
 		}
 
-		std::string root(optionsVec vec)
+		std::string root(optionsVector vec)
 		{
-			defaultVector	get = findKey("root", vec);
+			stringVector	get = findKey("root", vec);
 		
 			if (get[0] == NO_KEY)
 				throw IncorrectConfig("rule 'root': no rule is defined, the server can't work");
@@ -555,9 +569,9 @@ class Parse : public ParseTypedef
 			return Regex.match()[0].occurence;
 		}
 
-		std::vector<std::string> server_name(optionsVec vec)
+		std::vector<std::string> server_name(optionsVector vec)
 		{
-			defaultVector				get = findKey("server_name", vec);
+			stringVector				get = findKey("server_name", vec);
 			std::vector<std::string>	ret;
 
 			if (get[0] == NO_KEY)
@@ -570,10 +584,10 @@ class Parse : public ParseTypedef
 			}
 			return ret;
 		}
-	public:
-		s_listen	listen(optionsVec vec)
+
+		s_listen	listen(optionsVector vec)
 		{
-			defaultVector				get = findKey("listen", vec);
+			stringVector				get = findKey("listen", vec);
 			std::vector<std::string>	temp;
 			std::string					ip = "127.0.0.1";
 			int							port = 80;
@@ -602,7 +616,6 @@ class Parse : public ParseTypedef
 			return ret;
 		}
 	#pragma endregion Getter
-*/
 	#pragma region Print for debug
 	public:
 		/**
@@ -675,5 +688,4 @@ class Parse : public ParseTypedef
 		}
 	#pragma endregion Print for debug
 };
-
 #endif

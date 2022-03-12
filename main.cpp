@@ -9,8 +9,7 @@ int main(int argc, char **argv)
 	try
 	{
 		Parse config(argv[1]);
-
-		config.print();
+		
 		//CGI cgi(config);
 		//cgi.printCGI();
 	}
