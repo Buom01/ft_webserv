@@ -7,6 +7,7 @@
 # include <sstream>
 # include <fstream>
 # include <cstring>
+# include <cctype>
 # include <cstdio>
 # include <exception>
 # include <map>
@@ -51,10 +52,11 @@ struct ParseTypedef
 
 	struct s_server
 	{
+		int				id;
 		optionsVector	options;
 		locationsVector	locations;
+		s_server() : id(-1) {};
 	};
-	
 	typedef std::vector<s_server>					serversVector;
 
 	/**
@@ -148,16 +150,21 @@ class Parse : public ParseTypedef
 		{
 			pairLocations	locationTemp;
 			s_server		serverTemp;
-			std::string line;
+			std::string		line;
+			bool asServerBlock = false;
 			bool isServerBlock = false, isLocationBlock = false;
 
+			serverTemp.id = 0;
 			stream.open(configFilePath.c_str());
 			stream.exceptions(std::ifstream::badbit);
 			if (!stream.is_open())
 				throw std::ifstream::failure("Open configuration file failed");
 			while (getline(stream, line))
 			{
-				if (line.empty())
+				size_t commentPos = line.find("#", 0);
+				if (commentPos != std::string::npos)
+					line = line.substr(0, commentPos);
+				if (isEmpty(line))
 					continue;
 				for (int i = 0; i < REGEX_SIZE; i++)
 				{
@@ -178,6 +185,7 @@ class Parse : public ParseTypedef
 							servers.push_back(serverTemp);
 							serverTemp.locations.clear();
 							serverTemp.options.clear();
+							++serverTemp.id;
 							isServerBlock = false;
 						}
 						break;
@@ -197,6 +205,7 @@ class Parse : public ParseTypedef
 					{
 						if (isServerBlock == true)
 							throw IncorrectConfig("configuration: a server block cannot contain another one");
+						asServerBlock = true;
 						isServerBlock = true;
 						break;
 					}
@@ -219,14 +228,22 @@ class Parse : public ParseTypedef
 				}
 			}
 			stream.close();
+			if (!asServerBlock)
+				throw IncorrectConfig("configuration: no server block is present. A configuration must be in at least one server block");
 		}
 	
 	private:
-		inline const optionsVector::iterator find(
-			optionsVector::iterator first,
-			optionsVector::iterator last,
-			pairOptions pair
-		)
+		bool isEmpty(std::string str)
+		{
+			if (str.empty())
+				return true;
+			for (std::string::iterator it = str.begin(); it != str.end(); it++)
+				if (!isspace(*it))
+					return false;
+			return true;
+		}
+
+		inline const optionsVector::iterator find(optionsVector::iterator first, optionsVector::iterator last, pairOptions pair)
 		{
 			while (first != last)
 			{
@@ -244,18 +261,30 @@ class Parse : public ParseTypedef
 			return str;
 		}
 	#pragma endregion Read config file and parse in a resiliente way
-/*
+
 	#pragma region Getter
-	private:
-		defaultVector findKey(std::string key, optionsVec toSearch)
+	public:
+		/**
+		 * Get stringVector of arguments of key element
+		 * @param key (std::string) key of element (alias, allow, ...)
+		 * @param toSearch (optionsVector) vector of options
+		 * @return stringVector of arguments, if not exist, first element of 
+		 * vector is set to `NO_KEY` value
+		 */
+		stringVector	findKey(std::string key, optionsVector toSearch)
 		{
-			for (optionsIt it = toSearch.begin(); it != toSearch.end(); it++)
+			for (optionsVector::iterator it = toSearch.begin(); it != toSearch.end(); it++)
 				if (it->first == key)
 					return it->second;
-			return defaultVector(1, NO_KEY);
+			return stringVector(1, NO_KEY);
 		}
 
-		bool exist(const std::string name)
+		/**
+		 * Test if file exist
+		 * @param name (std::string) path to file
+		 * @return true if exist
+		 */
+		bool 			exist(const std::string name)
 		{
 			struct stat buf;
 			int ret = stat(name.c_str(), &buf);
@@ -265,21 +294,39 @@ class Parse : public ParseTypedef
 			return false;
 		}
 	public:
-		/// Get vector of general options
-		optionsVec		getOptions() { return options; };
-		/// Get vector of locations blocks
-		locationsVec	getLocations() { return locations; };
-		/// Get vector of options for specific locations blocks, search with location_match
-		optionsVec		getSpecificLocations(std::string location_match )
+		/**
+		 * Get vector of s_server
+		 * @return std::vector<s_server> (serversVector)
+		 */
+		serversVector	getServers() { return servers; }
+
+		/**
+		 * Get specific server block by ID
+		 * @param id ID of server block, 0 by default (first block)
+		 * @return s_server of selected block, or empty s_server if error
+		 */
+		s_server		getServerBlock(int id = 0)
 		{
-			for (locationsIt it = locations.begin(); it != locations.end(); it++)
-			{
-				defaultVector selectedOption = findKey("location", *it);
-				if (!selectedOption.empty() && selectedOption[0] == location_match)
-					return *it;
-			}
-			return optionsVec();
+			if (!servers.empty())
+				for (serversVector::iterator it = servers.begin(); it != servers.end(); it++)
+					if ((*it).id == id)
+						return *it;
+			return s_server();
 		}
+		
+		/**
+		 * Get specific block location of server block
+		 * @param server server block
+		 * @param locationMatch	path of location block search
+		 */
+		optionsVector	getSpecificLocation(s_server server, std::string locationMatch)
+		{
+			for (locationsVector::iterator it = server.locations.begin(); it != server.locations.end(); it++)
+				if ((*it).first == locationMatch)
+					return (*it).second;
+			return optionsVector();
+		}
+/*
 	public:
 		std::string	alias(optionsVec vec)
 		{
@@ -570,6 +617,7 @@ class Parse : public ParseTypedef
 			for (serversVector::iterator it = servers.begin(); it != servers.end(); )
 			{
 				std::cout << TAB << "{" << std::endl;
+				std::cout << TAB << TAB << SEP << "ID" << SEP << ": " << SEP << (*it).id << SEP << std::endl;
 				size = (*it).options.size();
 				if (!(*it).locations.empty())
 					size = -1;
