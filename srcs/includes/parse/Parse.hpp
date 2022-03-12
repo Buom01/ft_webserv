@@ -558,36 +558,60 @@ class Parse : public ParseTypedef
 */
 	#pragma region Print for debug
 	public:
+		/**
+		 * Print to std::cout parsed configuration file to json format
+		 */
 		inline void print()
 		{
-			std::string TAB = "    ", SEP = "\"";
-			for(serversVector::iterator it = servers.begin(); it != servers.end(); it++)
+			int size;
+			std::string TAB = "  ", SEP = "\"";
+			
+			std::cout << "[" << std::endl;
+			for (serversVector::iterator it = servers.begin(); it != servers.end(); )
 			{
-				std::cout << "server {" << std::endl;
+				std::cout << TAB << "{" << std::endl;
+				size = (*it).options.size();
+				if (!(*it).locations.empty())
+					size = -1;
 				for (optionsVector::iterator itConf = (*it).options.begin(); itConf != (*it).options.end(); itConf++)
-					printArgs(*itConf);
-
-				for (locationsVector::iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
+					printArgs(*itConf, false, size--);
+				if (!(*it).locations.empty())
 				{
-					std::cout << TAB << "location " << (*itLoc).first << " {" << std::endl;
-					for (optionsVector::iterator itConf = (*itLoc).second.begin(); itConf != (*itLoc).second.end(); itConf++)
-						printArgs(*itConf, true);
-					std::cout << TAB << "}," << std::endl;
+					std::cout << TAB << TAB << SEP << "location" << SEP << ": {" << std::endl;
+					locationsVector::iterator itLocBegin = (*it).locations.begin();
+					locationsVector::iterator itLocEnd = (*it).locations.end();
+					while (itLocBegin != itLocEnd)
+					{
+						size = (*itLocBegin).second.size();
+						std::cout << TAB << TAB << TAB << SEP << (*itLocBegin).first << SEP << ": {" << std::endl;
+						for (optionsVector::iterator itConf = (*itLocBegin).second.begin(); itConf != (*itLocBegin).second.end(); itConf++)
+							printArgs(*itConf, true, size--);
+						++itLocBegin;
+						std::cout << TAB << TAB << TAB << "}";
+						if (itLocBegin != itLocEnd)
+							std::cout << ",";
+						std::cout << std::endl;
+					}
+					std::cout << TAB << TAB << "}" << std::endl;
 				}
-
-				std::cout << "}" << std::endl << std::endl;
+				std::cout << TAB << "}";
+				++it;
+				if (it != servers.end())
+					std::cout << ",";
+				std::cout << std::endl;
 			}
+			std::cout << "]" << std::endl;
 		}
 	private:
-		inline void printArgs(pairOptions vector, bool addTab = false)
+		inline void printArgs(pairOptions vector, bool addTab = false, int size = -1)
 		{
-			std::string TAB = "    ", SEP = "\"";
+			std::string TAB = "  ", SEP = "\"";
 			stringVector::const_iterator begin = vector.second.begin();
 			stringVector::const_iterator end = vector.second.end();
 
 			if (addTab == true)
-				std::cout << TAB;
-			std::cout << TAB << SEP << vector.first << SEP << ": ";
+				std::cout << TAB << TAB;
+			std::cout << TAB << TAB << SEP << vector.first << SEP << ": ";
 			std::cout << "[";
 			while (begin != end)
 			{
@@ -596,7 +620,10 @@ class Parse : public ParseTypedef
 				if (begin != end)
 					std::cout << ", ";
 			}
-			std::cout << "]," << std::endl;
+			std::cout << "]";
+			if (size <= -1 || size > 1)
+				std::cout << ",";
+			std::cout << std::endl;
 		}
 	#pragma endregion Print for debug
 };
