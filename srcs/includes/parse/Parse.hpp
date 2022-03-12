@@ -1,6 +1,6 @@
 #ifndef __PARSE
 # define __PARSE
-# define REGEX_SIZE 12
+# define REGEX_SIZE 13
 # define NO_KEY "NO_KEY"
 # include <algorithm>
 # include <iostream>
@@ -25,8 +25,9 @@ struct s_defineRegex
 	bool			noDuplication;
 } REGEX[REGEX_SIZE] =
 {
+	{ "server", "^[ \t]*(server)[ \t]*\\{?[ \t]*$", false },
 	{ "location", "^[ \t]*location[ \t]+([a-zA-Z0-9_/.]*)[ \t]*\\{*$", false},
-	{ "endLocation", "^[ \t]*(});*$", false },
+	{ "endBlock", "^[ \t]*(});*$", false },
 	{ "alias", "^[ \t]*alias[ \t]+([-a-zA-Z0-9_.\\/]+);$", true },
 	{ "allow", "^[ \t]*allow[ \t]+(.*);$", true },
 	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);$", true },
@@ -41,13 +42,20 @@ struct s_defineRegex
 
 struct ParseTypedef
 {
-	typedef std::vector<std::string>				defaultVector;
-	typedef std::pair<std::string, defaultVector>	stringPair;
-	typedef std::vector<stringPair>					optionsVec;
-	typedef optionsVec::iterator					optionsIt;
+	typedef std::vector<std::string>				stringVector;
+	typedef std::pair<std::string, stringVector>	pairOptions;
+	typedef std::vector<pairOptions>				optionsVector;
+
+	typedef std::pair<std::string, optionsVector>	pairLocations;
+	typedef std::vector<pairLocations>				locationsVector;
+
+	struct s_server
+	{
+		optionsVector	options;
+		locationsVector	locations;
+	};
 	
-	typedef std::vector<optionsVec>					locationsVec;
-	typedef locationsVec::iterator					locationsIt;
+	typedef std::vector<s_server>					serversVector;
 
 	/**
 	 * @param GET (bool), false by default
@@ -86,8 +94,8 @@ struct ParseTypedef
 	 */
 	struct s_clientBodyBufferSize
 	{
-		long int	bits;
-		long int	size;
+		size_t	bits;
+		size_t	size;
 	};
 
 	/**
@@ -127,8 +135,7 @@ class Parse : public ParseTypedef
 {
 	private:
 		Regex			Regex;
-		optionsVec		options;
-		locationsVec	locations;
+		serversVector	servers;
 		std::string		configFilePath;
 		std::ifstream	stream;
 	private:
@@ -139,9 +146,10 @@ class Parse : public ParseTypedef
 	public:
 		Parse(std::string configFilePath) : configFilePath(configFilePath)
 		{
-			optionsVec locationTemp;
+			pairLocations	locationTemp;
+			s_server		serverTemp;
 			std::string line;
-			bool isLocationBlock = false;
+			bool isServerBlock = false, isLocationBlock = false;
 
 			stream.open(configFilePath.c_str());
 			stream.exceptions(std::ifstream::badbit);
@@ -156,53 +164,69 @@ class Parse : public ParseTypedef
 					Regex.exec(line, REGEX[i].regex, GLOBAL_FLAG);
 					if (Regex.size() == 0)
 						continue;
-					if (REGEX[i].name == "endLocation")
+					if (REGEX[i].name == "endBlock")
 					{
-						locations.push_back(locationTemp);
-						locationTemp.clear();
-						isLocationBlock = false;
+						if (isLocationBlock == true)
+						{
+							serverTemp.locations.push_back(locationTemp);
+							locationTemp.first.clear();
+							locationTemp.second.clear();
+							isLocationBlock = false;
+						}
+						else if (isServerBlock == true)
+						{
+							servers.push_back(serverTemp);
+							serverTemp.locations.clear();
+							serverTemp.options.clear();
+							isServerBlock = false;
+						}
+						break;
 					}
-					else if (REGEX[i].name == "location" || isLocationBlock)
+					else if (REGEX[i].name == "location")
 					{
-						if (!isLocationBlock)
-							isLocationBlock = true;
-						defaultVector ret;
+						if (isLocationBlock == true)
+							throw IncorrectConfig("configuration: a location block cannot contain another one");
+						isLocationBlock = true;
+						locationTemp.first.clear();
 						for (size_t m = 0; m < Regex.size(); m++)
 							if (!Regex.match()[m].occurence.empty())
-								ret.push_back(trim(Regex.match()[m].occurence));
-						stringPair newPair = std::make_pair(REGEX[i].name, ret);
-
-						if (REGEX[i].noDuplication)
-						{
-							optionsIt it = find(locationTemp.begin(), locationTemp.end(), newPair);
-							if (it != locationTemp.end())
-								locationTemp.erase(it);
-						}
-						locationTemp.push_back(std::make_pair(REGEX[i].name, ret));
+								locationTemp.first += trim(Regex.match()[m].occurence);
+						break;
 					}
+					else if (REGEX[i].name == "server")
+					{
+						if (isServerBlock == true)
+							throw IncorrectConfig("configuration: a server block cannot contain another one");
+						isServerBlock = true;
+						break;
+					}
+					stringVector ret;
+					for (size_t m = 0; m < Regex.size(); m++)
+						if (!Regex.match()[m].occurence.empty())
+							ret.push_back(trim(Regex.match()[m].occurence));
+					pairOptions newPair = std::make_pair(REGEX[i].name, ret);
+					if (REGEX[i].noDuplication)
+					{
+						optionsVector::iterator it = find(serverTemp.options.begin(), serverTemp.options.end(), newPair);
+						if (it != serverTemp.options.end())
+							serverTemp.options.erase(it);
+					}
+					if (isLocationBlock)
+						locationTemp.second.push_back(newPair);
 					else
-					{
-						defaultVector ret;
-						for (size_t m = 0; m < Regex.size(); m++)
-							if (!Regex.match()[m].occurence.empty())
-								ret.push_back(trim(Regex.match()[m].occurence));
-						stringPair newPair = std::make_pair(REGEX[i].name, ret);
-
-						if (REGEX[i].noDuplication)
-						{
-							optionsIt it = find(options.begin(), options.end(), newPair);
-							if (it != options.end())
-								options.erase(it);
-						}
-						options.push_back(std::make_pair(REGEX[i].name, ret));
-					}
+						serverTemp.options.push_back(newPair);
 					break;
 				}
 			}
 			stream.close();
 		}
+	
 	private:
-		inline const optionsIt find(optionsIt first, optionsIt last, stringPair pair)
+		inline const optionsVector::iterator find(
+			optionsVector::iterator first,
+			optionsVector::iterator last,
+			pairOptions pair
+		)
 		{
 			while (first != last)
 			{
@@ -220,7 +244,7 @@ class Parse : public ParseTypedef
 			return str;
 		}
 	#pragma endregion Read config file and parse in a resiliente way
-
+/*
 	#pragma region Getter
 	private:
 		defaultVector findKey(std::string key, optionsVec toSearch)
@@ -526,51 +550,53 @@ class Parse : public ParseTypedef
 						port = atoi((*it).c_str());
 				}
 			}
-			ret.ip = inet_addr(ip.c_str());
-			ret.port = htons(port);
+			ret.ip = static_cast<size_t>(inet_addr(ip.c_str()));
+			ret.port = static_cast<size_t>(htons(port));
 			return ret;
 		}
 	#pragma endregion Getter
-
+*/
 	#pragma region Print for debug
 	public:
-		inline void printConfig()
+		inline void print()
 		{
-			int x = 0;
+			std::string TAB = "    ", SEP = "\"";
+			for(serversVector::iterator it = servers.begin(); it != servers.end(); it++)
+			{
+				std::cout << "server {" << std::endl;
+				for (optionsVector::iterator itConf = (*it).options.begin(); itConf != (*it).options.end(); itConf++)
+					printArgs(*itConf);
 
-			for (optionsIt it = options.begin(); it != options.end(); it++)
-			{
-				std::cout << it->first << "=";
-				printVector(it->second);
-			}
-			std::cout << "BLOCK =============" << std::endl;
-			for (locationsIt it = locations.begin(); it != locations.end(); it++)
-			{
-				std::cout << "==  " << x++ << "  =============" << std::endl;
-				for (optionsIt it2 = it->begin(); it2 != it->end(); it2++)
+				for (locationsVector::iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
 				{
-					std::cout << it2->first << "=";
-					printVector(it2->second);
+					std::cout << TAB << "location " << (*itLoc).first << " {" << std::endl;
+					for (optionsVector::iterator itConf = (*itLoc).second.begin(); itConf != (*itLoc).second.end(); itConf++)
+						printArgs(*itConf, true);
+					std::cout << TAB << "}," << std::endl;
 				}
-				std::cout << "=======================" << std::endl;
+
+				std::cout << "}" << std::endl << std::endl;
 			}
-			std::cout << "END_BLOCK =============" << std::endl;
 		}
-
-		inline void printVector(defaultVector vector)
+	private:
+		inline void printArgs(pairOptions vector, bool addTab = false)
 		{
-			defaultVector::const_iterator first = vector.begin();
-			defaultVector::const_iterator last = vector.end();
+			std::string TAB = "    ", SEP = "\"";
+			stringVector::const_iterator begin = vector.second.begin();
+			stringVector::const_iterator end = vector.second.end();
 
+			if (addTab == true)
+				std::cout << TAB;
+			std::cout << TAB << SEP << vector.first << SEP << ": ";
 			std::cout << "[";
-			while (first != last)
+			while (begin != end)
 			{
-				std::cout << *first;
-				++first;
-				if (first != last)
+				std::cout << SEP << *begin << SEP;
+				++begin;
+				if (begin != end)
 					std::cout << ", ";
 			}
-			std::cout << "]" << std::endl;
+			std::cout << "]," << std::endl;
 		}
 	#pragma endregion Print for debug
 };

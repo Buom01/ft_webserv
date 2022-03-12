@@ -10,12 +10,7 @@ int main(int argc, char **argv)
 	{
 		Parse config(argv[1]);
 
-		Parse::optionsVec generalOptions = config.getOptions();
-		Parse::s_listen test = config.listen(generalOptions);
-
-		std::cout << test.ip << ":" << test.port << std::endl;
-
-		//config.print();
+		config.print();
 		//CGI cgi(config);
 		//cgi.printCGI();
 	}
