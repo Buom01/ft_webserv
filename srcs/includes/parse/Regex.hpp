@@ -1,6 +1,5 @@
 #ifndef __REGEX
 # define __REGEX
-# define TEMP 2048
 # define NO_FLAG 0
 # define GLOBAL_FLAG 1
 # include <sys/types.h>
@@ -89,6 +88,8 @@ class Regex
 				{
 					temp.start = pmatch[pass].rm_so + (_pos - to_match);
 					temp.end = pmatch[pass].rm_eo + (_pos - to_match);
+					if (temp.start > _size_line)
+						temp.start = _size_line;
 					if (temp.end > _size_line)
 						temp.end = _size_line;
 					temp.width = temp.end - temp.start;

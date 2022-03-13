@@ -9,7 +9,7 @@
 # include <cstring>
 # include <cctype>
 # include <cstdio>
-# include <exception>
+# include <stdexcept>
 # include <map>
 # include <vector>
 # include <string>
@@ -126,10 +126,11 @@ struct ParseTypedef
 		private:
 			const std::string e;
 		public:
-			IncorrectConfig(void);
-			IncorrectConfig(const std::string _e) : e(_e) {};
-			IncorrectConfig(IncorrectConfig const &copy);
-			IncorrectConfig &operator=(IncorrectConfig const &newObject);
+			IncorrectConfig();
+			IncorrectConfig(const IncorrectConfig &copy);
+			IncorrectConfig &operator=(const IncorrectConfig &newObject);
+			IncorrectConfig(const std::string &_e) : e(_e) {};
+			~IncorrectConfig() throw() {};
 			const char* what() const throw() { return e.c_str(); }
 	};
 };
@@ -146,12 +147,24 @@ class Parse : public ParseTypedef
 		Parse(const Parse *);
 		Parse operator=(const Parse *);
 	#pragma region Read config file and parse in a resiliente way
+	private:
+		void generateParseError(int lineNumber, std::string str)
+		{
+			std::string err = "line ";
+			std::stringstream strstream;
+			strstream << lineNumber;
+			err += strstream.str();
+			err += " | ";
+			err += str;
+			throw IncorrectConfig(err);
+		}
 	public:
 		Parse(std::string configFilePath) : configFilePath(configFilePath)
 		{
 			pairLocations	locationTemp;
 			s_server		serverTemp;
 			std::string		line;
+			int				lineNumber = 0;
 			bool asServerBlock = false;
 			bool isServerBlock = false, isLocationBlock = false;
 
@@ -162,6 +175,7 @@ class Parse : public ParseTypedef
 				throw std::ifstream::failure("Open configuration file failed");
 			while (getline(stream, line))
 			{
+				++lineNumber;
 				size_t commentPos = line.find("#", 0);
 				if (commentPos != std::string::npos)
 					line = line.substr(0, commentPos);
@@ -193,8 +207,8 @@ class Parse : public ParseTypedef
 					}
 					else if (REGEX[i].name == "location")
 					{
-						if (isLocationBlock == true)
-							throw IncorrectConfig("configuration: a location block cannot contain another one");
+						if (isLocationBlock)
+							generateParseError(lineNumber, "configuration: a location block cannot contain another one");
 						isLocationBlock = true;
 						locationTemp.first.clear();
 						locationTemp.second.clear();
@@ -204,13 +218,16 @@ class Parse : public ParseTypedef
 					}
 					else if (REGEX[i].name == "server")
 					{
-						if (isServerBlock == true)
-							throw IncorrectConfig("configuration: a server block cannot contain another one");
+						if (isServerBlock)
+							generateParseError(lineNumber, "configuration: a server block cannot contain another one");
 						asServerBlock = true;
 						isServerBlock = true;
 					}
 					else
 					{
+						if (!isServerBlock)
+							generateParseError(lineNumber, "configuration: no server block is present. A configuration must be in at least one server block");
+
 						stringVector ret;
 						for (size_t m = 0; m < Regex.size(); m++)
 							if (!Regex.match()[m].occurence.empty())
@@ -241,7 +258,7 @@ class Parse : public ParseTypedef
 			}
 			stream.close();
 			if (!asServerBlock)
-				throw IncorrectConfig("configuration: no server block is present. A configuration must be in at least one server block");
+				generateParseError(lineNumber, "configuration: no server block is present. A configuration must be in at least one server block");
 		}
 	
 	private:

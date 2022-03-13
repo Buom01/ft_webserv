@@ -10,6 +10,7 @@ int main(int argc, char **argv)
 	{
 		Parse config(argv[1]);
 		
+		config.print();
 		//CGI cgi(config);
 		//cgi.printCGI();
 	}
