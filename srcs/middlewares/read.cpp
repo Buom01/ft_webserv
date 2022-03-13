@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   read.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
+/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/02/17 02:31:31 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/13 01:04:55 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,13 +37,13 @@ bool	parseStartLine(Request &req, Response &)
 	if (get_next_line_string(req.fd, line, req.buff, SERVER_BUFFER_SIZE) < 0)
 		return (false);
 
-	regex.Match(line, "^([A-Z]+)\\ ([^\\ ]+)\\ HTTP\\/([0-9\\.]+)$");
-	if (regex.GetSize() != 4)
+	regex.exec(line, "^([A-Z]+)\\ ([^\\ ]+)\\ HTTP\\/([0-9\\.]+)$");
+	if (regex.size() != 4)
 		throw new Serve::ServerSocketException("Malformed request start line");
 
-	std::string &method = regex.GetMatch()[1].occurence;
-	std::string &pathname = regex.GetMatch()[2].occurence;
-	std::string &http_version = regex.GetMatch()[3].occurence;
+	std::string &method = regex.match()[1].occurence;
+	std::string &pathname = regex.match()[2].occurence;
+	std::string &http_version = regex.match()[3].occurence;
 
 	if (method == "GET")
 		req.method = M_GET;

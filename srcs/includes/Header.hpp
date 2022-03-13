@@ -6,12 +6,13 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 14:41:25 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/10 14:58:33 by cbertran         ###   ########.fr       */
+/*   Updated: 2022/03/13 00:29:21 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef __PARSE_HEADER
 # define __PARSE_HEADER
+# define HEADERS_SIZE 10
 # include <iostream>
 # include <utility>
 # include <string>
@@ -20,18 +21,18 @@
 # include <map>
 # include "Regex.hpp"
 
-/** Types of headers
- *	Host
- *	Accept-Charsets
- *	//Accept-Language
- *	Allow
- *	Authorization
- * 	
- *	Content-Language
- *	Content-Length
- *	Content-Location
- *	Content-Type
- */
+static std::string HEADERS[HEADERS_SIZE] =
+{
+	"Accept-Charsets",
+	"Accept-Language",
+	"Allow",
+	"Authorization",
+	"Content-Language",
+	"Content-Length",
+	"Content-Location",
+	"Content-Type",
+	"Host"
+};
 
 class Header
 {
@@ -52,7 +53,8 @@ class Header
 			std::string					rawValue;
 			std::vector<std::string>	results;
 
-			if (!(match = _regex.exec(raw, "^([^ ]+): ([^,].*)$", GLOBAL_FLAG))) return results;
+			if (!(match = _regex.exec(raw, "^([^ ]+): ([^,].*)$", GLOBAL_FLAG)))
+				return results;
 			key = toLowerCase(match[1].occurence);
 			rawValue = match[2].occurence;
 
@@ -60,7 +62,7 @@ class Header
 			
 			_regex.exec(rawValue, " *([^,]+),? *", GLOBAL_FLAG);
 			for (size_t x = 0; x < _regex.size(); x++)
-				results.push_back(_regex.match()[x]);
+				results.push_back(_regex.match()[x].occurence);
 			return (results);
 		}
 

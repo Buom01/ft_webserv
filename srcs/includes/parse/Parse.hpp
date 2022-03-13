@@ -130,7 +130,7 @@ struct ParseTypedef
 			IncorrectConfig(const std::string _e) : e(_e) {};
 			IncorrectConfig(IncorrectConfig const &copy);
 			IncorrectConfig &operator=(IncorrectConfig const &newObject);
-			virtual const char* what() const throw() { return e.c_str(); }
+			const char* what() const throw() { return e.c_str(); }
 	};
 };
 

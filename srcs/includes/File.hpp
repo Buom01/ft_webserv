@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   File.hpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
+/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/17 12:59:44 by badam             #+#    #+#             */
-/*   Updated: 2021/08/17 15:09:02 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/13 01:03:36 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,7 @@ std::string sanitizeRelativePath(std::string path)
 	}
 
 	// Applying parenting
-	while ((match = parent.Match(path, "(^/|/[^/]+/)(\\.+)(/|$)")))
+	while ((match = parent.exec(path, "(^/|/[^/]+/)(\\.+)(/|$)", GLOBAL_FLAG)))
 	{
 		if (match[2].occurence.size() >= 2)
 			path.replace(match[0].start, match[0].width, std::string("/"));
