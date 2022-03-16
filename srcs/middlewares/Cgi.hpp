@@ -7,6 +7,7 @@
 # include <cstdlib>
 # include <string>
 # include <map>
+# include <vector>
 # include <sys/types.h>
 # include <sys/wait.h>
 # include <unistd.h>
@@ -54,18 +55,18 @@ class cgiEnv
 		std::map<std::string, std::string>	env;
 		char								**generateEnv;
 	private:
-		cgiBase(const &cgiBase) {};
-		cgiBase &operator=(const &cgiBase) {};
+		cgiEnv(cgiEnv const &rhs) {};
+		cgiEnv &operator=(cgiEnv const &rhs) {};
 
 		void clean()
 		{
-			for (int x = 0; generateEnv[x]; i++)
+			for (int x = 0; generateEnv[x]; x++)
 				delete generateEnv[x];
 			delete [] generateEnv;
 		}
 	public:
-		cgiBase() {};
-		~cgiBase() { clean(); };
+		cgiEnv() {};
+		~cgiEnv() { clean(); };
 
 		/**
 		 * Get environment variable
@@ -74,7 +75,7 @@ class cgiEnv
 		 */
 		s_environment	getVariable(std::string key)
 		{
-			for (x = 0; x < ENV_SIZE; x++)
+			for (int x = 0; x < ENV_SIZE; x++)
 				if (ENV[x].key == key)
 					return ENV[x];
 			return s_environment();
@@ -88,7 +89,7 @@ class cgiEnv
 		 */
 		bool			addVariable(std::string key, std::string value)
 		{
-			for (x = 0; x < ENV_SIZE; x++)
+			for (int x = 0; x < ENV_SIZE; x++)
 			{
 				if (ENV[x].key == key)
 				{
@@ -107,7 +108,7 @@ class cgiEnv
 		 */
 		bool			deleteVariable(std::string key)
 		{
-			for (x = 0; x < ENV_SIZE; x++)
+			for (int x = 0; x < ENV_SIZE; x++)
 			{
 				if (ENV[x].key == key)
 				{
@@ -155,8 +156,8 @@ class CGI : public cgiEnv
 		CGI() {};
 		~CGI() {};
 	private:
-		CGI(CGI const &rhs) { *this = rhs; };
-		CGI &operator=(const CGI &rhs) {};
+		CGI(CGI const &rhs) {};
+		CGI &operator=(CGI const &rhs) {};
 	public:
 		/**
 		 * Execute cgi
@@ -178,7 +179,7 @@ class CGI : public cgiEnv
 			if (pid == 0)
 			{
 				dup2(fdIN, STDIN_FILENO); dup2(fdOUT, STDOUT_FILENO);
-				if (execve(getVariable("SCRIPT_FILENAME"), NULL, envForCGI()) == -1)
+				if (execve(getVariable("SCRIPT_FILENAME").value.c_str(), NULL, envForCGI()) == -1)
 					write(STDOUT_FILENO, "Status: 500\r\n", 15);
 			}
 			else
