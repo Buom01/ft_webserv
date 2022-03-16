@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 23:58:19 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/15 21:46:47 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,9 +19,11 @@
 # include "File.hpp"
 # include "AEpoll.hpp"
 
-class Static: public AEpoll
+
+
+class Static: public IMiddleware
 {
-	typedef	AEpoll	_parent;
+	typedef	IMiddleware	_parent;
 
 	public:
 		typedef struct	options_s
@@ -34,7 +36,7 @@ class Static: public AEpoll
 		options_t		options;
 
 
-		Static(Log &logger): _parent(logger)
+		Static()
 		{
 			options.root = "./";
 			options.directory_listing = false;
@@ -43,7 +45,7 @@ class Static: public AEpoll
 			options.indexes.push_back("index.php");
 		}
 
-		Static(Log &logger, options_t opts): _parent(logger)
+		Static(options_t opts)
 		{
 			options = opts;
 		}
@@ -54,6 +56,8 @@ class Static: public AEpoll
 			if (!hasReadPermissions(path))
 				return (false);
 
+			// @TODO: Serve the content of a directory
+
 			// std::vector<std::string>	files	= listFile(path);
 			// write res.body here with template
 			// res.code = C_OK;
@@ -63,19 +67,17 @@ class Static: public AEpoll
 			return (false);
 		}
 
-		bool	serveFile(Response &res, const std::string &path)
+		void	serveFile(Response &res, const std::string &path)
 		{
-			std::ifstream	fs;
+			int	fd = open(path.c_str(), O_NOATIME | O_NOFOLLOW | O_NONBLOCK, O_RDONLY);
 
-			fs.open(path.c_str(), std::fstream::in | std::ios::binary);
-			if (!fs || !fs.is_open())
-				return (false);
-
-			res.body << fs.rdbuf();
-			fs.close();
-			res.code = C_OK;
-
-			return (true);
+			if (fd > 0)
+			{
+				res.response_fd = fd;
+				res.code = C_OK;
+			}
+			else
+				res.code = C_FORBIDDEN;
 		}
 
 		std::string getIndex(const std::string &path, const options_t &options)
@@ -105,6 +107,8 @@ class Static: public AEpoll
 		{
 			if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
 				return (true);
+			if (res.response_fd > 0 || res.body.length() > 0)
+				return (true);
 
 			std::string				path	= sanitizeRelativePath(req.pathname);
 
@@ -117,10 +121,7 @@ class Static: public AEpoll
 					std::string index = getIndex(path, options);
 
 					if (index.size() > 0)
-					{
-						if (!serveFile(res, index))
-							res.code = C_FORBIDDEN;
-					}
+						serveFile(res, index);
 					else if (options.directory_listing)
 					{
 						if (!serveDirectory(res, path))
@@ -135,10 +136,7 @@ class Static: public AEpoll
 			else if (directoryExists(path + "/"))
 				redirect(res, req.pathname + "/");
 			else if (fileExists(path))
-			{
-				if (!serveFile(res, path))
-					res.code = C_FORBIDDEN;
-			}
+				serveFile(res, path);
 			else
 				res.code = C_NOT_FOUND;
 			

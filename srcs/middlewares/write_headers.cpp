@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/02/17 22:02:01 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/10 22:52:10 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,13 +23,27 @@
 bool	addResponseHeaders(Request &, Response &res)
 {
 	Header				&h		= res.headers;
-	std::stringstream	to_str;
+	intmax_t			length	= -1;
+
 
 	h.set("Server: FT_WebServ");
-	to_str << res.body.str().length();
-	h.set("Content-Length: " + to_str.str());
-	if (res.code == C_OK && res.body.str().length() == 0)
-		res.code = C_NO_CONTENT;
+
+	if (res.body.length() > 0)
+		length = static_cast<intmax_t>(res.body.length());
+	else if (res.response_fd)
+		length = fdFileSize(res.response_fd);
+
+	if (length >= 0)
+	{
+		std::stringstream	to_str;
+
+		to_str << length;
+		h.set("Content-Length: " + to_str.str());
+	}
+	
+	if (length == 0 && res.code == C_OK)
+		res.code = C_NO_CONTENT;  // @TODO: Verify this
+	
 	
 	return (true);
 }
@@ -76,7 +90,7 @@ bool	sendHeader(Request &req, Response &res)
 	}
 	
 	res.headers_sent = true;
-	res.logger->log(res.code, req.pathname);  // should it be there or at the end ??
+	res.logger.log(res.code, req.pathname);  // should it be there or at the end ??
 	
 	return (true);
 }

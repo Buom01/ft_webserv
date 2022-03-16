@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 21:55:09 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 22:02:03 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/14 18:38:26 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,18 +19,79 @@
 
 # include "utils/writeout.cpp"
 
-
-bool	sendBodyMockupFunction(Request &req, Response &res)
+// @TODO handle reponseFD
+bool	sendBodyFromFD(Request &req, Response &res)
 {
+	if (res.sent)
+		return (true);
+	if (!res.response_fd)
+		return (true);
 	if (req.closed())
 		return (true);
 	if (!req.await(EPOLLOUT))
 		return (false);
 
-	::send(res.fd, res.body.str().c_str(), res.body.str().length(), MSG_DONTWAIT | MSG_NOSIGNAL);
-	::close(res.fd);
+	// ::send(res.fd, res.body.str().c_str(), res.body.length(), MSG_DONTWAIT | MSG_NOSIGNAL);
 
 	res.sent = true;
+
+	return (true);
+}
+
+bool	sendBodyFromBigBuffer(Request &req, Response &res)
+{
+	std::cout << "Call" << std::endl;
+	ssize_t	send_ret = -1;
+
+	if (res.sent)
+		return (true);
+	if (!req.await(EPOLLOUT))
+		return (false);
+
+	if (req.closed())  // Middleware has to not take care of it ? But they should have a cleanup
+		return (true);
+
+	while (send_ret != 0)
+	{
+		if (!res.sending_chunk_size)
+		{
+			if (!res.body.can_read())
+				return (false);
+			res.sending_chunk = res.body.get_next_chunk(&(res.sending_chunk_size));
+			if (res.sending_chunk_size == 0)
+				break ;
+		}
+
+		send_ret = send(res.fd, res.sending_chunk, res.sending_chunk_size, MSG_NOSIGNAL | MSG_DONTWAIT);
+		if (send_ret == -1)
+		{
+			std::cout << "1" << std::endl;
+			req.unfire(EPOLLOUT);
+			return (false);
+		}
+		else
+		{
+			memmove(res.sending_chunk, res.sending_chunk + send_ret, res.sending_chunk_size - send_ret);
+			res.sending_chunk_size -= send_ret;
+			if (res.sending_chunk_size != 0)
+			{
+				std::cout << "2" << std::endl;
+				std::cout << "sending_chunk_size is " << res.sending_chunk_size << std::endl;
+				req.unfire(EPOLLOUT);
+				return (false);
+			}
+		}
+	}
+	
+	res.sent = true;
+
+	return (true);
+}
+
+bool	finishBody(Request &, Response &res)
+{
+	::close(res.fd);
+	std::cout << "Closed FD" << std::endl;
 
 	return (true);
 }

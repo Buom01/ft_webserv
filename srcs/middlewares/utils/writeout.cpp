@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 19:12:57 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 22:02:34 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/10 22:52:10 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,7 @@ bool	writeBuffer(Request &req, Response &res, std::string &str, unsigned long &s
 	{
 		req.await(EPOLLOUT);
 		req.unfire(EPOLLOUT);
-		res.logger->warn("Failed to write buffer right now");  // @TODO remove that log
+		res.logger.warn("Failed to write buffer right now");  // @TODO remove that log
 		return (false);
 	}
 	else

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 21:58:17 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/15 21:51:51 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,9 +41,9 @@ class	RunningChain
 		chain_t::iterator	pos;
 		chain_state_t		state;
 
-		RunningChain(Request &_req, Response &_res, uint32_t _events, chain_t::iterator _pos):
-			req(_req),
-			res(_res),
+		RunningChain(int connection, uint32_t _events, Log &logger, chain_t::iterator _pos):
+			req(connection, _events),
+			res(connection, logger),
 			events(_events),
 			pos(_pos),
 			state(CS_OTHER)
@@ -75,7 +75,7 @@ class   Chain
 			chain_link_t		link;
 			bool				ret;
 
-			while (instance.pos != _raw_chain.end() && !instance.res.sent)
+			while (instance.pos != _raw_chain.end())
 			{
 				link = *(instance.pos);
 				if (_canUseLink(link, instance.req))
@@ -91,59 +91,59 @@ class   Chain
 				++(instance.pos);
 			}
 			if (!instance.res.sent)
-				instance.res.logger->warn("Chain finished without sending data");
+				instance.res.logger.warn("Chain finished without sending data");
 			return (true);
 		}
 
 		bool	_exec_instance(RunningChain &instance)
 		{
-			try
-			{
+			// try
+			// {
 				return _run(instance);
-			}
-			catch (const std::exception &e)
-			{
-				instance.state = CS_OTHER;
-				instance.res.logger->fail(e.what());
-				instance.res.error = &e;
+			// }
+			// catch (const std::exception &e)
+			// {
+			// 	instance.state = CS_OTHER;
+			// 	instance.res.logger.fail(e.what());
+			// 	instance.res.error = &e;
 
-				// try
-				// {
-				// 	if (_error_chain)
-				// 	{
-				// 		_error_chain->exec(instance.req, instance.res, instance.events);  // Should replace the running instance. Verify that's the case
-				// 		return (true);
-				// 	}
-				// 	else
-				// 		throw (CantHandleRequest());
-				// }
-				// catch(const std::exception &ce)
-				// {
-					instance.res.logger->fail("Failed to answer");
+			// 	// try
+			// 	// {
+			// 	// 	if (_error_chain)
+			// 	// 	{
+			// 	// 		_error_chain->exec(instance.req, instance.res, instance.events);  // Should replace the running instance. Verify that's the case
+			// 	// 		return (true);
+			// 	// 	}
+			// 	// 	else
+			// 	// 		throw (CantHandleRequest());
+			// 	// }
+			// 	// catch(const std::exception &ce)
+			// 	// {
+			// 		instance.res.logger.fail("Failed to answer");
 
-					try
-					{
-						::close(instance.res.fd);
-					}
-					catch (...)
-					{}
+			// 		try
+			// 		{
+			// 			::close(instance.res.fd);
+			// 		}
+			// 		catch (...)
+			// 		{}
 
-					return (true);
-				// }
-			}
-			catch (...)
-			{
-				instance.res.logger->fail("Unhandled exception");
+			// 		return (true);
+			// 	// }
+			// }
+			// catch (...)
+			// {
+			// 	instance.res.logger.fail("Unhandled exception");
 
-				try
-				{
-					::close(instance.res.fd);
-				}
-				catch(...)
-				{}
+			// 	try
+			// 	{
+			// 		::close(instance.res.fd);
+			// 	}
+			// 	catch(...)
+			// 	{}
 
-				return (true);
-			}
+			// 	return (true);
+			// }
 		}
 
 		void _remove_instance(RunningChain *instance)
@@ -203,9 +203,7 @@ class   Chain
 		
         RunningChain	*exec(int connection, uint32_t events, Log &logger)
         {
-			Request			req(connection, events);
-			Response		res(connection, logger);
-            RunningChain	*instance	= new RunningChain(req, res, events, _raw_chain.begin());
+            RunningChain	*instance	= new RunningChain(connection, events, logger, _raw_chain.begin());
 
 			if (!_exec_instance(*instance))
 				_running.push_back(instance);

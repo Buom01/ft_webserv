@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 22:54:02 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 23:54:54 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/10 23:25:09 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,43 +19,90 @@
 
 class AEpoll: public IMiddleware
 {
-	protected:
-		Epoll	_epoll;
+	private:
+		Log						&_logger;
+		Epoll					_epoll;
+		std::map<int, uint32_t>	_registred;
+		
+		void	_refresh_events()
+		{
+			events_t							events			= _epoll.accept();
+			events_t::iterator					it				= events.begin();
+			int									fd;
+			std::map<int, uint32_t>::iterator	registeredItem;
 
-		AEpoll(Log &logger): _epoll(logger)
+			while (it != events.end())
+			{
+				fd = static_cast<event_data_t *>(it->data.ptr)->fd;
+				registeredItem = _registred.find(fd);
+
+				if (registeredItem != _registred.end())
+					registeredItem->second |= it->events;
+				else
+					_logger.warn("Event happened on unregistred FD");
+				++it;
+			}
+		}
+
+	protected:
+
+		AEpoll(Log &logger): _logger(logger), _epoll(logger)
 		{}
 
 		virtual ~AEpoll()
 		{}
 
-
-		std::set<int>	_registred;
-
 		void	setup(int fd, event_type_t type, void *data, uint32_t events = EPOLLIN)
 		{
-			if (_registred.insert(fd).second)
+			if (_registred.insert(std::make_pair(fd, 0)).second)
 				_epoll.add(fd, type, data, events);
 		}
 
 		void	cleanup(int fd)
 		{
 			_epoll.remove(fd);
+			_registred.erase(fd);
+		}
+
+		void	clear_events(int fd)
+		{
+			std::map<int, uint32_t>::iterator	registeredItem;
+			
+			registeredItem = _registred.find(fd);
+
+			if (registeredItem != _registred.end())
+				registeredItem->second = 0;
+			else
+				_logger.warn("Use of unregistred FD");
+		}
+
+		void	clear_events(int fd, uint32_t events)
+		{
+			std::map<int, uint32_t>::iterator	registeredItem;
+			
+			registeredItem = _registred.find(fd);
+
+			if (registeredItem != _registred.end())
+				registeredItem->second &= ~events;
+			else
+				_logger.warn("Use of unregistred FD");
 		}
 
 		bool	await(int fd, uint32_t waited_events)
 		{
-			events_t			events	= _epoll.accept();
-			events_t::iterator	it		= events.begin();
+			std::map<int, uint32_t>::iterator	registeredItem;
+			
+			_refresh_events();
+			registeredItem = _registred.find(fd);
 
-			while (it != events.end())
+			if (registeredItem != _registred.end())
 			{
-				if (static_cast<event_data_t *>(it->data.ptr)->fd == fd)
-				{
-					if (it->events & waited_events)
-						return (true);
-				}
-				++it;
+				if (registeredItem->second & waited_events)
+					return (true);
 			}
+			else
+				_logger.warn("Await on unregistred FD");
+
 			return (false);
 		}
 };

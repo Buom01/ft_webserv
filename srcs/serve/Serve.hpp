@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 23:52:47 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/10 23:19:18 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,7 +55,10 @@ class	Serve
 			try
 			{
 				if (bind.fd)
+				{
+					_epoll.remove(bind.fd);
 					close(bind.fd);
+				}
 			}
 			catch(...)
 			{}
@@ -126,7 +129,7 @@ class	Serve
 		}
 
 	public:
-		void	bind(std::string host, int port)
+		void	bind(std::string host, uint16_t port)
 		{
 			in_addr_t			ip;
 			server_bind_t		bind;

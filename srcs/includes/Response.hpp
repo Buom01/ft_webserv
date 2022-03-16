@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:50:37 by badam             #+#    #+#             */
-/*   Updated: 2022/01/31 20:29:37 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 03:14:42 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,12 +18,13 @@
 # include "Log.hpp"
 # include "http.hpp"
 # include "Header.hpp"
+# include "BigBuffer.hpp"
 
 class Response
 {
 	public:
 		int						fd;
-		Log						*logger;
+		Log						&logger;
 		const std::exception	*error;
 		
 		std::string				used_file;
@@ -31,59 +32,31 @@ class Response
 		Header					headers;
 		std::string				headers_buff;
 		bool					headers_sent;
-		std::stringstream		body;
+		int						response_fd;
+		BigBuffer				body;
+		char					*sending_chunk;
+		size_t					sending_chunk_size;
 		bool					sent;
-		
-		Response() :
-			fd(1),
-			logger(NULL),
-			error(NULL),
-			used_file(""),
-			code(C_NOT_IMPLEMENTED),
-			headers(),
-			headers_buff(""),
-			headers_sent(false),
-			body(""),
-			sent(false)
-		{}
-
-		Response 	(const Response &rhs)
-		{
-			*this = rhs;
-		}
 
 		Response(int connection, Log &_logger) :
 			fd(connection),
-			logger(&_logger),
+			logger(_logger),
 			error(NULL),
 			used_file(""),
 			code(C_NOT_IMPLEMENTED),
 			headers(),
 			headers_buff(""),
 			headers_sent(false),
-			body(""),
+			response_fd(0),
+			body(_logger, 2048),
+			sending_chunk(NULL),
+			sending_chunk_size(0),
 			sent(false)
 		{}
 
 		virtual ~Response()
-		{}
-
-		Response 	&operator=(const Response &rhs)
 		{
-			if (this != &rhs)
-			{
-				fd		= rhs.fd;
-				logger	= rhs.logger;
-				error	= rhs.error;
-
-				used_file	= rhs.used_file;
-				code		= rhs.code;
-				headers		= rhs.headers;
-				body << rhs.body.str();
-				sent		= rhs.sent;
-			}
-
-			return (*this);
+			std::cout << "Response destoying" << std::endl;
 		}
 };
 

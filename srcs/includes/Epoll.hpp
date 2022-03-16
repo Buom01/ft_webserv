@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/26 22:16:47 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 22:59:59 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 00:32:24 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 
 # include <vector>
 # include "http.hpp"
-# include "Chain.hpp"
+// # include "Chain.hpp"
 
 typedef	std::vector<epoll_event_t>	events_t;
 
@@ -23,6 +23,7 @@ typedef enum	event_type_s
 {
 	ET_BIND = 0,
 	ET_CONNECTION,
+	ET_BIGBUFFER,
 	ET_FILE
 }				event_type_t;
 
@@ -33,7 +34,14 @@ typedef struct	event_data_s
 	void			*data;
 }				event_data_t;
 
-typedef	std::map<int, epoll_event_t *>	epoll_events_map_t;
+
+typedef struct	inner_event_s
+{
+	bool			fallback;
+	epoll_event_t	*event;
+}				inner_event_t;
+
+typedef	std::map<int, inner_event_t>	epoll_events_map_t;
 
 class	Epoll
 {
@@ -43,7 +51,8 @@ class	Epoll
 		epoll_events_map_t	_events;
 
 	public:
-		Epoll(Log &logger): _logger(logger)
+		Epoll(Log &logger) :
+			_logger(logger)
 		{
 			if ((_fd = epoll_create1(0)) == -1)
 				throw new EpollException("EPOLL creation failed");
@@ -64,6 +73,7 @@ class	Epoll
 		{
 			epoll_event_t	*ev			= new epoll_event_t();
 			event_data_t	*ev_data	= new event_data_t();
+			inner_event_t	inner_ev;
 
 			bzero(ev, sizeof(epoll_event_t));
 
@@ -74,16 +84,23 @@ class	Epoll
 			ev->events		= events;
 			ev->data.ptr	= ev_data;
 
-			_events.insert(std::pair<int, epoll_event_t*>(fd, ev));
+			inner_ev.fallback	= false;
+			inner_ev.event		= ev;
 			
 			if (epoll_ctl(_fd, EPOLL_CTL_ADD, fd, ev) == -1)
-				throw new EpollException("EPOLL setup failed");
+			{
+				if (errno == EPERM)
+					inner_ev.fallback = true;
+				else
+					throw new EpollException("EPOLL setup failed");
+			}
+			_events.insert(std::pair<int, inner_event_t>(fd, inner_ev));
 		}
 
 		void	remove(int fd)
 		{
 			epoll_events_map_t::iterator	it;
-			epoll_event_t					*ev;
+			inner_event_t					inner_ev;
 			event_data_t					*data;
 
 			if (epoll_ctl(_fd, EPOLL_CTL_DEL, fd, NULL) == 0)
@@ -94,8 +111,8 @@ class	Epoll
 					_logger.warn("Fail to find epoll event in the map");
 				else
 				{
-					ev = it->second;
-					data = static_cast<event_data_t *>(ev->data.ptr);
+					inner_ev = it->second;
+					data = static_cast<event_data_t *>(inner_ev.event->data.ptr);
 
 					if (data->data)
 					{
@@ -107,7 +124,7 @@ class	Epoll
 						// 	_logger.warn("Failed to remove epoll event's data");
 					}
 
-					delete ev;
+					delete inner_ev.event;
 					delete data;
 				}
 			}
@@ -117,16 +134,28 @@ class	Epoll
 
 		events_t	accept(void)
 		{
-			epoll_event_t	events[MAX_EVENTS];
-			events_t		iterable_events;
-			int				ret;
+			epoll_event_t					events[MAX_EVENTS];
+			events_t						iterable_events;
+			int								ret;
+			epoll_events_map_t::iterator	it					= _events.begin();
+			epoll_event_t					fake_event;
 
 			ret = epoll_wait(_fd, events, MAX_EVENTS, 0);
 			if (ret > 0)
 				iterable_events.insert(iterable_events.begin(), events, events + ret);
 			else if (ret < 0 && errno != EINTR)
 				_logger.fail("Unexpected stop while waiting EPOLL");
-				
+			
+			while (it != _events.end())
+			{
+				if (it->second.fallback)
+				{
+					fake_event = *(it->second.event);
+					iterable_events.insert(iterable_events.end(), fake_event);
+				}
+				++it;
+			}
+
 			return (iterable_events);
 		}
 

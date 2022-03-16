@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 22:47:57 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/14 23:11:12 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,25 +72,8 @@ class Request
 		}
 
 		virtual ~Request()
-		{}
-
-		Request 	&operator=(const Request &rhs)
 		{
-			if (this != &rhs)
-			{
-				start	= rhs.start;
-				fd		= rhs.fd;
-				events	= rhs.events;
-				memcpy(buff, rhs.buff, SERVER_BUFFER_SIZE);
-
-				method				= rhs.method;
-				pathname			= rhs.pathname;
-				trusted_pathname	= rhs.trusted_pathname;
-				http_version		= rhs.http_version;
-				headers				= rhs.headers;
-			}
-
-			return (*this);
+			std::cout << "Request destoying" << std::endl;
 		}
 
 		bool	await(uint32_t _events)

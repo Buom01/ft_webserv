@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/10 18:19:19 by badam             #+#    #+#             */
-/*   Updated: 2022/01/11 13:44:42 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/08 23:32:14 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,7 @@ typedef struct server_bind_s
 	int				fd;
 	std::string		host;
 	std::string		ip;
-	int				port;
+	uint16_t		port;
 	sockaddr_in_t	sockaddr_in;
 	sockaddr_t		*sockaddr;
 	socklen_t		len;
