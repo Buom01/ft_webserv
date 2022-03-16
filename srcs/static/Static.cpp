@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/03/15 21:46:47 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 04:25:42 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,8 +18,6 @@
 # include "Regex.hpp"
 # include "File.hpp"
 # include "AEpoll.hpp"
-
-
 
 class Static: public IMiddleware
 {

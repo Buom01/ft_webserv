@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/10 22:52:10 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 06:18:39 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,15 +16,12 @@
 # include "Request.hpp"
 # include "Response.hpp"
 # include "Serve.hpp"
-
-# include "utils/writeout.cpp"
-
+# include "utils.hpp"
 
 bool	addResponseHeaders(Request &, Response &res)
 {
 	Header				&h		= res.headers;
 	intmax_t			length	= -1;
-
 
 	h.set("Server: FT_WebServ");
 
@@ -43,7 +40,6 @@ bool	addResponseHeaders(Request &, Response &res)
 	
 	if (length == 0 && res.code == C_OK)
 		res.code = C_NO_CONTENT;  // @TODO: Verify this
-	
 	
 	return (true);
 }
@@ -71,7 +67,8 @@ bool	serializeHeaders(Request &req, Response &res)
 
 bool	sendHeader(Request &req, Response &res)
 {
-	unsigned long	bufferSize;
+	ssize_t	send_ret = -1;
+	size_t	write_size;
 
 	if (req.closed())
 		return (true);
@@ -80,17 +77,23 @@ bool	sendHeader(Request &req, Response &res)
 
 	while (res.headers_buff.length())
 	{
-		bufferSize = 1024;
-		
-		while(bufferSize)
+		write_size	= min(res.send_chunksize, res.headers_buff.length());
+		send_ret = send(res.fd, res.headers_buff.c_str(), write_size, MSG_NOSIGNAL | MSG_DONTWAIT);
+
+		if (send_ret > 0)
+			res.headers_buff.erase(0, send_ret);
+		if (send_ret < write_size)
 		{
-			if (!writeBuffer(req, res, res.headers_buff, bufferSize))
-				return (false);
+			req.unfire(EPOLLOUT);
+			return (false);
 		}
 	}
-	
+
 	res.headers_sent = true;
-	res.logger.log(res.code, req.pathname);  // should it be there or at the end ??
+	std::stringstream	infos;
+	infos << get_elasped(clock());
+	infos << "ms";
+	res.logger.log(res.code, req.pathname, infos.str());
 	
 	return (true);
 }

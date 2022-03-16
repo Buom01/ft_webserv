@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/03/10 23:19:18 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 07:06:22 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,10 @@ class	Serve
 	public:
 		Log				logger;
 
-		Serve(void): _epoll(logger)
+		Serve(void):
+			_epoll(logger),
+			_response_chain(_epoll),
+			_error_chain(_epoll)
 		{
 			_response_chain.setErrorChain(_error_chain);
 		}
@@ -67,34 +70,6 @@ class	Serve
 		std::string		_netIpToStr(in_addr_t ip)
 		{
 			return (inet_ntoa(*reinterpret_cast<in_addr *>(&ip)));
-		}
-
-		server_bind_t	&_bindFromFD(int fd)
-		{
-			static server_bind_t	nullBind;
-			binds_t::iterator		it			= _binds.begin();
-
-			while (it != _binds.end())
-			{
-				if (it->fd == fd)
-					return (*it);
-			}
-			
-			logger.warn("Bind not found for gived FD");
-			return (nullBind);
-		}
-
-		bool	_doesBelongToBinds(int fd)
-		{
-			binds_t::iterator		it		= _binds.begin();
-
-			while (it != _binds.end())
-			{
-				if (it->fd == fd)
-					return (true);
-			}
-			
-			return (false);
 		}
 
 		in_addr_t		_ipFromHost(std::string host)
@@ -210,18 +185,6 @@ class	Serve
 			return (_response_chain.retake(instance, events));
 		}
 
-		// bool	retake(int fd, uint32_t events)
-		// {
-		// 	if (_error_chain.retake(fd, events))
-		// 		return (true);
-		// 	if (_response_chain.retake(fd, events))
-		// 		return (true);
-
-		// 	logger.warn("FD doesn't match with any instances");
-			
-		// 	return (false);
-		// }
-
 		void	retake()
 		{
 			_error_chain.retake();
@@ -260,8 +223,6 @@ class	Serve
 						if (chainInstance)
 							_epoll.add(connection, ET_CONNECTION, chainInstance);
 					}
-					// else if (errno == EWOULDBLOCK)  // Le sujet interdit la lecture d'errno après lecture ou écriture
-					// 	logger.warn("EWOULDBLOCK happened with EPOLL");
 					else
 						logger.fail("Fail to grab connection", errno);
 				}
@@ -269,39 +230,6 @@ class	Serve
 				++it;
 			}
 		}
-
-		// void	accept(void)
-		// {
-		// 	server_bind_t			bind;
-		// 	events_t				events;
-		// 	events_t::iterator		it;
-		// 	int						connection;
-
-		// 	events = _epoll.accept();
-		// 	it = events.begin();
-
-		// 	while (it != events.end())
-		// 	{
-		// 		if (!retake(it->data.fd, it->events))
-		// 		{
-		// 			connection	= ::accept(it->data.fd, NULL, NULL);
-
-		// 			if (connection >= 0)
-		// 			{
-		// 				bind = _bindFromFD(it->data.fd);
-		// 				exec(connection, bind, it->events);
-		// 			}
-		// 			else if (errno == EWOULDBLOCK)
-		// 				logger.warn("EWOULDBLOCK happened with EPOLL");
-		// 			else
-		// 				logger.fail("Fail to grab connection", errno);
-		// 		}
-
-		// 		++it;
-		// 	}
-
-		// 	retake();
-		// }
 
 		class	ServerException: public std::runtime_error
 		{

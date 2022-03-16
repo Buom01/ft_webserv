@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/26 22:16:47 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 00:32:24 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 06:02:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,7 @@ typedef enum	event_type_s
 {
 	ET_BIND = 0,
 	ET_CONNECTION,
-	ET_BIGBUFFER,
+	ET_BODY,
 	ET_FILE
 }				event_type_t;
 
@@ -69,6 +69,13 @@ class	Epoll
 			{}
 		}
 
+		bool	has(int fd)
+		{
+			epoll_events_map_t::iterator	it	= _events.find(fd);
+
+			return (it != _events.end());
+		}
+
 		void	add(int fd, event_type_t type, void *data, uint32_t events = EPOLLIN | EPOLLOUT)
 		{
 			epoll_event_t	*ev			= new epoll_event_t();
@@ -103,30 +110,27 @@ class	Epoll
 			inner_event_t					inner_ev;
 			event_data_t					*data;
 
-			if (epoll_ctl(_fd, EPOLL_CTL_DEL, fd, NULL) == 0)
+			it = _events.find(fd);
+
+			if (it == _events.end())
 			{
-				it = _events.find(fd);
+				_logger.warn("Fail to find epoll event in the map");
+				return ;
+			}
+			inner_ev = it->second;
 
-				if (it == _events.end())
-					_logger.warn("Fail to find epoll event in the map");
-				else
+			if (inner_ev.fallback || epoll_ctl(_fd, EPOLL_CTL_DEL, fd, NULL) == 0)
+			{
+				data = static_cast<event_data_t *>(inner_ev.event->data.ptr);
+
+				if (data->data)
 				{
-					inner_ev = it->second;
-					data = static_cast<event_data_t *>(inner_ev.event->data.ptr);
-
-					if (data->data)
-					{
-						// @TODO : Find a way to properly remove event's data
-						
-						// if (RunningChain *instance = dynamic_cast<RunningChain *>(data->data))
-						// 	delete instance;
-						// else
-						// 	_logger.warn("Failed to remove epoll event's data");
-					}
-
-					delete inner_ev.event;
-					delete data;
+					// @TODO : Find a way to properly remove event's data
+					// should not be done at epoll level, but at his caller level
 				}
+				_events.erase(it);
+				delete inner_ev.event;
+				delete data;
 			}
 			else
 				_logger.warn("Failed to remove FD from epoll");

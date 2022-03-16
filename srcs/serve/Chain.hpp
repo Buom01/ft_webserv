@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/03/15 21:51:51 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 07:08:05 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,7 @@ class	RunningChain
 		chain_state_t		state;
 
 		RunningChain(int connection, uint32_t _events, Log &logger, chain_t::iterator _pos):
-			req(connection, _events),
+			req(connection, _events, logger),
 			res(connection, logger),
 			events(_events),
 			pos(_pos),
@@ -58,6 +58,7 @@ typedef std::vector<RunningChain *>    running_chains_t;
 class   Chain
 {
     protected:
+		Epoll				&_epoll;
         chain_t				_raw_chain;
 		Chain				*_error_chain;
 		running_chains_t	_running;
@@ -87,10 +88,14 @@ class   Chain
 
 					if (!ret)
 						return (false);
+					else if (instance.req.closed())
+						break ;
 				}
 				++(instance.pos);
 			}
-			if (!instance.res.sent)
+			if (instance.req.closed())
+				instance.res.logger.warn("Request closed by the client");
+			else if (!instance.res.sent)
 				instance.res.logger.warn("Chain finished without sending data");
 			return (true);
 		}
@@ -154,17 +159,24 @@ class   Chain
 			{
 				if (*it == instance)
 				{
-					delete *it;
 					it = _running.erase(it);
-					// @TODO: Remove FD from poll
+					_epoll.remove(instance->req.fd);
+					break ;
 				}
 				else
 					++it;
 			}
+			try
+			{
+				close(instance->req.fd);
+			}
+			catch(...)
+			{}
+			delete instance;
 		}
     
     public:
-        Chain()
+        Chain(Epoll &epoll): _epoll(epoll)
         {}
 
         ~Chain()
@@ -209,25 +221,12 @@ class   Chain
 				_running.push_back(instance);
 			else
 			{
-				delete (instance);
+				_remove_instance(instance);
 				instance = NULL;
 			}
 
 			return (instance);
         }
-		
-        // void	exec(Request &req, Response &res, uint32_t events)
-        // {
-        //     RunningChain	*instance	= new RunningChain(req, res, events, _raw_chain.begin());
-
-		// 	if (!_exec_instance(*instance))
-		// 	{
-		// 		_running.push_back(instance);
-		// 		// @TODO: add FD to poll
-		// 	}
-		// 	else
-		// 		delete (instance);
-        // }
 
 		bool	retake(RunningChain *instance, uint32_t events)
 		{
@@ -241,34 +240,9 @@ class   Chain
 					return (true);
 				}
 			}
+			
 			return (false);
 		}
-
-		// bool	retake(int fd, uint32_t events)
-		// {
-		// 	// Should also support POLLHUP for closed streams
-		// 	running_chains_t::iterator	it	= _running.begin();
-
-		// 	while (it != _running.end())
-		// 	{
-		// 		if ((*it)->req.fd == fd)
-		// 		{
-		// 			if (((*it)->state == CS_AWAIT_IN && ))
-		// 			{
-		// 				if (_exec_instance(**it))
-		// 				{
-		// 					delete *it;
-		// 					_running.erase(it);
-		// 					// Remove FD from poll
-		// 				}
-		// 			}
-		// 			return (true);
-		// 		}
-		// 		++it;
-		// 	}
-			
-		// 	return (false);
-		// }
 
 		void	retake()
 		{
@@ -277,11 +251,7 @@ class   Chain
 			while (it != _running.end())
 			{
 				if ((*it)->state == CS_OTHER && _exec_instance(**it))
-				{
-					delete *it;
-					it = _running.erase(it);
-					// @TODO: Remove FD from poll
-				}
+					_remove_instance(*it);
 				else
 					++it;
 			}

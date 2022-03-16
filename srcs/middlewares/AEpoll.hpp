@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 22:54:02 by badam             #+#    #+#             */
-/*   Updated: 2022/03/10 23:25:09 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 05:07:03 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,14 +45,18 @@ class AEpoll: public IMiddleware
 		}
 
 	protected:
-
 		AEpoll(Log &logger): _logger(logger), _epoll(logger)
 		{}
 
 		virtual ~AEpoll()
 		{}
 
-		void	setup(int fd, event_type_t type, void *data, uint32_t events = EPOLLIN)
+		bool	has(int fd)
+		{
+			return (_epoll.has(fd));
+		}
+
+		void	setup(int fd, event_type_t type, void *data = NULL, uint32_t events = EPOLLIN)
 		{
 			if (_registred.insert(std::make_pair(fd, 0)).second)
 				_epoll.add(fd, type, data, events);

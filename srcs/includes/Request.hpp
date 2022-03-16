@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/03/14 23:11:12 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 06:05:24 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 # define REQUEST_HPP
 
 # include <time.h>
+# include "Log.hpp"
 # include "Header.hpp"
 # include "http.hpp"
 
@@ -28,6 +29,7 @@ class Request
 	public:
 		clock_t				start;
 		int					fd;
+		Log					&logger;
 		uint32_t			events;
 		chain_state_t		*state;
 		char				buff[SERVER_BUFFER_SIZE];
@@ -38,28 +40,10 @@ class Request
 		std::string			http_version;
 		Header				headers;
 
-		Request() :
-			start(clock()),
-			fd(0),
-			events(0),
-			state(NULL),
-			method(M_UNKNOWN),
-			pathname(""),
-			trusted_pathname(""),
-			http_version(""),
-			headers()
-		{
-			bzero(&buff, sizeof(buff));
-		}
-
-		Request 	(const Request &rhs)
-		{
-			*this = rhs;
-		}
-
-		Request(int connection, uint32_t _events) :
+		Request(int connection, uint32_t _events, Log &_logger) :
 			start(clock()),
 			fd(connection),
+			logger(_logger),
 			events(_events),
 			state(NULL),
 			method(M_UNKNOWN),
@@ -72,9 +56,7 @@ class Request
 		}
 
 		virtual ~Request()
-		{
-			std::cout << "Request destoying" << std::endl;
-		}
+		{}
 
 		bool	await(uint32_t _events)
 		{
@@ -85,8 +67,6 @@ class Request
 			}
 			else
 			{
-				std::cout << "Await..." << std::endl;
-				events = events | _events;
 				*state = CS_AWAIT_EVENT;
 				return (false);
 			}
@@ -96,12 +76,12 @@ class Request
 		{
 			if (!(~events & _events))
 			{
-				std::cout << "Ignored fire" << std::endl;
+				logger.warn("Were waiting on an unused event");
+				*state = CS_OTHER;
 				return (false);
 			}
 			else
 			{
-				std::cout << "Fire !" << std::endl;
 				events = events | _events;
 				return (true);
 			}
@@ -109,7 +89,6 @@ class Request
 
 		void	unfire(uint32_t _events)
 		{
-			std::cout << "Unfire !" << std::endl;
 			events = events &~ _events;
 		}
 

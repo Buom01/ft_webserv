@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 21:55:09 by badam             #+#    #+#             */
-/*   Updated: 2022/03/14 18:38:26 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 06:22:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,82 +16,105 @@
 # include "Request.hpp"
 # include "Response.hpp"
 # include "Serve.hpp"
+# include "AEpoll.hpp"
+# include "utils.hpp"
 
-# include "utils/writeout.cpp"
-
-// @TODO handle reponseFD
-bool	sendBodyFromFD(Request &req, Response &res)
+class SendBodyFromFD: public AEpoll
 {
+	typedef	AEpoll	_parent;
+
+	public:
+		SendBodyFromFD(Log &logger): _parent(logger)
+		{}
+		
+	public:
+		bool	operator()(Request &req, Response &res)
+		{
+			ssize_t	read_ret = -1;
+			ssize_t	send_ret = -1;
+			size_t	write_size;
+			char	read_buffer[res.send_chunksize];
+			
+			if (res.sent)
+				return (true);
+			if (!res.response_fd)
+				return (true);
+			if (req.closed())
+			{
+				if (_parent::has(res.response_fd))
+					_parent::cleanup(res.response_fd);
+				return (true);
+			}
+				
+			if (!req.await(EPOLLOUT))
+				return (false);
+			if (!_parent::has(res.response_fd))
+				_parent::setup(res.response_fd, ET_BODY);
+			if (!_parent::await(res.response_fd, EPOLLIN))
+				return (false);
+			
+			while (read_ret != 0 && send_ret != 0)
+			{
+				if (res.response_fd_buff.length())
+				{
+					send_ret = send(res.fd, res.response_fd_buff.c_str(), res.response_fd_buff.length(), MSG_NOSIGNAL | MSG_DONTWAIT);
+					if (send_ret > 0)
+						res.response_fd_buff.erase(0, send_ret);
+					if (res.response_fd_buff.length())
+					{
+						req.unfire(EPOLLOUT);
+						return (false);
+					}
+				}
+
+				read_ret = read(res.response_fd, read_buffer, res.send_chunksize);
+				if (read_ret == -1)
+				{
+					_parent::clear_events(res.response_fd, EPOLLIN);
+					return (false);
+				}
+				res.response_fd_buff.append(read_buffer, read_ret);
+			}
+
+			res.sent = true;
+			_parent::cleanup(res.response_fd);
+			close(res.response_fd);
+			
+			return (true);
+		}
+
+};
+
+bool	sendBodyFromBuffer(Request &req, Response &res)
+{
+	ssize_t	send_ret = -1;
+	size_t	write_size;
+
 	if (res.sent)
 		return (true);
-	if (!res.response_fd)
+	if (!res.body.length())
 		return (true);
 	if (req.closed())
 		return (true);
+
 	if (!req.await(EPOLLOUT))
 		return (false);
 
-	// ::send(res.fd, res.body.str().c_str(), res.body.length(), MSG_DONTWAIT | MSG_NOSIGNAL);
-
-	res.sent = true;
-
-	return (true);
-}
-
-bool	sendBodyFromBigBuffer(Request &req, Response &res)
-{
-	std::cout << "Call" << std::endl;
-	ssize_t	send_ret = -1;
-
-	if (res.sent)
-		return (true);
-	if (!req.await(EPOLLOUT))
-		return (false);
-
-	if (req.closed())  // Middleware has to not take care of it ? But they should have a cleanup
-		return (true);
-
-	while (send_ret != 0)
+	while (res.body.length())
 	{
-		if (!res.sending_chunk_size)
+		write_size	= min(res.send_chunksize, res.body.length());
+		send_ret = send(res.fd, res.body.c_str(), write_size, MSG_NOSIGNAL | MSG_DONTWAIT);
+		
+		if (send_ret > 0)
+			res.body.erase(0, send_ret);
+		if (send_ret < write_size)
 		{
-			if (!res.body.can_read())
-				return (false);
-			res.sending_chunk = res.body.get_next_chunk(&(res.sending_chunk_size));
-			if (res.sending_chunk_size == 0)
-				break ;
-		}
-
-		send_ret = send(res.fd, res.sending_chunk, res.sending_chunk_size, MSG_NOSIGNAL | MSG_DONTWAIT);
-		if (send_ret == -1)
-		{
-			std::cout << "1" << std::endl;
 			req.unfire(EPOLLOUT);
 			return (false);
-		}
-		else
-		{
-			memmove(res.sending_chunk, res.sending_chunk + send_ret, res.sending_chunk_size - send_ret);
-			res.sending_chunk_size -= send_ret;
-			if (res.sending_chunk_size != 0)
-			{
-				std::cout << "2" << std::endl;
-				std::cout << "sending_chunk_size is " << res.sending_chunk_size << std::endl;
-				req.unfire(EPOLLOUT);
-				return (false);
-			}
 		}
 	}
 	
 	res.sent = true;
-
-	return (true);
-}
-
-bool	finishBody(Request &, Response &res)
-{
-	::close(res.fd);
-	std::cout << "Closed FD" << std::endl;
 
 	return (true);
 }
