@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 07:08:05 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 17:05:47 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,8 +94,12 @@ class   Chain
 				++(instance.pos);
 			}
 			if (instance.req.closed())
+			{
+				if (instance.res.response_fd > 0)
+					close(instance.res.response_fd);
 				instance.res.logger.warn("Request closed by the client");
-			else if (!instance.res.sent)
+			}
+			else if (!instance.res.sent && instance.res.code == C_OK)
 				instance.res.logger.warn("Chain finished without sending data");
 			return (true);
 		}

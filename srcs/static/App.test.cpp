@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 07:05:21 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 17:43:21 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,17 @@
 # include "write_headers.cpp"
 # include "write_body.cpp"
 # include "Static.cpp"
+
+
+bool	hangForeverTest(Request &req, Response &res)
+{
+	if (req.timeout())
+	{
+		res.code = C_REQUEST_TIMEOUT;
+		return (true);
+	}
+	return (false);
+}
 
 int	main(void)
 {
@@ -33,6 +44,7 @@ int	main(void)
 	app.use(parseStartLine);
 	app.use(parseRequestHeaders);
 
+	// app.use(hangForeverTest);
 	// app.use(cgi);
 	app.use(serveStatic);
 	// app.use(error);
@@ -47,6 +59,6 @@ int	main(void)
 	while (1)
 	{
 		app.accept();
-		usleep(500000);
+		usleep(1);
 	}
 }

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 04:25:42 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 17:10:26 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -107,6 +107,13 @@ class Static: public IMiddleware
 				return (true);
 			if (res.response_fd > 0 || res.body.length() > 0)
 				return (true);
+			if (req.closed())
+				return (true);
+			if (req.timeout())
+			{
+				res.code = C_REQUEST_TIMEOUT;
+				return (true);
+			}
 
 			std::string				path	= sanitizeRelativePath(req.pathname);
 

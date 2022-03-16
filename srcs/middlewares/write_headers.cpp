@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/16 06:18:39 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 17:32:55 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,7 +91,7 @@ bool	sendHeader(Request &req, Response &res)
 
 	res.headers_sent = true;
 	std::stringstream	infos;
-	infos << get_elasped(clock());
+	infos << get_elasped_ms(req.start);
 	infos << "ms";
 	res.logger.log(res.code, req.pathname, infos.str());
 	

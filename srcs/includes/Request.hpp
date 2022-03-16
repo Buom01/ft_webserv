@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 06:05:24 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 17:39:39 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@
 # include "Log.hpp"
 # include "Header.hpp"
 # include "http.hpp"
+# include "utils.hpp"
 
 typedef enum	chain_state_e
 {
@@ -27,7 +28,7 @@ typedef enum	chain_state_e
 class Request
 {
 	public:
-		clock_t				start;
+		struct timespec		start;
 		int					fd;
 		Log					&logger;
 		uint32_t			events;
@@ -41,7 +42,7 @@ class Request
 		Header				headers;
 
 		Request(int connection, uint32_t _events, Log &_logger) :
-			start(clock()),
+			start(get_time()),
 			fd(connection),
 			logger(_logger),
 			events(_events),
@@ -76,8 +77,11 @@ class Request
 		{
 			if (!(~events & _events))
 			{
-				logger.warn("Were waiting on an unused event");
-				*state = CS_OTHER;
+				if (*state == CS_AWAIT_EVENT)
+				{
+					logger.warn("Were waiting on an unused event");
+					*state = CS_OTHER;
+				}
 				return (false);
 			}
 			else
@@ -90,6 +94,11 @@ class Request
 		void	unfire(uint32_t _events)
 		{
 			events = events &~ _events;
+		}
+
+		bool	timeout()
+		{
+			return (get_elasped_ns(start) >= (int64_t)30 * 1000000000);
 		}
 
 		bool	closed()
