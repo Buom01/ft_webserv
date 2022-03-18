@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 05:24:17 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 05:45:34 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -119,7 +119,6 @@ class   Chain
 			{
 				instance.res.logger.fail("Failed to send error to client");
 
-				nothrow_close(instance.res.fd);
 				instance.res.sent = true;
 				instance.pos = _raw_chain.end();
 			}
