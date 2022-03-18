@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 21:55:09 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 16:56:19 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 18:32:52 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 # include "Serve.hpp"
 # include "AEpoll.hpp"
 # include "utils.hpp"
+# include "File.hpp"
 
 class SendBodyFromFD: public AEpoll
 {
@@ -78,7 +79,7 @@ class SendBodyFromFD: public AEpoll
 
 			res.sent = true;
 			_parent::cleanup(res.response_fd);
-			close(res.response_fd);
+			nothrow_close(res.response_fd);
 			res.response_fd = 0;
 			
 			return (true);

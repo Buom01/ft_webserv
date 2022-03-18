@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/02/17 02:31:31 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 18:20:23 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,7 +39,7 @@ bool	parseStartLine(Request &req, Response &)
 
 	regex.Match(line, "^([A-Z]+)\\ ([^\\ ]+)\\ HTTP\\/([0-9\\.]+)$");
 	if (regex.GetSize() != 4)
-		throw new Serve::ServerSocketException("Malformed request start line");
+		throw Serve::ServerSocketException("Malformed request start line");
 
 	std::string &method = regex.GetMatch()[1].occurence;
 	std::string &pathname = regex.GetMatch()[2].occurence;
@@ -67,9 +67,9 @@ bool	parseStartLine(Request &req, Response &)
 	req.http_version = http_version;
 
 	if (http_version != "1.0" && http_version != "1.1")
-		throw new Serve::ServerSocketException("Unsupported HTTP version");
+		throw Serve::ServerSocketException("Unsupported HTTP version");
 	if (req.method == M_UNKNOWN)
-		throw new Serve::ServerSocketException("Unsupported method");
+		throw Serve::ServerSocketException("Unsupported method");
 
 	return (true);
 }

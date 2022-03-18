@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 22:00:56 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 18:20:23 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ bool	test_breakchain(Request &, Response &)
 
 bool	test_throwchain(Request &, Response &)
 {
-	throw new Serve::ServerSocketException("test_throwchain middleware");
+	throw Serve::ServerSocketException("test_throwchain middleware");
 }
 
 bool	test_middleware(Request &, Response &res)

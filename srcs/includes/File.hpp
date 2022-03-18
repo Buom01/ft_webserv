@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/17 12:59:44 by badam             #+#    #+#             */
-/*   Updated: 2022/03/10 22:21:52 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 18:31:43 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,16 @@
 # include <sys/stat.h>
 # include <sys/types.h>
 # include <dirent.h>
+
+void	nothrow_close(int fd)
+{
+	try
+	{
+		close(fd);
+	}
+	catch(...)
+	{}
+}
 
 /*
 ** Following function limit parenting to root and simplify path as much as possible.

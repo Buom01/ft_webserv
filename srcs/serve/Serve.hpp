@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 07:06:22 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 04:53:42 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,18 +28,14 @@ class	Serve
 	Epoll			_epoll;
 	binds_t			_binds;
 	Chain			_response_chain;
-	Chain			_error_chain;
 
 	public:
 		Log				logger;
 
 		Serve(void):
 			_epoll(logger),
-			_response_chain(_epoll),
-			_error_chain(_epoll)
-		{
-			_response_chain.setErrorChain(_error_chain);
-		}
+			_response_chain(_epoll)
+		{}
 	
 		virtual ~Serve(void)
 		{
@@ -55,16 +51,11 @@ class	Serve
 	private:
 		void			_destroyBind(server_bind_t &bind)
 		{
-			try
+			if (bind.fd)
 			{
-				if (bind.fd)
-				{
-					_epoll.remove(bind.fd);
-					close(bind.fd);
-				}
+				_epoll.remove(bind.fd);
+				nothrow_close(bind.fd);
 			}
-			catch(...)
-			{}
 		}
 
 		std::string		_netIpToStr(in_addr_t ip)
@@ -114,11 +105,11 @@ class	Serve
 			if ((ip = _ipFromHost(host)) == INADDR_NONE)
 				return ;
 			if ((bind.fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
-				throw new ServerSocketException("Socket creation failed");
+				throw ServerSocketException("Socket creation failed");
 			if (setsockopt(bind.fd, SOL_SOCKET, SO_REUSEADDR, &opts, sizeof(opts)) == -1)
 			{
 				_destroyBind(bind);
-				throw new ServerSocketException("Failed to set socket options");
+				throw ServerSocketException("Failed to set socket options");
 			}
 
 			bind.host = host;
@@ -149,7 +140,7 @@ class	Serve
 				bind = *it;
 
 				if (listen(bind.fd, 1) == -1)
-					throw new ServerSocketException("Socket failed to listen");
+					throw ServerSocketException("Socket failed to listen");
 			
 				_epoll.add(bind.fd, ET_BIND, NULL);
 
@@ -159,20 +150,14 @@ class	Serve
 			}
 		}
 
-		void	use(IMiddleware &middleware, chain_flag_t flag = F_NORMAL, method_t methods = M_ALL)
+		void	use(IMiddleware &middleware, chain_flag_t flag = F_NORMAL, method_t methods = M_ALL, std::string pathname = "")
 		{
-			if (flag & F_NORMAL)
-				_response_chain.use(middleware, methods);
-			if (flag & F_ERROR)
-				_error_chain.use(middleware, methods);
+			_response_chain.use(middleware, flag, methods, pathname);
 		}
 
-		void	use(bool (&middleware)(Request&, Response&), chain_flag_t flag = F_NORMAL, method_t methods = M_ALL)
+		void	use(bool (&middleware)(Request&, Response&), chain_flag_t flag = F_NORMAL, method_t methods = M_ALL, std::string pathname = "")
 		{
-			if (flag & F_NORMAL)
-				_response_chain.use(middleware, methods);
-			if (flag & F_ERROR)
-				_error_chain.use(middleware, methods);
+			_response_chain.use(middleware, flag, methods, pathname);
 		}
 
 		RunningChain	*exec(int connection, uint32_t events)
@@ -187,7 +172,6 @@ class	Serve
 
 		void	retake()
 		{
-			_error_chain.retake();
 			_response_chain.retake();
 		}
 
@@ -234,19 +218,16 @@ class	Serve
 		class	ServerException: public std::runtime_error
 		{
 			public:
-				ServerException(std::string msg = "Unknown internal server error.") :
+				ServerException(const std::string &msg = "Unknown internal server error.") :
 					std::runtime_error(msg)
-				{}
-
-				virtual ~ServerException() throw()
 				{}
 		};
 
 		class	ServerSocketException: public ServerException
 		{
 			public:
-				ServerSocketException(std::string msg = "Server socket exception.") :
-					ServerException(msg)
+				ServerSocketException(const std::string &msg = "Server socket exception.") :
+					ServerException("ServerSocketException: " + msg)
 				{}
 		};
 };

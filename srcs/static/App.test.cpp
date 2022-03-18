@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 17:43:21 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 05:26:03 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,13 @@ bool	hangForeverTest(Request &req, Response &res)
 	return (false);
 }
 
+bool	throwErrorChain(Request &req, Response &res)
+{
+	throw Serve::ServerSocketException("throwErrorChain");
+	
+	return (true);
+}
+
 int	main(void)
 {
 	Serve 			app;
@@ -41,13 +48,14 @@ int	main(void)
 
 	app.bind("0.0.0.0", 8888);
 
-	app.use(parseStartLine);
-	app.use(parseRequestHeaders);
+	app.use(parseStartLine, F_ALL);
+	app.use(parseRequestHeaders, F_ALL);
 
+	// app.use(throwErrorChain);
 	// app.use(hangForeverTest);
 	// app.use(cgi);
 	app.use(serveStatic);
-	// app.use(error);
+	// app.use(error, F_ALL);
 	
 	app.use(addResponseHeaders, F_ALL);
 	app.use(serializeHeaders, F_ALL);

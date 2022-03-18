@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 17:05:47 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 05:24:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 # include "Request.hpp"
 # include "Response.hpp"
 # include "Log.hpp"
+# include "File.hpp"
 
 typedef struct	middleware_s
 {
@@ -25,6 +26,7 @@ typedef struct	middleware_s
 
 typedef struct chain_link_s
 {
+	chain_flag_t	flag;
 	method_t		methods;
 	std::string		pathname;
 	middleware_t	middleware;
@@ -50,6 +52,12 @@ class	RunningChain
 		{
 			req.state = &state;
 		}
+
+		virtual ~RunningChain()
+		{
+			if (res.response_fd > 0)
+				nothrow_close(res.response_fd);
+		}
 };
 
 typedef std::vector<RunningChain *>    running_chains_t;
@@ -60,14 +68,19 @@ class   Chain
     protected:
 		Epoll				&_epoll;
         chain_t				_raw_chain;
-		Chain				*_error_chain;
 		running_chains_t	_running;
 
-		bool	_canUseLink(chain_link_t &link, Request &req)
+		void	_log_error(RunningChain &instance, const std::exception &e)
+		{
+			instance.res.logger.fail(e.what());
+		}
+
+		bool	_canUseLink(chain_link_t &link, Request &req, Response &res)
 		{
 			return (
 				( req.method == M_UNKNOWN  || (link.methods & req.method) )
 				&& link.pathname.compare(req.pathname) <= 0
+				&& (!res.error || link.flag & F_ERROR)
 			);
 		}
 
@@ -79,7 +92,7 @@ class   Chain
 			while (instance.pos != _raw_chain.end())
 			{
 				link = *(instance.pos);
-				if (_canUseLink(link, instance.req))
+				if (_canUseLink(link, instance.req, instance.res))
 				{
 					if (link.middleware.obj)
 						ret = (*link.middleware.obj)(instance.req, instance.res);
@@ -94,65 +107,49 @@ class   Chain
 				++(instance.pos);
 			}
 			if (instance.req.closed())
-			{
-				if (instance.res.response_fd > 0)
-					close(instance.res.response_fd);
 				instance.res.logger.warn("Request closed by the client");
-			}
 			else if (!instance.res.sent && instance.res.code == C_OK)
 				instance.res.logger.warn("Chain finished without sending data");
 			return (true);
 		}
 
+		void	_handle_exception(RunningChain &instance, const std::exception &e)
+		{
+			if (instance.res.error)
+			{
+				instance.res.logger.fail("Failed to send error to client");
+
+				nothrow_close(instance.res.fd);
+				instance.res.sent = true;
+				instance.pos = _raw_chain.end();
+			}
+			else
+			{
+				instance.state = CS_OTHER;
+				_log_error(instance, e);
+				instance.res.error = &e;
+			}
+		}
+
 		bool	_exec_instance(RunningChain &instance)
 		{
-			// try
-			// {
+			try
+			{
 				return _run(instance);
-			// }
-			// catch (const std::exception &e)
-			// {
-			// 	instance.state = CS_OTHER;
-			// 	instance.res.logger.fail(e.what());
-			// 	instance.res.error = &e;
+			}
+			catch (const std::exception &e)
+			{
+				_handle_exception(instance, e);
+				return (false);
+			}
+			catch (...)
+			{
+				instance.res.logger.fail("Unhandled exception");
+				
+				nothrow_close(instance.res.fd);
 
-			// 	// try
-			// 	// {
-			// 	// 	if (_error_chain)
-			// 	// 	{
-			// 	// 		_error_chain->exec(instance.req, instance.res, instance.events);  // Should replace the running instance. Verify that's the case
-			// 	// 		return (true);
-			// 	// 	}
-			// 	// 	else
-			// 	// 		throw (CantHandleRequest());
-			// 	// }
-			// 	// catch(const std::exception &ce)
-			// 	// {
-			// 		instance.res.logger.fail("Failed to answer");
-
-			// 		try
-			// 		{
-			// 			::close(instance.res.fd);
-			// 		}
-			// 		catch (...)
-			// 		{}
-
-			// 		return (true);
-			// 	// }
-			// }
-			// catch (...)
-			// {
-			// 	instance.res.logger.fail("Unhandled exception");
-
-			// 	try
-			// 	{
-			// 		::close(instance.res.fd);
-			// 	}
-			// 	catch(...)
-			// 	{}
-
-			// 	return (true);
-			// }
+				return (true);
+			}
 		}
 
 		void _remove_instance(RunningChain *instance)
@@ -170,12 +167,8 @@ class   Chain
 				else
 					++it;
 			}
-			try
-			{
-				close(instance->req.fd);
-			}
-			catch(...)
-			{}
+
+			nothrow_close(instance->req.fd);
 			delete instance;
 		}
     
@@ -188,15 +181,11 @@ class   Chain
             // clearup  running
         }
 
-		void	setErrorChain(Chain &error_chain)
-		{
-			_error_chain = &error_chain;
-		}
-
-		void	use(IMiddleware &middleware, method_t methods = M_ALL)
+		void	use(IMiddleware &middleware, chain_flag_t flag, method_t methods, std::string &pathname)
 		{
 			chain_link_t	link;
 
+			link.flag = flag;
 			link.methods = methods;
 			link.pathname = "";
 			link.middleware.obj = &middleware;
@@ -205,10 +194,11 @@ class   Chain
             _raw_chain.push_back(link);
 		}
 
-		void	use(bool (&middleware)(Request&, Response&), method_t methods = M_ALL)
+		void	use(bool (&middleware)(Request&, Response&), chain_flag_t flag, method_t methods, std::string &pathname)
 		{
 			chain_link_t	link;
 
+			link.flag = flag;
 			link.methods = methods;
 			link.pathname = "";
 			link.middleware.obj = NULL;
@@ -260,15 +250,6 @@ class   Chain
 					++it;
 			}
 		}
-
-		class CantHandleRequest : public std::exception
-		{
-			public:
-				virtual const char* what() const throw () 
-				{
-					return ("No more fallback error chain");
-				}
-		};
 };
 
 #endif

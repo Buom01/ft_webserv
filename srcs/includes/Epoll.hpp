@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/26 22:16:47 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 06:02:17 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 18:32:18 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 
 # include <vector>
 # include "http.hpp"
-// # include "Chain.hpp"
+# include "File.hpp"
 
 typedef	std::vector<epoll_event_t>	events_t;
 
@@ -55,18 +55,13 @@ class	Epoll
 			_logger(logger)
 		{
 			if ((_fd = epoll_create1(0)) == -1)
-				throw new EpollException("EPOLL creation failed");
+				throw EpollException("EPOLL creation failed");
 		}
 
 		~Epoll()
 		{
-			try
-			{
-				if (_fd >= 0)
-					::close(_fd);
-			}
-			catch(...)
-			{}
+			if (_fd >= 0)
+				nothrow_close(_fd);
 		}
 
 		bool	has(int fd)
@@ -99,7 +94,7 @@ class	Epoll
 				if (errno == EPERM)
 					inner_ev.fallback = true;
 				else
-					throw new EpollException("EPOLL setup failed");
+					throw EpollException("EPOLL setup failed");
 			}
 			_events.insert(std::pair<int, inner_event_t>(fd, inner_ev));
 		}
