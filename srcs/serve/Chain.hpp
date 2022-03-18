@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 08:02:23 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 08:25:08 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -183,8 +183,14 @@ class   Chain
 
         ~Chain()
         {
-            // clearup  running
-        }
+			running_chains_t::iterator	it	= _running.begin();
+
+			while (it != _running.end())
+			{
+				_remove_instance(*it);
+				++it;
+			}
+		}
 
 		void	use(IMiddleware &middleware, chain_flag_t flag, method_t methods, std::string &pathname)
 		{

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/18 07:48:59 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 08:20:34 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,10 +20,6 @@
 # include "Regex.hpp"
 # include "File.hpp"
 
-/*
-** @todo: retake should not enter into these chain part if there are no incomming event in epoll
-** alternative should be to change a variable in request if new epoll event happpened
-*/
 bool	parseStartLine(Request &req, Response &)
 {
 	std::string	line;

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 21:55:09 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 07:48:59 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 08:18:58 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -120,17 +120,5 @@ bool	sendBodyFromBuffer(Request &req, Response &res)
 
 	return (true);
 }
-
-/*
-@TODO:
-De plus on peut en générale savoir que le buffer du socket est saturé car send retounerais -1 avec errno à ERR_WOULDBLOCK, seulement:
-- "La vérification de la valeur de errno est strictement interdite après une opération de lecture ou d’écriture."
-Enfin, dans le cas où body peut être un fichier il y aura un autre epoll dédié à mettre en place
-
-=> Solution:
-- Si il retourne -1, se remttre dane l'epoll et attendre EPOLLOUT à nouveau (si ça marche ?? à priori c'est le but: https://stackoverflow.com/questions/3673828/proper-handling-of-ewouldblock-with-polling-on-a-non-blocking-socket)
-- Bien écouter sur EPOLLHUP ("closed")
-- Mettre un timeout
-*/
 
 #endif

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/26 22:16:47 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 18:32:18 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 08:22:52 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -118,11 +118,6 @@ class	Epoll
 			{
 				data = static_cast<event_data_t *>(inner_ev.event->data.ptr);
 
-				if (data->data)
-				{
-					// @TODO : Find a way to properly remove event's data
-					// should not be done at epoll level, but at his caller level
-				}
 				_events.erase(it);
 				delete inner_ev.event;
 				delete data;
