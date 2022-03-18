@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 16:28:32 by badam             #+#    #+#             */
-/*   Updated: 2022/03/08 23:32:29 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 07:24:24 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,6 +54,11 @@ class	Log
 			std::cout << "Server is listening " << address
 				<< " on port " << port << " !"
 				<< std::endl;
+		}
+
+		void	stopping()
+		{
+			std::cout << "Server stopping..." << std::endl;
 		}
 
 		void	log(int code, std::string path, std::string infos = "")

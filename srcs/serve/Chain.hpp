@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 05:45:34 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 07:49:22 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,8 +43,8 @@ class	RunningChain
 		chain_t::iterator	pos;
 		chain_state_t		state;
 
-		RunningChain(int connection, uint32_t _events, Log &logger, chain_t::iterator _pos):
-			req(connection, _events, logger),
+		RunningChain(int connection, uint32_t _events, bool &_alive, Log &logger, chain_t::iterator _pos):
+			req(connection, _events, _alive, logger),
 			res(connection, logger),
 			events(_events),
 			pos(_pos),
@@ -69,6 +69,7 @@ class   Chain
 		Epoll				&_epoll;
         chain_t				_raw_chain;
 		running_chains_t	_running;
+		bool				_alive;
 
 		void	_log_error(RunningChain &instance, const std::exception &e)
 		{
@@ -101,13 +102,15 @@ class   Chain
 
 					if (!ret)
 						return (false);
-					else if (instance.req.closed())
+					else if (instance.req.finish())
 						break ;
 				}
 				++(instance.pos);
 			}
 			if (instance.req.closed())
 				instance.res.logger.warn("Request closed by the client");
+			else if (instance.req.finish())
+				instance.req.logger.warn("Connection was cut up cause of timeout");
 			else if (!instance.res.sent && instance.res.code == C_OK)
 				instance.res.logger.warn("Chain finished without sending data");
 			return (true);
@@ -172,7 +175,9 @@ class   Chain
 		}
     
     public:
-        Chain(Epoll &epoll): _epoll(epoll)
+        Chain(Epoll &epoll):
+			_epoll(epoll),
+			_alive(true)
         {}
 
         ~Chain()
@@ -208,7 +213,7 @@ class   Chain
 		
         RunningChain	*exec(int connection, uint32_t events, Log &logger)
         {
-            RunningChain	*instance	= new RunningChain(connection, events, logger, _raw_chain.begin());
+            RunningChain	*instance	= new RunningChain(connection, events, _alive, logger, _raw_chain.begin());
 
 			if (!_exec_instance(*instance))
 				_running.push_back(instance);
@@ -248,6 +253,16 @@ class   Chain
 				else
 					++it;
 			}
+		}
+
+		bool	alive()
+		{
+			return (_alive || _running.size());
+		}
+
+		void	stop()
+		{
+			_alive = false;
 		}
 };
 

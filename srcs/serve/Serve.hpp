@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 04:53:42 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 07:25:07 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,13 +28,15 @@ class	Serve
 	Epoll			_epoll;
 	binds_t			_binds;
 	Chain			_response_chain;
+	bool			_alive;
 
 	public:
 		Log				logger;
 
 		Serve(void):
 			_epoll(logger),
-			_response_chain(_epoll)
+			_response_chain(_epoll),
+			_alive(false)
 		{}
 	
 		virtual ~Serve(void)
@@ -148,6 +150,7 @@ class	Serve
 
 				++it;
 			}
+			_alive = true;
 		}
 
 		void	use(IMiddleware &middleware, chain_flag_t flag = F_NORMAL, method_t methods = M_ALL, std::string pathname = "")
@@ -202,10 +205,18 @@ class	Serve
 
 					if (connection >= 0)
 					{
-						chainInstance = exec(connection, 0);
-						
-						if (chainInstance)
-							_epoll.add(connection, ET_CONNECTION, chainInstance);
+						if (_alive)
+						{
+							chainInstance = exec(connection, 0);
+							
+							if (chainInstance)
+								_epoll.add(connection, ET_CONNECTION, chainInstance);
+						}
+						else
+						{
+							nothrow_close(connection);
+							logger.warn("Reject connection");
+						}
 					}
 					else
 						logger.fail("Fail to grab connection", errno);
@@ -213,6 +224,20 @@ class	Serve
 
 				++it;
 			}
+		}
+
+		bool	alive()
+		{
+			return (_alive || _response_chain.alive());
+		}
+
+		void	stop()
+		{
+			if (!_alive)
+				return ;
+			logger.stopping();
+			_alive = false;
+			_response_chain.stop();
 		}
 
 		class	ServerException: public std::runtime_error

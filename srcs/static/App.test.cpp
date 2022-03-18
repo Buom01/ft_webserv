@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 05:26:03 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 07:32:18 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,8 @@
 
 bool	hangForeverTest(Request &req, Response &res)
 {
+	if (req.finish())
+		return (true);
 	if (req.timeout())
 	{
 		res.code = C_REQUEST_TIMEOUT;
@@ -64,7 +66,7 @@ int	main(void)
 	app.use(sendBodyFromFD, F_ALL);
 
 	app.begin();
-	while (1)
+	while (app.alive())
 	{
 		app.accept();
 		usleep(1);

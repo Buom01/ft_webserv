@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/16 17:32:55 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 07:48:59 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,7 @@ bool	addResponseHeaders(Request &, Response &res)
 
 bool	serializeHeaders(Request &req, Response &res)
 {
-	if (req.closed())
+	if (req.finish())
 		return (true);
 
 	std::stringstream			startline;
@@ -70,7 +70,7 @@ bool	sendHeader(Request &req, Response &res)
 	ssize_t	send_ret = -1;
 	size_t	write_size;
 
-	if (req.closed())
+	if (req.finish())
 		return (true);
 	if (!req.await(EPOLLOUT))
 		return (false);

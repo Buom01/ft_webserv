@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 17:10:26 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 07:48:59 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -107,7 +107,7 @@ class Static: public IMiddleware
 				return (true);
 			if (res.response_fd > 0 || res.body.length() > 0)
 				return (true);
-			if (req.closed())
+			if (req.finish())
 				return (true);
 			if (req.timeout())
 			{

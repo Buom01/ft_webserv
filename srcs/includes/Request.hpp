@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 17:39:39 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 07:08:34 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,6 +32,7 @@ class Request
 		int					fd;
 		Log					&logger;
 		uint32_t			events;
+		bool				&alive;
 		chain_state_t		*state;
 		char				buff[SERVER_BUFFER_SIZE];
 		
@@ -41,11 +42,12 @@ class Request
 		std::string			http_version;
 		Header				headers;
 
-		Request(int connection, uint32_t _events, Log &_logger) :
+		Request(int connection, uint32_t _events, bool &_alive, Log &_logger) :
 			start(get_time()),
 			fd(connection),
 			logger(_logger),
 			events(_events),
+			alive(_alive),
 			state(NULL),
 			method(M_UNKNOWN),
 			pathname(""),
@@ -104,6 +106,11 @@ class Request
 		bool	closed()
 		{
 			return (events & EPOLLHUP);
+		}
+
+		bool	finish()
+		{
+			return (closed() || (!alive && timeout()));
 		}
 };
 
