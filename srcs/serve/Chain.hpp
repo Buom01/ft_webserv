@@ -6,13 +6,14 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 07:49:22 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 08:02:23 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CHAIN_HPP
 # define CHAIN_HPP
 
+# include "IMiddleware.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
 # include "Log.hpp"

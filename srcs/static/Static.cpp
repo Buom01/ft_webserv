@@ -6,13 +6,14 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 07:48:59 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 08:01:27 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef __STATIC_MIDDLEWARE_CPP
 # define __STATIC_MIDDLEWARE_CPP
 
+# include "IMiddleware.hpp"
 # include "Response.hpp"
 # include "Request.hpp"
 # include "Regex.hpp"
