@@ -140,10 +140,9 @@ class Parse : public ParseTypedef
 	private:
 		Regex			Regex;
 		serversVector	servers;
-		std::string		configFilePath;
+		std::string		configPath;
 		std::ifstream	stream;
 	private:
-		Parse();
 		Parse(const Parse *);
 		Parse operator=(const Parse *);
 	#pragma region Read config file and parse in a resiliente way
@@ -159,7 +158,10 @@ class Parse : public ParseTypedef
 			throw IncorrectConfig(err);
 		}
 	public:
-		Parse(std::string configFilePath) : configFilePath(configFilePath)
+		Parse() {}
+		Parse(std::string configFilePath) : configPath(configFilePath) { init(configPath); }
+		
+		void init(std::string configFilePath)
 		{
 			pairLocations	locationTemp;
 			s_server		serverTemp;
@@ -168,8 +170,9 @@ class Parse : public ParseTypedef
 			bool asServerBlock = false;
 			bool isServerBlock = false, isLocationBlock = false;
 
+			configPath = configFilePath;
 			serverTemp.id = 0;
-			stream.open(configFilePath.c_str());
+			stream.open(configPath.c_str());
 			stream.exceptions(std::ifstream::badbit);
 			if (!stream.is_open())
 				throw std::ifstream::failure("Open configuration file failed");
@@ -260,7 +263,6 @@ class Parse : public ParseTypedef
 			if (!asServerBlock)
 				generateParseError(lineNumber, "configuration: no server block is present. A configuration must be in at least one server block");
 		}
-	
 	private:
 		bool isEmpty(std::string str)
 		{
@@ -586,7 +588,7 @@ class Parse : public ParseTypedef
 			return Regex.match()[0].occurence;
 		}
 
-		std::vector<std::string> server_name(optionsVector vec)
+		std::vector<std::string> serverName(optionsVector vec)
 		{
 			stringVector				get = findKey("server_name", vec);
 			std::vector<std::string>	ret;
@@ -629,10 +631,63 @@ class Parse : public ParseTypedef
 				}
 			}
 			ret.ip = static_cast<size_t>(inet_addr(ip.c_str()));
+			if (ret.ip < 0 || ret.ip > 4294967295)
+			{
+				std::string c = "rule 'listen': ip address ";
+				c += ip.c_str();
+				c += " is outside the range [0.0.0.0] <> [255.255.255.255]";
+				throw IncorrectConfig(c.c_str());
+			}
+			if (port < 0 || port > 65535)
+			{
+				std::string c = "rule 'listen': port ";
+				std::stringstream strstream;
+				strstream << port;
+				c += strstream.str();
+				c += " is outside the range [0] <> [65535]";
+				throw IncorrectConfig(c.c_str());
+			}
 			ret.port = static_cast<size_t>(htons(port));
 			return ret;
 		}
 	#pragma endregion Getter
+	
+	#pragma region Check config
+	public:
+		inline void check()
+		{
+			for (serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
+			{
+				alias((*it).options);
+				allow((*it).options);
+				autoindex((*it).options);
+				cgi((*it).options);
+				clientBodyBufferSize((*it).options);
+				errorPage((*it).options);
+				index((*it).options);
+				root((*it).options);
+				serverName((*it).options);
+				listen((*it).options);
+				if (!((*it).locations.empty()))
+				{
+					for (locationsVector::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
+					{
+						alias((*itLoc).second);
+						allow((*itLoc).second);
+						autoindex((*itLoc).second);
+						cgi((*itLoc).second);
+						clientBodyBufferSize((*itLoc).second);
+						errorPage((*itLoc).second);
+						index((*itLoc).second);
+						root((*itLoc).second);
+						serverName((*itLoc).second);
+						listen((*itLoc).second);
+					}
+				}
+			}
+		}
+	#pragma endregion Check config
+	
 	#pragma region Print for debug
 	public:
 		/**

@@ -7,13 +7,18 @@ int	main(int argc, char **argv)
 
 	if (argc < 3)
 	{
+		std::cout << "No args, default value set" << std::endl;
 		line = "One     Two Three Four Five Six ";
 		reg = "([a-zA-Z0-9_]+)";
 	}
-	std::cout << "Testing: \"" << argv[0] << "\"" << std::endl;
-	std::cout << "With: \"" << argv[1] << "\"" << std::endl;
+	else
+	{
+		line = argv[0];
+		reg = argv[1];
+	}
+	std::cout << "Testing: \"" << line << "\"" << std::endl;
+	std::cout << "With: \"" << reg << "\"" << std::endl;
 
-	std::string line = argv[0], reg = argv[1];
 	std::cout << "With no flag:" << std::endl;
 	while (regex.exec(line, reg))
 	{

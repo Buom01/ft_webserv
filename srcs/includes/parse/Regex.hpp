@@ -27,8 +27,7 @@ class Regex
 		char		*_pos;
 		char		*_pos_save;
 		char 		*_reg;
-
-		bool		is_end;
+		bool		_is_end;
 		int			_size_line;
 		size_t		_size;
 		regex_t		_regex;
@@ -74,7 +73,7 @@ class Regex
 			)
 				return;
 			
-			is_end = false;
+			_is_end = false;
 
 			if (_line)
 				delete [] _line;
@@ -114,7 +113,7 @@ class Regex
 			match_t					temp;
 			std::string				tempGroup;
 
-			for (size_t x = 0; regexec(r, _pos, n_matches, pmatch , 0) == 0 && !is_end; x++)
+			for (size_t x = 0; regexec(r, _pos, n_matches, pmatch , 0) == 0 && !_is_end; x++)
 			{
 				if (x > 0 && flag != GLOBAL_FLAG)
 					break;
@@ -125,7 +124,7 @@ class Regex
 					temp.end = pmatch[pass].rm_eo + point;
 					temp.width = temp.end - temp.start;
 					occ_is_null = !!(temp.width == 0);
-						is_end = !!(temp.start == _size_line || temp.start == _size_line);
+						_is_end = !!(temp.start == _size_line || temp.start == _size_line);
 					temp.occurence = std::string(_pos + pmatch[pass].rm_so, temp.width);
 					if (pass > 0)
 					{
@@ -136,7 +135,7 @@ class Regex
 						tempGroup = temp.occurence;
 				}
 				_pos += pmatch[0].rm_eo;
-				if (occ_is_null && !is_end)
+				if (occ_is_null && !_is_end)
 					_pos += 1;
 			}
 			_size = matches.size();
@@ -155,13 +154,13 @@ class Regex
 		}
 	public:
 		/**
-		 * Get the number of occurrences in the array
+		 * Get the number of last occurrence(s) in the array
 		 * @return (size_t) number of occurence found
 		 */
 		size_t size() const { return _size; }
 
 		/**
-		 *	Get the array of occurrence(s)
+		 *	Get the array of last occurrence(s)
 		 *	@return (match_t[]) array containing the match(s)
 		 *	If no match, size() is zero
 		 */
@@ -179,11 +178,11 @@ class Regex
 				std::replace(__match[x].occurence.begin(), __match[x].occurence.end(),'\t',' ');
 				std::replace(__match[x].group.begin(), __match[x].group.end(),'\t',' ');
 				std::cout << "  {" << std::endl;
-				std::cout << "     \"Group\"     : \"" << __match[x].group		<< "\","	<< std::endl;
-				std::cout << "     \"Start\"     : \"" << __match[x].start		<< "\","	<< std::endl;
-				std::cout << "     \"End\"       : \"" << __match[x].end		<< "\","	<< std::endl;
-				std::cout << "     \"Width\"     : \"" << __match[x].width		<< "\","	<< std::endl;
-				std::cout << "     \"Occurence\" : \"" << __match[x].occurence	<< "\""		<< std::endl;
+				std::cout << "     \"Group\"     : \""	<< __match[x].group		<< "\","	<< std::endl;
+				std::cout << "     \"Start\"     : "	<< __match[x].start		<< ","		<< std::endl;
+				std::cout << "     \"End\"       : "	<< __match[x].end		<< ","		<< std::endl;
+				std::cout << "     \"Width\"     : "	<< __match[x].width		<< ","		<< std::endl;
+				std::cout << "     \"Occurence\" : \""	<< __match[x].occurence	<< "\""		<< std::endl;
 				std::cout << "  }";
 				if (x < _size - 1)
 					std::cout << ",";
@@ -193,14 +192,14 @@ class Regex
 		}
 
 		/**
-		 * 	Found all occurences in string
+		 * 	Found occurence(s) in string
 		 * 	@param line (std::string) line to search occurence
 		 * 	@param regex (std::string) regex rules
 		 * 	@param flag (int) (optional) by default regex stop at first occurence,
 		 *	pass FLAG_GLOBAL for get all occurences in string
-		 *	@param reset (bool) (optionak) if set to true, regex position is reset to zero
+		 *	@param reset (bool) (optional) if set to true, regex position is reset to zero
 		 *  @return match_t[size()] containing the match(s)
-		 *	If no flag pass and function recall, regex saved last position and return next match
+		 *	If no flag pass & no reset and function recall, regex saved last position and return next match
 		 */
 		match_t *exec(const std::string line, const std::string regex, int flag = NO_FLAG, bool reset = false)
 		{
