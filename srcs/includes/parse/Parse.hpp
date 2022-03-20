@@ -119,6 +119,8 @@ struct ParseTypedef
 	{
 		uint32_t	ip;
 		uint16_t	port;
+		std::string ipSave;
+		int			portSave;
 	};
 
 	class	IncorrectConfig : virtual public std::exception
@@ -476,6 +478,8 @@ class Parse : public ParseTypedef
 			s_cgi cgi;
 			std::string err = "rule 'cgi': ";
 			
+			if (get.size() == 1 && get[0] == "NO_KEY")
+				return cgi;
 			if (get.size() != 3)
 			{
 				err += "there must be at least [extension] [path to executable] [http request allowed]";
@@ -576,12 +580,17 @@ class Parse : public ParseTypedef
 			return Regex.match()[0].occurence;
 		}
 
-		std::string root(optionsVector vec)
+		std::string root(optionsVector vec, bool optional = false)
 		{
 			stringVector	get = findKey("root", vec);
 		
 			if (get[0] == NO_KEY)
-				throw IncorrectConfig("rule 'root': no rule is defined, the server can't work");
+			{
+				if (!optional)
+					throw IncorrectConfig("rule 'root': no rule is defined, the server can't work");
+				else
+					return "";
+			}
 			Regex.exec(get[0], "([-a-zA-Z0-9_./\\]+)", GLOBAL_FLAG);
 			if (Regex.size() > 1)
 				throw IncorrectConfig("rule 'root': only one directory definition is allowed");
@@ -623,13 +632,15 @@ class Parse : public ParseTypedef
 				}
 				for (std::vector<std::string>::iterator it = temp.begin(); it != temp.end(); it++)
 				{
-					Regex.exec(ip, "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+)");
+					Regex.exec(*it, "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+)");
 					if (Regex.size() == 1)
 						ip = *it;
 					else
 						port = atoi((*it).c_str());
 				}
 			}
+			ret.ipSave = ip;
+			ret.portSave = port;
 			ret.ip = static_cast<size_t>(inet_addr(ip.c_str()));
 			if (ret.ip < 0 || ret.ip > 4294967295)
 			{
@@ -656,6 +667,13 @@ class Parse : public ParseTypedef
 	public:
 		inline void check()
 		{
+			std::vector<s_listen>		checkListen;
+			std::vector<std::string>	checkServer;
+			std::vector<std::string>	tempServer;
+			uint32_t					ipTemp;
+			uint16_t					portTemp;
+			int							count = 0;
+
 			for (serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 			{
 				alias((*it).options);
@@ -666,8 +684,10 @@ class Parse : public ParseTypedef
 				errorPage((*it).options);
 				index((*it).options);
 				root((*it).options);
-				serverName((*it).options);
-				listen((*it).options);
+				tempServer = serverName((*it).options);
+				for (std::vector<std::string>::const_iterator itC = tempServer.begin(); itC != tempServer.end(); itC++)
+					checkServer.push_back(*itC);
+				checkListen.push_back(listen((*it).options));
 				if (!((*it).locations.empty()))
 				{
 					for (locationsVector::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
@@ -679,9 +699,41 @@ class Parse : public ParseTypedef
 						clientBodyBufferSize((*itLoc).second);
 						errorPage((*itLoc).second);
 						index((*itLoc).second);
-						root((*itLoc).second);
-						serverName((*itLoc).second);
-						listen((*itLoc).second);
+						root((*itLoc).second, true);
+					}
+				}
+			}
+
+			for (std::vector<std::string>::const_iterator it = checkServer.begin(); it != checkServer.end(); it++)
+			{
+				count = std::count(checkServer.begin(), checkServer.end(), *it);
+				if (count > 1)
+				{
+					std::string c = "rule 'server_name': ";
+					c += *it;
+					c += " has several definitions and therefore cannot work properly";
+					throw IncorrectConfig(c.c_str());
+				}
+			}
+			for (std::vector<s_listen>::const_iterator it = checkListen.begin(); it != checkListen.end(); it++)
+			{
+				ipTemp = (*it).ip;
+				portTemp = (*it).port;
+				count = 0;
+				for (std::vector<s_listen>::const_iterator it2 = checkListen.begin(); it2 != checkListen.end(); it2++)
+				{
+					if ((*it2).ip == ipTemp && (*it2).port == portTemp)
+						++count;
+					if (count > 1)
+					{
+						std::string c = "rule 'listen': ";
+						c += (*it2).ipSave;
+						c += ":";
+						std::stringstream strstream;
+						strstream << (*it2).portSave;
+						c += strstream.str();
+						c += " is defined several times";
+						throw IncorrectConfig(c.c_str());
 					}
 				}
 			}
