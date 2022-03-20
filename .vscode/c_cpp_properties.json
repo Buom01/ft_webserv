@@ -6,10 +6,10 @@
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/srcs/includes/*",
                 "${workspaceFolder}/srcs/includes/parse/*",
-                "${workspaceFolder}/srcs/cgi/*",
                 "${workspaceFolder}/srcs/log/*",
                 "${workspaceFolder}/srcs/middlewares/*",
-                "${workspaceFolder}/srcs/serve/*"
+                "${workspaceFolder}/srcs/serve/*",
+                "${workspaceFolder}/srcs/static/*"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang++",

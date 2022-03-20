@@ -6,8 +6,9 @@ SRCS		:=	main.cpp \
 
 OBJS		:=	$(SRCS:.cpp=.o)
 RM			:=	rm -f
-LIBRARY		?=	-I ./srcs/includes -I ./srcs/includes/parse -I ./srcs/cgi -I ./srcs/serve
-CXXFLAGS	?=  -Wall -Werror -Wextra -std=c++98 $(LIBRARY)
+LIBRARY		?=	-I ./srcs/cgi -I ./srcs/includes -I ./srcs/includes/parse -I ./srcs/log \
+				-I ./srcs/middlewares -I ./srcs/serve  -I ./srcs/static
+CXXFLAGS	?=  -Wall -Werror -Wextra -std=c++98 -g $(LIBRARY)
 
 $(NAME): $(OBJS) $(SUBDIRS)
 	$(CXX) $(LIBRARY) -o $(NAME) $(OBJS)
@@ -26,4 +27,4 @@ re: fclean
 
 test: fclean
 	$(MAKE) all
-	./$(NAME)
+	./$(NAME) website_test/init.conf

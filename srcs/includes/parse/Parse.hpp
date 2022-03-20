@@ -1,237 +1,816 @@
 #ifndef __PARSE
 # define __PARSE
+# define REGEX_SIZE 13
+# define NO_KEY "NO_KEY"
+# include <algorithm>
 # include <iostream>
+# include <sstream>
 # include <fstream>
 # include <cstring>
-# include <exception>
+# include <cctype>
+# include <cstdio>
+# include <stdexcept>
 # include <map>
 # include <vector>
+# include <string>
+# include <bits/stdc++.h>
+# include <sys/stat.h>
+# include <arpa/inet.h>
 # include "Regex.hpp"
+# include "nullptr_t.hpp"
 
-struct s_server
+struct s_defineRegex
 {
-	std::vector<std::pair<std::string, std::string> >	options;
-	std::vector<std::map<std::string, std::string> >	locations;
+	std::string		name;
+	std::string		regex;
+	bool			noDuplication;
+} REGEX[REGEX_SIZE] =
+{
+	{ "server", "^[ \t]*(server)[ \t]*\\{?[ \t]*$", false },
+	{ "location", "^[ \t]*location[ \t]+([a-zA-Z0-9_/.]*)[ \t]*\\{*$", false},
+	{ "endBlock", "^[ \t]*(});*$", false },
+
+	{ "alias", "^[ \t]*alias[ \t]+(.*);$", true },
+	{ "allow", "^[ \t]*allow[ \t]+(.*);$", true },
+	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);$", true },
+	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)(\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);$", true },
+	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);$", true },
+	{ "error_page", "^[ \t]*error_page[ \t]+([0-9 ]*)(\\/.*);$", false },
+	{ "index", "^[ \t]*index[ \t]+(.*);$", true },
+	{ "root", "^[ \t]*root[ \t]+(\\/.*);$", true },
+	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);$", true },
+	{ "listen", "^[ \t]*listen[ \t]+(.+);$", true }
 };
 
-class Parse
+struct ParseTypedef
+{
+	typedef std::vector<std::string>				stringVector;
+	typedef std::pair<std::string, stringVector>	pairOptions;
+	typedef std::vector<pairOptions>				optionsVector;
+
+	typedef std::pair<std::string, optionsVector>	pairLocations;
+	typedef std::vector<pairLocations>				locationsVector;
+
+	struct s_server
+	{
+		int				id;
+		optionsVector	options;
+		locationsVector	locations;
+		s_server() : id(-1) {};
+	};
+	typedef std::vector<s_server>					serversVector;
+
+	/**
+	 * @param GET (bool), false by default
+	 * @param PUT (bool), false by default
+	 * @param POST (bool), false by default
+	 * @param DELETE (bool), false by default
+	 */
+	struct s_allow
+	{
+		bool GET, PUT, POST, DELETE;
+	};
+
+	/**
+	 * @param active (bool), false by default
+	 */
+	struct s_autoindex
+	{
+		bool active;
+	};
+
+	/**
+	 * @param extensions (std::vector<<std::string>>), file extensions
+	 * @param path (std::string), path of executable
+	 * @param methods (s_allow), accepted HTTP request methods
+	 */
+	struct s_cgi
+	{
+		std::vector<std::string>	extensions;
+		std::string					path;
+		s_allow						allow;							
+	};
+
+	/**
+	 * @param (int) bit size
+	 * @param (int) size of buffer, converted from bit to char size (1 for 4)
+	 */
+	struct s_clientBodyBufferSize
+	{
+		size_t	bits;
+		size_t	size;
+	};
+
+	/**
+	 * @param codes (std::vector<<std::string>>), error codes to be redirected
+	 * @param path (std::string), relative path from website directory to error page
+	 */
+	struct s_errorPage
+	{
+		std::vector<std::string>	codes;
+		std::string					path;
+	};
+	
+	/**
+	 * @param ip (uint32_t), INADDR_ANY by default
+	 * @param port (uint16_t), 80 by default
+	 */
+	struct s_listen
+	{
+		uint32_t	ip;
+		uint16_t	port;
+		std::string ipSave;
+		int			portSave;
+	};
+
+	class	IncorrectConfig : virtual public std::exception
+	{
+		private:
+			const std::string e;
+		public:
+			IncorrectConfig();
+			IncorrectConfig(const IncorrectConfig &copy);
+			IncorrectConfig &operator=(const IncorrectConfig &newObject);
+			IncorrectConfig(const std::string &_e) : e(_e) {};
+			~IncorrectConfig() throw() {};
+			const char* what() const throw() { return e.c_str(); }
+	};
+};
+
+class Parse : public ParseTypedef
 {
 	private:
-		std::string											_configPath;
-		std::string											_line;
-		std::ifstream										CONFIG;
-		Regex												regex;
-		std::vector<std::string> 							AutorizedFlag;
-		std::vector<std::pair<std::string, std::string> >	ParsingResult;
-		std::vector<s_server>								Configuration;
+		Regex			Regex;
+		serversVector	servers;
+		std::string		configPath;
+		std::ifstream	stream;
+	private:
+		Parse(const Parse *);
+		Parse operator=(const Parse *);
+	#pragma region Read config file and parse in a resiliente way
+	private:
+		void generateParseError(int lineNumber, std::string str)
+		{
+			std::string err = "line ";
+			std::stringstream strstream;
+			strstream << lineNumber;
+			err += strstream.str();
+			err += " | ";
+			err += str;
+			throw IncorrectConfig(err);
+		}
 	public:
-		Parse(const Parse &x) : _configPath(x._configPath), AutorizedFlag(x.AutorizedFlag), Configuration(x.Configuration) {}
-		Parse &operator=(const Parse &x)
+		Parse() {}
+		Parse(std::string configFilePath) : configPath(configFilePath) { init(configPath); }
+		
+		void init(std::string configFilePath)
 		{
-			_configPath = x._configPath;
-			AutorizedFlag = x.AutorizedFlag;
-			Configuration = x.Configuration;
-			return *this;
-		}
-	private:
-		Parse(void) {}
-		std::string& leftTrim(std::string& str, std::string& chars)
-		{
-			str.erase(0, str.find_first_not_of(chars));
-			return str;
-		}
-		std::string& rightTrim(std::string& str, std::string& chars)
-		{
-			str.erase(str.find_last_not_of(chars) + 1);
-			return str;
-		}
-		void fillVector()
-		{
-			AutorizedFlag.push_back("server_name");
-			AutorizedFlag.push_back("listen");
-			AutorizedFlag.push_back("root");
-			AutorizedFlag.push_back("index");
-			AutorizedFlag.push_back("autoindex");
-			AutorizedFlag.push_back("cli_max_size");
-			AutorizedFlag.push_back("error_page");
-			AutorizedFlag.push_back("allow");
-			AutorizedFlag.push_back("autoindex");
-			AutorizedFlag.push_back("alias");
-			AutorizedFlag.push_back("cgi_pass");
-		}
-	private:
-		void fillParsingResultVector()
-		{
-			std::string key;
-			std::string value;
-			while (getline(CONFIG, _line))
+			pairLocations	locationTemp;
+			s_server		serverTemp;
+			std::string		line;
+			int				lineNumber = 0;
+			bool asServerBlock = false;
+			bool isServerBlock = false, isLocationBlock = false;
+
+			configPath = configFilePath;
+			serverTemp.id = 0;
+			stream.open(configPath.c_str());
+			stream.exceptions(std::ifstream::badbit);
+			if (!stream.is_open())
+				throw std::ifstream::failure("Open configuration file failed");
+			while (getline(stream, line))
 			{
-				if (_line.empty())
-					continue ;
-				regex.Match(_line, "^[^ ]+");
-				key = trim(regex.GetMatch()[0].occurence, 0);
-				if (key == "{")
-					continue ;
-				_line = _line.substr(regex.GetMatch()[0].end, (_line.size() - regex.GetMatch()[0].start));
-				regex.Match(_line, "^.*\\b");
-				value = regex.GetMatch()[0].occurence;
-				value = trim(value);
-				ParsingResult.push_back(std::make_pair(key, value));
+				++lineNumber;
+				size_t commentPos = line.find("#", 0);
+				if (commentPos != std::string::npos)
+					line = line.substr(0, commentPos);
+				if (isEmpty(line))
+					continue;
+				line = trim(line);
+				for (int i = 0; i < REGEX_SIZE; i++)
+				{
+					Regex.exec(line, REGEX[i].regex, GLOBAL_FLAG);
+					if (Regex.size() == 0)
+						continue;
+					if (REGEX[i].name == "endBlock")
+					{
+						if (isLocationBlock && isServerBlock)
+						{
+							serverTemp.locations.push_back(locationTemp);
+							locationTemp.first.clear();
+							locationTemp.second.clear();
+							isLocationBlock = false;
+						}
+						else
+						{
+							servers.push_back(serverTemp);
+							serverTemp.locations.clear();
+							serverTemp.options.clear();
+							++serverTemp.id;
+							isServerBlock = false;
+						}
+					}
+					else if (REGEX[i].name == "location")
+					{
+						if (isLocationBlock)
+							generateParseError(lineNumber, "configuration: a location block cannot contain another one");
+						isLocationBlock = true;
+						locationTemp.first.clear();
+						locationTemp.second.clear();
+						for (size_t m = 0; m < Regex.size(); m++)
+							if (!Regex.match()[m].occurence.empty())
+								locationTemp.first += trim(Regex.match()[m].occurence);
+					}
+					else if (REGEX[i].name == "server")
+					{
+						if (isServerBlock)
+							generateParseError(lineNumber, "configuration: a server block cannot contain another one");
+						asServerBlock = true;
+						isServerBlock = true;
+					}
+					else
+					{
+						if (!isServerBlock)
+							generateParseError(lineNumber, "configuration: no server block is present. A configuration must be in at least one server block");
+
+						stringVector ret;
+						for (size_t m = 0; m < Regex.size(); m++)
+							if (!Regex.match()[m].occurence.empty())
+								ret.push_back(trim(Regex.match()[m].occurence));
+						pairOptions newPair = std::make_pair(REGEX[i].name, ret);
+						if (REGEX[i].noDuplication)
+						{
+							if (isLocationBlock && isServerBlock)
+							{
+								optionsVector::iterator it = find(locationTemp.second.begin(),  locationTemp.second.end(), newPair);
+								if (it != locationTemp.second.end())
+									locationTemp.second.erase(it);
+							}
+							else
+							{
+								optionsVector::iterator it = find(serverTemp.options.begin(),  serverTemp.options.end(), newPair);
+								if (it != serverTemp.options.end())
+									serverTemp.options.erase(it);
+							}
+						}
+						if (isLocationBlock)
+							locationTemp.second.push_back(newPair);
+						else
+							serverTemp.options.push_back(newPair);
+					}
+					break;
+				}
 			}
+			stream.close();
+			if (!asServerBlock)
+				generateParseError(lineNumber, "configuration: no server block is present. A configuration must be in at least one server block");
 		}
-		
-		/**
-		 * Parsing system with multi level of depth
-		 */
-		typedef std::vector<std::pair<std::string, std::string> >::iterator _iterator;
-		
-		bool keyIsValid(std::string key)
+	private:
+		bool isEmpty(std::string str)
 		{
-			for (std::vector<std::string>::iterator it = AutorizedFlag.begin(); it != AutorizedFlag.end(); it++)
-			{ if (*it == key) return true; }
+			if (str.empty())
+				return true;
+			for (std::string::iterator it = str.begin(); it != str.end(); it++)
+				if (!isspace(*it))
+					return false;
+			return true;
+		}
+
+		inline const optionsVector::iterator find(optionsVector::iterator first, optionsVector::iterator last, pairOptions pair)
+		{
+			while (first != last)
+			{
+				if (first->first == pair.first)
+					return first;
+				++first;
+			}
+			return last;
+		}
+
+		std::string& trim(std::string& str, std::string chars = " \t\n\r\f\v")
+		{
+			str.erase(0, str.find_first_not_of(chars)); // left
+			str.erase(str.find_last_not_of(chars) + 1); // right
+			return str;
+		}
+	#pragma endregion Read config file and parse in a resiliente way
+
+	#pragma region Getter
+	public:
+		/**
+		 * Get stringVector of arguments of key element
+		 * @param key (std::string) key of element (alias, allow, ...)
+		 * @param toSearch (optionsVector) vector of options
+		 * @return stringVector of arguments, if not exist, first element of 
+		 * vector is set to `NO_KEY` value
+		 */
+		stringVector	findKey(std::string key, optionsVector toSearch)
+		{
+			for (optionsVector::iterator it = toSearch.begin(); it != toSearch.end(); it++)
+				if (it->first == key)
+					return it->second;
+			return stringVector(1, NO_KEY);
+		}
+
+		/**
+		 * Test if file exist
+		 * @param name (std::string) path to file
+		 * @return true if exist
+		 */
+		bool 			exist(const std::string name)
+		{
+			struct stat buf;
+			int ret = stat(name.c_str(), &buf);
+
+			if (ret == 0 && S_ISREG(buf.st_mode) == 1)
+				return true;
 			return false;
 		}
+	public:
+		/**
+		 * Get vector of s_server
+		 * @return std::vector<s_server> (serversVector)
+		 */
+		serversVector	getServers() { return servers; }
 
-		void parsingLocationBlock(s_server *_block, _iterator begin, _iterator end)
+		/**
+		 * Get specific server block by ID
+		 * @param id ID of server block, 0 by default (first block)
+		 * @return s_server of selected block, or empty s_server if error
+		 */
+		s_server		getServerBlock(int id = 0)
 		{
-			std::map<std::string, std::string> _location;
-			if (begin->first == "location")
-			{
-				std::string _loc = begin->second;
-				if (_loc.length() <= 0) _loc = "/";
-				_location.insert(std::make_pair(begin->first, _loc));
-			}
-			while (begin != end)
-			{
-				if (keyIsValid(begin->first))
-					_location.insert(std::make_pair(begin->first, begin->second));
-				begin++;
-			}
-			_block->locations.push_back(_location);
-		}
-
-		void parsingServerBlock(_iterator begin, _iterator End)
-		{
-			s_server _block;
-			while (begin != End)
-			{
-				if (begin->first == "location")
-				{
-					_iterator _LocationEndBlock = begin;
-					while (_LocationEndBlock != ParsingResult.end())
-					{
-						if (_LocationEndBlock->first == "}")
-							break ;
-						_LocationEndBlock++;
-					}
-					parsingLocationBlock(&_block, begin, _LocationEndBlock);
-					begin = _LocationEndBlock;
-				}
-				if (keyIsValid(begin->first))
-					_block.options.push_back(std::make_pair(begin->first, begin->second));
-				begin++;
-			}
-			Configuration.push_back(_block);
+			if (!servers.empty())
+				for (serversVector::iterator it = servers.begin(); it != servers.end(); it++)
+					if ((*it).id == id)
+						return *it;
+			return s_server();
 		}
 		
-		void createStructTreeOfConfig()
+		/**
+		 * Get specific block location of server block
+		 * @param server server block
+		 * @param locationMatch	path of location block search
+		 */
+		optionsVector	getSpecificLocation(s_server server, std::string locationMatch)
 		{
-			bool IsLocationBlock = false;
-			for (_iterator it = ParsingResult.begin(); it != ParsingResult.end(); it++)
+			for (locationsVector::iterator it = server.locations.begin(); it != server.locations.end(); it++)
+				if ((*it).first == locationMatch)
+					return (*it).second;
+			return optionsVector();
+		}
+
+	public:
+		std::string	alias(optionsVector vec)
+		{
+			stringVector get = findKey("alias", vec);
+
+			if (get[0] == NO_KEY)
+				return std::string();
+			if (get.empty())
+				throw IncorrectConfig("rule 'alias': no argument is set");
+			return get[0];
+		}
+	private:
+		void _allow(std::string str, std::string err, s_allow *allow)
+		{
+			Regex.exec(str, "([-a-zA-Z0-9_]+)", GLOBAL_FLAG);
+			for (size_t x = 0; x < Regex.size(); x++)
 			{
-				if (it->first == "server")
+				std::string occ = Regex.match()[x].occurence;
+				if (occ == "DELETE")
 				{
-					_iterator _ServerEndBlock = it;
-					while (_ServerEndBlock != ParsingResult.end())
+					if (allow->DELETE)
 					{
-						if (!IsLocationBlock && _ServerEndBlock->first == "}")
-							break ;
-						if (IsLocationBlock && _ServerEndBlock->first == "}")
-						{
-							IsLocationBlock = false;
-							_ServerEndBlock++;
-							continue ;
-						}
-						if (_ServerEndBlock->first == "location")
-							IsLocationBlock = true;
-						_ServerEndBlock++;
+						err += "DELETE is already defined";
+						throw IncorrectConfig(err);
 					}
-					parsingServerBlock(it, _ServerEndBlock);
-					it = _ServerEndBlock;
+					allow->DELETE = true;
 				}
-			}
-		}
-
-		void StartParsing()
-		{
-			fillVector();
-			CONFIG.open(_configPath.c_str());
-			CONFIG.exceptions(std::ifstream::badbit);
-			if (!CONFIG.is_open())
-				throw std::ifstream::failure("Open configuration file failed");
-			fillParsingResultVector();
-			CONFIG.close();
-			if (ParsingResult[0].first != "server")
-				throw IncorrectConfig("Config file not begin with a new server block");
-			createStructTreeOfConfig();
-		}
-	public:
-		Parse(std::string config_path) : _configPath(config_path) { StartParsing(); }
-	public:
-		/**
-		 * 	Get current configuration, iterable with iterator
-		 */
-		std::vector<s_server> GetConfiguration() { return Configuration; }
-		/**
-		 * 	Change link of config file, and auto update configuration.
-		 * 	Iterator created with last configuration change is invalid.
-		 * 	@param config_path: relative link to configuration path
-		 */
-		void setConfig(std::string config_path)
-		{
-			_configPath = config_path;
-			StartParsing();
-		}
-
-		void print()
-		{
-			for (std::vector<s_server>::iterator it = Configuration.begin(); it != Configuration.end(); it++)
-			{
-				std::cout << "Global options" << std::endl;
-				for (std::vector<std::pair<std::string, std::string> >::iterator it2 = it->options.begin(); it2 != it->options.end(); it2++)
-					std::cout << it2->first << "=" << it2->second << std::endl;
-				std::cout << "Location block(s)" << std::endl;
-				for (std::vector<std::map<std::string, std::string> >::iterator it2 = it->locations.begin(); it2 != it->locations.end(); it2++)
+				else if (occ == "GET")
 				{
-					std::cout << "Location {" << std::endl;
-					for (std::map<std::string, std::string>::iterator it3 = it2->begin(); it3 != it2->end(); it3++)
-						std::cout << it3->first << "=" << it3->second << std::endl;
-					std::cout << "}" << std::endl;
+					if (allow->GET)
+					{
+						err += "GET is already defined";
+						throw IncorrectConfig(err);
+					}
+					allow->GET = true;
+				}
+				else if (occ == "POST")
+				{
+					if (allow->POST)
+					{
+						err += "POST is already defined";
+						throw IncorrectConfig(err);
+					}
+					allow->POST = true;
+				}
+				else if (occ == "PUT")
+				{
+					if (allow->PUT)
+					{
+						err += "PUT is already defined";
+						throw IncorrectConfig(err);
+					}
+					allow->PUT = true;
+				}
+				else
+				{
+					err += occ;
+					err += " is incorrect";
+					throw IncorrectConfig(err);
 				}
 			}
 		}
 	public:
-		virtual ~Parse() {}
-		class	IncorrectConfig : virtual public std::exception
+		s_allow	allow(optionsVector vec)
 		{
-			private:
-				const char *e;
-			public:
-				IncorrectConfig(void);
-				IncorrectConfig(const char *_e) : e(_e) {};
-				IncorrectConfig(IncorrectConfig const &copy);
-				IncorrectConfig &operator=(IncorrectConfig const &newObject);
-				virtual const char* what() const throw() { return e; }
-		};
-		std::string& trim(std::string& str, char type = 0, std::string chars = " \t\n\r\f\v")
-		{
-			if (type == 0)
-				return leftTrim(rightTrim(str, chars), chars);
-			else if (type == 1)
-				return rightTrim(str, chars);
-			else
-				return leftTrim(str, chars);
+			stringVector	get = findKey("allow", vec);
+			std::string		err = "rule 'allow': flag ";
+			s_allow			allow;
+			
+			allow.DELETE = false;
+			allow.GET = false;
+			allow.POST = false;
+			allow.PUT = false;
+			if (get[0] == NO_KEY)
+				return allow;
+			if (get.empty())
+				throw IncorrectConfig("rule 'allow': no argument is set");
+			_allow(get[0], "rule 'allow': flag ", &allow);
+			return allow;
 		}
-};
 
+		s_autoindex autoindex(optionsVector vec)
+		{
+			stringVector get = findKey("autoindex", vec);
+			s_autoindex autoindex;
+			std::string err = "rule 'autoindex': ";
+
+			autoindex.active = false;
+			if (!get.empty() && get[0] != NO_KEY)
+			{
+				if (get.size() > 1)
+				{
+					err += "there can be only one argument";
+					throw IncorrectConfig(err);
+				}
+				Regex.exec(get[0], "([-a-zA-Z0-9_]+)", GLOBAL_FLAG);
+				if (Regex.size() > 1)
+				{
+					err += "there can be only one argument";
+					throw IncorrectConfig(err);
+				}
+				if (Regex.match()[0].occurence != "on" && Regex.match()[0].occurence != "off")
+				{
+					err += "the argument can only be on or off, not ";
+					err += Regex.match()[0].occurence;
+					throw IncorrectConfig(err);
+				}
+				autoindex.active = (Regex.match()[0].occurence == "off") ? true : false;
+			}
+			return autoindex;
+		}
+	
+		s_cgi cgi(optionsVector vec)
+		{
+			stringVector get = findKey("cgi", vec);
+			s_cgi cgi;
+			std::string err = "rule 'cgi': ";
+			
+			if (get.size() == 1 && get[0] == "NO_KEY")
+				return cgi;
+			if (get.size() != 3)
+			{
+				err += "there must be at least [extension] [path to executable] [http request allowed]";
+				throw IncorrectConfig(err.c_str());
+			}
+			Regex.exec(get[0], "(\\.[a-zA-Z0-9_]+)", GLOBAL_FLAG);
+			for (size_t x = 0; x < Regex.size(); x++)
+				cgi.extensions.push_back(Regex.match()[x].occurence);
+
+			if (!exist(get[1]))
+			{
+				err += "the executable does not exist";
+				throw IncorrectConfig(err);
+			}
+			cgi.path = get[1];
+
+			cgi.allow.DELETE = false;
+			cgi.allow.GET = false;
+			cgi.allow.POST = false;
+			cgi.allow.PUT = false;
+			_allow(get[2], "rule 'cgi': flag ", &cgi.allow);
+			return cgi;
+		}
+
+	private:
+		bool isNumber(const std::string &str)
+		{
+			for (size_t x = 0; x < str.size(); x++)
+				if (std::isdigit(str[x] == 0))
+					return false;
+			return true;
+		}
+	public:
+		s_clientBodyBufferSize clientBodyBufferSize(optionsVector vec)
+		{
+			stringVector get = findKey("client_body_buffer_size", vec);
+			s_clientBodyBufferSize client;
+
+			client.bits = 16000;
+			client.size = 2000;
+			if (!get.empty() && get[0] != NO_KEY)
+			{
+				long int temp = atol(get[0].c_str());
+				if (temp < 8)
+				{
+					std::string err = "rule 'client_body_buffer_size': the minimum must be 8 bits (one character), actual size is ";
+					std::stringstream strstream;
+					strstream << temp;
+					err += strstream.str();
+					throw IncorrectConfig(err);
+				}
+				if (get[1][0] == 'k')
+					temp *= 1000;
+				else if (get[1][0] == 'm')
+					temp *= 1000000;
+				else if (get[1][0] == 'g')
+					temp *= 1000000000;
+				client.bits = temp;
+				client.size = temp / 8;
+			}
+			return client;
+		}
+
+		typedef std::vector<s_errorPage>	errorPageVector;
+		errorPageVector errorPage(optionsVector vec)
+		{
+			std::vector<stringVector>	errorsList;
+			errorPageVector				errors;
+			s_errorPage					temp;
+
+			for (optionsVector::iterator it = vec.begin(); it != vec.end(); it++)
+				if (it->first == "error_page")
+					errorsList.push_back(it->second);
+			if (errorsList.size() > 0)
+			{
+				for (std::vector<stringVector>::iterator page = errorsList.begin(); page != errorsList.end(); page++)
+				{
+					Regex.exec((*page)[0], "(-?[0-9]+)", GLOBAL_FLAG);
+					for (size_t x = 0; x < Regex.size(); x++)
+						temp.codes.push_back(Regex.match()[x].occurence);
+					temp.path = trim((*page)[1]);
+					errors.push_back(temp);
+				}
+			}
+			return errors;
+		}
+
+		std::string index(optionsVector vec)
+		{
+			stringVector	get = findKey("index", vec);
+			std::string		ret = "index.html";
+
+			if (get[0] == NO_KEY)
+				return ret;
+			Regex.exec(get[0], "([-a-zA-Z0-9_.]+)", GLOBAL_FLAG);
+			if (Regex.size() > 1)
+				throw IncorrectConfig("rule 'allow': only one file definition is allowed");
+			return Regex.match()[0].occurence;
+		}
+
+		std::string root(optionsVector vec, bool optional = false)
+		{
+			stringVector	get = findKey("root", vec);
+		
+			if (get[0] == NO_KEY)
+			{
+				if (!optional)
+					throw IncorrectConfig("rule 'root': no rule is defined, the server can't work");
+				else
+					return "";
+			}
+			Regex.exec(get[0], "([-a-zA-Z0-9_./\\]+)", GLOBAL_FLAG);
+			if (Regex.size() > 1)
+				throw IncorrectConfig("rule 'root': only one directory definition is allowed");
+			return Regex.match()[0].occurence;
+		}
+
+		std::vector<std::string> serverName(optionsVector vec)
+		{
+			stringVector				get = findKey("server_name", vec);
+			std::vector<std::string>	ret;
+
+			if (get[0] == NO_KEY)
+				ret.push_back("localhost");
+			else
+			{
+				Regex.exec(get[0], "([a-zA-Z0-9_.]+)", GLOBAL_FLAG);
+				for (size_t x = 0; x < Regex.size(); x++)
+					ret.push_back(Regex.match()[x].occurence);
+			}
+			return ret;
+		}
+
+		s_listen	listen(optionsVector vec)
+		{
+			stringVector				get = findKey("listen", vec);
+			std::vector<std::string>	temp;
+			std::string					ip = "127.0.0.1";
+			int							port = 80;
+			s_listen					ret;
+
+			if (get[0] != NO_KEY)
+			{
+				// Apparently this regex leak ???
+				Regex.exec(get[0], "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?([0-9]+)?", GLOBAL_FLAG);
+				for (size_t x = 0; x < Regex.size(); x++)
+				{
+					if (Regex.match()[x].occurence.size() == 0)
+						continue;
+					temp.push_back(Regex.match()[x].occurence);
+				}
+				for (std::vector<std::string>::iterator it = temp.begin(); it != temp.end(); it++)
+				{
+					Regex.exec(*it, "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+)");
+					if (Regex.size() == 1)
+						ip = *it;
+					else
+						port = atoi((*it).c_str());
+				}
+			}
+			ret.ipSave = ip;
+			ret.portSave = port;
+			ret.ip = static_cast<size_t>(inet_addr(ip.c_str()));
+			if (ret.ip < 0 || ret.ip > 4294967295)
+			{
+				std::string c = "rule 'listen': ip address ";
+				c += ip.c_str();
+				c += " is outside the range [0.0.0.0] <> [255.255.255.255]";
+				throw IncorrectConfig(c.c_str());
+			}
+			if (port < 0 || port > 65535)
+			{
+				std::string c = "rule 'listen': port ";
+				std::stringstream strstream;
+				strstream << port;
+				c += strstream.str();
+				c += " is outside the range [0] <> [65535]";
+				throw IncorrectConfig(c.c_str());
+			}
+			ret.port = static_cast<size_t>(htons(port));
+			return ret;
+		}
+	#pragma endregion Getter
+	
+	#pragma region Check config
+	public:
+		inline void check()
+		{
+			std::vector<s_listen>		checkListen;
+			std::vector<std::string>	checkServer;
+			std::vector<std::string>	tempServer;
+			uint32_t					ipTemp;
+			uint16_t					portTemp;
+			int							count = 0;
+
+			for (serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
+			{
+				alias((*it).options);
+				allow((*it).options);
+				autoindex((*it).options);
+				cgi((*it).options);
+				clientBodyBufferSize((*it).options);
+				errorPage((*it).options);
+				index((*it).options);
+				root((*it).options);
+				tempServer = serverName((*it).options);
+				for (std::vector<std::string>::const_iterator itC = tempServer.begin(); itC != tempServer.end(); itC++)
+					checkServer.push_back(*itC);
+				checkListen.push_back(listen((*it).options));
+				if (!((*it).locations.empty()))
+				{
+					for (locationsVector::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
+					{
+						alias((*itLoc).second);
+						allow((*itLoc).second);
+						autoindex((*itLoc).second);
+						cgi((*itLoc).second);
+						clientBodyBufferSize((*itLoc).second);
+						errorPage((*itLoc).second);
+						index((*itLoc).second);
+						root((*itLoc).second, true);
+					}
+				}
+			}
+
+			for (std::vector<std::string>::const_iterator it = checkServer.begin(); it != checkServer.end(); it++)
+			{
+				count = std::count(checkServer.begin(), checkServer.end(), *it);
+				if (count > 1)
+				{
+					std::string c = "rule 'server_name': ";
+					c += *it;
+					c += " has several definitions and therefore cannot work properly";
+					throw IncorrectConfig(c.c_str());
+				}
+			}
+			for (std::vector<s_listen>::const_iterator it = checkListen.begin(); it != checkListen.end(); it++)
+			{
+				ipTemp = (*it).ip;
+				portTemp = (*it).port;
+				count = 0;
+				for (std::vector<s_listen>::const_iterator it2 = checkListen.begin(); it2 != checkListen.end(); it2++)
+				{
+					if ((*it2).ip == ipTemp && (*it2).port == portTemp)
+						++count;
+					if (count > 1)
+					{
+						std::string c = "rule 'listen': ";
+						c += (*it2).ipSave;
+						c += ":";
+						std::stringstream strstream;
+						strstream << (*it2).portSave;
+						c += strstream.str();
+						c += " is defined several times";
+						throw IncorrectConfig(c.c_str());
+					}
+				}
+			}
+		}
+	#pragma endregion Check config
+	
+	#pragma region Print for debug
+	public:
+		/**
+		 * Print to std::cout parsed configuration file to json format
+		 */
+		inline void print()
+		{
+			int size;
+			std::string TAB = "  ", SEP = "\"";
+			
+			std::cout << "[" << std::endl;
+			for (serversVector::iterator it = servers.begin(); it != servers.end(); )
+			{
+				std::cout << TAB << "{" << std::endl;
+				std::cout << TAB << TAB << SEP << "ID" << SEP << ": " << SEP << (*it).id << SEP << std::endl;
+				size = (*it).options.size();
+				if (!(*it).locations.empty())
+					size = -1;
+				for (optionsVector::iterator itConf = (*it).options.begin(); itConf != (*it).options.end(); itConf++)
+					printArgs(*itConf, false, size--);
+				if (!(*it).locations.empty())
+				{
+					std::cout << TAB << TAB << SEP << "location" << SEP << ": {" << std::endl;
+					locationsVector::iterator itLocBegin = (*it).locations.begin();
+					locationsVector::iterator itLocEnd = (*it).locations.end();
+					while (itLocBegin != itLocEnd)
+					{
+						size = (*itLocBegin).second.size();
+						std::cout << TAB << TAB << TAB << SEP << (*itLocBegin).first << SEP << ": {" << std::endl;
+						for (optionsVector::iterator itConf = (*itLocBegin).second.begin(); itConf != (*itLocBegin).second.end(); itConf++)
+							printArgs(*itConf, true, size--);
+						++itLocBegin;
+						std::cout << TAB << TAB << TAB << "}";
+						if (itLocBegin != itLocEnd)
+							std::cout << ",";
+						std::cout << std::endl;
+					}
+					std::cout << TAB << TAB << "}" << std::endl;
+				}
+				std::cout << TAB << "}";
+				++it;
+				if (it != servers.end())
+					std::cout << ",";
+				std::cout << std::endl;
+			}
+			std::cout << "]" << std::endl;
+		}
+	private:
+		inline void printArgs(pairOptions vector, bool addTab = false, int size = -1)
+		{
+			std::string TAB = "  ", SEP = "\"";
+			stringVector::const_iterator begin = vector.second.begin();
+			stringVector::const_iterator end = vector.second.end();
+
+			if (addTab == true)
+				std::cout << TAB << TAB;
+			std::cout << TAB << TAB << SEP << vector.first << SEP << ": ";
+			std::cout << "[";
+			while (begin != end)
+			{
+				std::cout << SEP << *begin << SEP;
+				++begin;
+				if (begin != end)
+					std::cout << ", ";
+			}
+			std::cout << "]";
+			if (size <= -1 || size > 1)
+				std::cout << ",";
+			std::cout << std::endl;
+		}
+	#pragma endregion Print for debug
+};
 #endif
