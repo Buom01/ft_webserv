@@ -1,12 +1,15 @@
 #include <iostream>
 #include "Parse.hpp"
-//#include "Serve.hpp"
-//#include "Static.cpp"
+#include "Serve.hpp"
+#include "Static.cpp"
 
 int main(int argc, char **argv)
 {
 	Parse					config;
 	Parse::serversVector	servers;
+	Parse::locationsVector	locations;
+
+	std::vector<Serve>		serves;
 	
 	if (argc <= 1)
 	{
@@ -38,13 +41,15 @@ int main(int argc, char **argv)
 	}
 	#pragma endregion Parse configuration file
 
-	/*
+	
 	#pragma region Start server
 	for (Parse::serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
-		
+		Serve newServer;
+		Parse::s_listen bind = config.listen((*it).options);
+		newServer.bind(bind.ipSave, bind.portSave);
 	}
 	#pragma endregion Start server
-	*/
+	
 	return (EXIT_SUCCESS);
 }

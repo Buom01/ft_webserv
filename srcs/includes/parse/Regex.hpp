@@ -65,16 +65,14 @@ class Regex
 			return false;
 		}
 
-		void init(const std::string &regex, const std::string &line, bool reset)
+		void init(std::string regex, std::string line, bool reset)
 		{
 			if (reset == false && _line && _reg
 				&& std::strcmp(line.c_str(), _line) == 0
 				&& std::strcmp(regex.c_str(), _reg) == 0
 			)
 				return;
-			
 			_is_end = false;
-
 			if (_line)
 				delete [] _line;
 			_line = new char[line.size() + 1];
@@ -92,7 +90,7 @@ class Regex
 				delete [] _reg;
 			_reg = new char[regex.size() + 1];
 			std::memcpy(_reg, regex.c_str(), regex.size() + 1);
-			
+
 			_size_line = static_cast<int>(line.size());
 			if (_regex.re_nsub)
 				regfree(&_regex);
@@ -201,7 +199,7 @@ class Regex
 		 *  @return match_t[size()] containing the match(s)
 		 *	If no flag pass & no reset and function recall, regex saved last position and return next match
 		 */
-		match_t *exec(const std::string line, const std::string regex, int flag = NO_FLAG, bool reset = false)
+		match_t *exec(std::string line, std::string regex, int flag = NO_FLAG, bool reset = false)
 		{
 			init(regex, line, reset);
 			parse(&_regex, _line, flag);

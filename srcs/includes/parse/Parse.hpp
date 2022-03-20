@@ -623,6 +623,7 @@ class Parse : public ParseTypedef
 
 			if (get[0] != NO_KEY)
 			{
+				// Apparently this regex leak ???
 				Regex.exec(get[0], "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?([0-9]+)?", GLOBAL_FLAG);
 				for (size_t x = 0; x < Regex.size(); x++)
 				{
