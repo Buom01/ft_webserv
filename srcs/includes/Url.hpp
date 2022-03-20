@@ -6,7 +6,7 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/20 14:05:57 by cbertran          #+#    #+#             */
-/*   Updated: 2022/02/13 23:39:58 by cbertran         ###   ########.fr       */
+/*   Updated: 2022/03/20 20:07:58 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,15 +62,15 @@ class URL
 				int start = 0;
 				int end = _data.search.find(del);
 				while (end != -1) {
-					_regex.Match(_data.search.substr(start, end - start), "^(.*)=(.*)$");
-					if (_regex.GetSize() > 2)
-						_data.searchParams.push_back(std::make_pair(_regex.GetMatch()[1].occurence, _regex.GetMatch()[2].occurence));
+					_regex.exec(_data.search.substr(start, end - start), "^(.*)=(.*)$", GLOBAL_FLAG);
+					if (_regex.size() > 2)
+						_data.searchParams.push_back(std::make_pair(_regex.match()[1].occurence, _regex.match()[2].occurence));
 					start = end + del.size();
 					end = _data.search.find(del, start);
 				}
-				_regex.Match(_data.search.substr(start, end - start), "^(.*)=(.*)$");
-				if (_regex.GetSize() > 2)
-					_data.searchParams.push_back(std::make_pair(_regex.GetMatch()[1].occurence, _regex.GetMatch()[2].occurence));
+				_regex.exec(_data.search.substr(start, end - start), "^(.*)=(.*)$", GLOBAL_FLAG);
+				if (_regex.size() > 2)
+					_data.searchParams.push_back(std::make_pair(_regex.match()[1].occurence, _regex.match()[2].occurence));
 			}
 			_data.hash = getHash();
 		}
@@ -91,96 +91,96 @@ class URL
 	private:
 		std::string getProtocol()
 		{
-			_regex.Match(_url, "^(http|https)");
-			if (_regex.GetSize() >= 2)
-				return (_regex.GetMatch()[1].occurence);
+			_regex.exec(_url, "^(http|https)", GLOBAL_FLAG);
+			if (_regex.size() >= 2)
+				return (_regex.match()[1].occurence);
 			return "";
 		}
 
 		std::string getUsername()
 		{
-			_regex.Match(_url, "://(.*):(.*)@");
-			if (_regex.GetSize() > 1)
-				return _regex.GetMatch()[1].occurence;
+			_regex.exec(_url, "://(.*):(.*)@", GLOBAL_FLAG);
+			if (_regex.size() > 1)
+				return _regex.match()[1].occurence;
 			return "";
 		}
 		
 		std::string getPassword()
 		{
-			_regex.Match(_url, "://(.*):(.*)@");
-			if (_regex.GetSize() > 2)
-				return _regex.GetMatch()[2].occurence;
+			_regex.exec(_url, "://(.*):(.*)@", GLOBAL_FLAG);
+			if (_regex.size() > 2)
+				return _regex.match()[2].occurence;
 			return "";
 		}
 		
 		std::string getHostname()
 		{
 			if (!password().empty())
-				_regex.Match(_url, "@(\\w+\\.\\w+)");
+				_regex.exec(_url, "@(\\w+\\.\\w+)", GLOBAL_FLAG);
 			else
-				_regex.Match(_url, "://(\\w+\\.\\w+)");
-			if (_regex.GetSize() > 1)
-				return _regex.GetMatch()[1].occurence;
+				_regex.exec(_url, "://(\\w+\\.\\w+)", GLOBAL_FLAG);
+			if (_regex.size() > 1)
+				return _regex.match()[1].occurence;
 			return "";
 		}
 
 		std::string getHost()
 		{
 			if (!password().empty())
-				_regex.Match(_url, "@(\\w+\\.\\w+:?\\w+)");
+				_regex.exec(_url, "@(\\w+\\.\\w+:?\\w+)", GLOBAL_FLAG);
 			else
-				_regex.Match(_url, "://(\\w+\\.\\w+:?\\w+)");
-			if (_regex.GetSize() > 1)
-				return _regex.GetMatch()[1].occurence;
+				_regex.exec(_url, "://(\\w+\\.\\w+:?\\w+)", GLOBAL_FLAG);
+			if (_regex.size() > 1)
+				return _regex.match()[1].occurence;
 			return "";
 		}
 
 		std::string getPort()
 		{
 			if (!password().empty())
-				_regex.Match(_url, "@\\w+\\.\\w+:(\\w+)?");
+				_regex.exec(_url, "@\\w+\\.\\w+:(\\w+)?", GLOBAL_FLAG);
 			else
-				_regex.Match(_url, "://\\w+\\.\\w+:(\\w+)?");
-			if (_regex.GetSize() > 1)
-				return _regex.GetMatch()[1].occurence;
+				_regex.exec(_url, "://\\w+\\.\\w+:(\\w+)?", GLOBAL_FLAG);
+			if (_regex.size() > 1)
+				return _regex.match()[1].occurence;
 			return "";
 		}
 		
 		std::string getPathname()
 		{
 			if (!password().empty())
-				_regex.Match(_url, "@\\w+\\.\\w+:?\\w+([^ ?#]+)");
+				_regex.exec(_url, "@\\w+\\.\\w+:?\\w+([^ ?#]+)", GLOBAL_FLAG);
 			else
-				_regex.Match(_url, "://\\w+\\.\\w+:?\\w+([^ ?#]+)");
-			if (_regex.GetSize() > 1)
-				return _regex.GetMatch()[1].occurence;
+				_regex.exec(_url, "://\\w+\\.\\w+:?\\w+([^ ?#]+)", GLOBAL_FLAG);
+			if (_regex.size() > 1)
+				return _regex.match()[1].occurence;
 			return "/";
 		}
 		
 		std::string getPath()
 		{
 			if (!password().empty())
-				_regex.Match(_url, "@\\w+\\.\\w+:?\\w+([^ #]+)");
+				_regex.exec(_url, "@\\w+\\.\\w+:?\\w+([^ #]+)", GLOBAL_FLAG);
 			else
-				_regex.Match(_url, "://\\w+\\.\\w+:?\\w+([^ #]+)");
-			if (_regex.GetSize() > 1)
-				return _regex.GetMatch()[1].occurence;
+				_regex.exec(_url, "://\\w+\\.\\w+:?\\w+([^ #]+)", GLOBAL_FLAG);
+			if (_regex.size() > 1)
+				return _regex.match()[1].occurence;
 			return "/";
 		}
 		
 		std::string getSearch()
 		{
-			_regex.Match(_url, "://.*(\\?[^ #]+)");
-			if (_regex.GetSize() > 1)
-				return _regex.GetMatch()[1].occurence;
+			_regex.exec(_url, "://.*(\\?[^ #]+)", GLOBAL_FLAG);
+			if (_regex.size() > 1)
+				return _regex.match()[1].occurence;
 			return "";
 		}
 
 		std::string getHash()
 		{
-			_regex.Match(_url, "://.*(#[^ ]+)");
-			if (_regex.GetSize() > 1)
-				return _regex.GetMatch()[1].occurence;
+			_regex.exec(_url, "://.*(#[^ ]+)", GLOBAL_FLAG);
+			if (_regex.size() > 1)
+				return _regex.match()[1].occurence;
 			return "";
 		}
 

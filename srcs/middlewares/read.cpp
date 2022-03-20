@@ -6,7 +6,7 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/20 19:57:18 by cbertran         ###   ########.fr       */
+/*   Updated: 2022/03/20 20:04:01 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,8 +33,8 @@ bool	parseStartLine(Request &req, Response &)
 	if (get_next_line_string(req.fd, line, req.buff, SERVER_BUFFER_SIZE) < 0)
 		return (false);
 
-	regex.Match(line, "^([A-Z]+)\\ ([^\\ ]+)\\ HTTP\\/([0-9\\.]+)$");
-	if (regex.GetSize() != 4)
+	regex.exec(line, "^([A-Z]+)\\ ([^\\ ]+)\\ HTTP\\/([0-9\\.]+)$", GLOBAL_FLAG);
+	if (regex.size() != 4)
 		throw Serve::ServerSocketException("Malformed request start line");
 
 	std::string &method = regex.match()[1].occurence;
