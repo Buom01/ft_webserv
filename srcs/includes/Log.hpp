@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Log.hpp                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 16:28:32 by badam             #+#    #+#             */
-/*   Updated: 2021/07/12 17:39:37 by cbertran         ###   ########.fr       */
+/*   Updated: 2022/03/18 07:24:24 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,11 +49,16 @@ class	Log
 			std::cout << "Server stopped." << std::endl;
 		}
 
-		void	greeting(std::string address, int port)
+		void	greeting(std::string address, uint16_t port)
 		{
 			std::cout << "Server is listening " << address
 				<< " on port " << port << " !"
 				<< std::endl;
+		}
+
+		void	stopping()
+		{
+			std::cout << "Server stopping..." << std::endl;
 		}
 
 		void	log(int code, std::string path, std::string infos = "")

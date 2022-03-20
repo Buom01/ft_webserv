@@ -6,16 +6,18 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 02:50:36 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 08:25:08 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CHAIN_HPP
 # define CHAIN_HPP
 
+# include "IMiddleware.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
 # include "Log.hpp"
+# include "File.hpp"
 
 typedef struct	middleware_s
 {
@@ -25,6 +27,7 @@ typedef struct	middleware_s
 
 typedef struct chain_link_s
 {
+	chain_flag_t	flag;
 	method_t		methods;
 	std::string		pathname;
 	middleware_t	middleware;
@@ -41,14 +44,20 @@ class	RunningChain
 		chain_t::iterator	pos;
 		chain_state_t		state;
 
-		RunningChain(Request &_req, Response &_res, uint32_t _events, chain_t::iterator _pos):
-			req(_req),
-			res(_res),
+		RunningChain(int connection, uint32_t _events, bool &_alive, Log &logger, chain_t::iterator _pos):
+			req(connection, _events, _alive, logger),
+			res(connection, logger),
 			events(_events),
 			pos(_pos),
 			state(CS_OTHER)
 		{
 			req.state = &state;
+		}
+
+		virtual ~RunningChain()
+		{
+			if (res.response_fd > 0)
+				nothrow_close(res.response_fd);
 		}
 };
 
@@ -58,15 +67,22 @@ typedef std::vector<RunningChain *>    running_chains_t;
 class   Chain
 {
     protected:
+		Epoll				&_epoll;
         chain_t				_raw_chain;
-		Chain				*_error_chain;
 		running_chains_t	_running;
+		bool				_alive;
 
-		bool	_canUseLink(chain_link_t &link, Request &req)
+		void	_log_error(RunningChain &instance, const std::exception &e)
+		{
+			instance.res.logger.fail(e.what());
+		}
+
+		bool	_canUseLink(chain_link_t &link, Request &req, Response &res)
 		{
 			return (
 				( req.method == M_UNKNOWN  || (link.methods & req.method) )
 				&& link.pathname.compare(req.pathname) <= 0
+				&& (!res.error || link.flag & F_ERROR)
 			);
 		}
 
@@ -75,10 +91,10 @@ class   Chain
 			chain_link_t		link;
 			bool				ret;
 
-			while (instance.pos != _raw_chain.end() && !instance.res.sent)
+			while (instance.pos != _raw_chain.end())
 			{
 				link = *(instance.pos);
-				if (_canUseLink(link, instance.req))
+				if (_canUseLink(link, instance.req, instance.res))
 				{
 					if (link.middleware.obj)
 						ret = (*link.middleware.obj)(instance.req, instance.res);
@@ -87,12 +103,35 @@ class   Chain
 
 					if (!ret)
 						return (false);
+					else if (instance.req.finish())
+						break ;
 				}
 				++(instance.pos);
 			}
-			if (!instance.res.sent)
-				instance.res.logger->warn("Chain finished without sending data");
+			if (instance.req.closed())
+				instance.res.logger.warn("Request closed by the client");
+			else if (instance.req.finish())
+				instance.req.logger.warn("Connection was cut up cause of timeout");
+			else if (!instance.res.sent && instance.res.code == C_OK)
+				instance.res.logger.warn("Chain finished without sending data");
 			return (true);
+		}
+
+		void	_handle_exception(RunningChain &instance, const std::exception &e)
+		{
+			if (instance.res.error)
+			{
+				instance.res.logger.fail("Failed to send error to client");
+
+				instance.res.sent = true;
+				instance.pos = _raw_chain.end();
+			}
+			else
+			{
+				instance.state = CS_OTHER;
+				_log_error(instance, e);
+				instance.res.error = &e;
+			}
 		}
 
 		bool	_exec_instance(RunningChain &instance)
@@ -103,44 +142,14 @@ class   Chain
 			}
 			catch (const std::exception &e)
 			{
-				instance.state = CS_OTHER;
-				instance.res.logger->fail(e.what());
-				instance.res.error = &e;
-
-				// try
-				// {
-				// 	if (_error_chain)
-				// 	{
-				// 		_error_chain->exec(instance.req, instance.res, instance.events);  // Should replace the running instance. Verify that's the case
-				// 		return (true);
-				// 	}
-				// 	else
-				// 		throw (CantHandleRequest());
-				// }
-				// catch(const std::exception &ce)
-				// {
-					instance.res.logger->fail("Failed to answer");
-
-					try
-					{
-						::close(instance.res.fd);
-					}
-					catch (...)
-					{}
-
-					return (true);
-				// }
+				_handle_exception(instance, e);
+				return (false);
 			}
 			catch (...)
 			{
-				instance.res.logger->fail("Unhandled exception");
-
-				try
-				{
-					::close(instance.res.fd);
-				}
-				catch(...)
-				{}
+				instance.res.logger.fail("Unhandled exception");
+				
+				nothrow_close(instance.res.fd);
 
 				return (true);
 			}
@@ -154,33 +163,40 @@ class   Chain
 			{
 				if (*it == instance)
 				{
-					delete *it;
 					it = _running.erase(it);
-					// @TODO: Remove FD from poll
+					_epoll.remove(instance->req.fd);
+					break ;
 				}
 				else
 					++it;
 			}
+
+			nothrow_close(instance->req.fd);
+			delete instance;
 		}
     
     public:
-        Chain()
+        Chain(Epoll &epoll):
+			_epoll(epoll),
+			_alive(true)
         {}
 
         ~Chain()
         {
-            // clearup  running
-        }
+			running_chains_t::iterator	it	= _running.begin();
 
-		void	setErrorChain(Chain &error_chain)
-		{
-			_error_chain = &error_chain;
+			while (it != _running.end())
+			{
+				_remove_instance(*it);
+				++it;
+			}
 		}
 
-		void	use(IMiddleware &middleware, method_t methods = M_ALL)
+		void	use(IMiddleware &middleware, chain_flag_t flag, method_t methods, std::string &pathname)
 		{
 			chain_link_t	link;
 
+			link.flag = flag;
 			link.methods = methods;
 			link.pathname = "";
 			link.middleware.obj = &middleware;
@@ -189,10 +205,11 @@ class   Chain
             _raw_chain.push_back(link);
 		}
 
-		void	use(bool (&middleware)(Request&, Response&), method_t methods = M_ALL)
+		void	use(bool (&middleware)(Request&, Response&), chain_flag_t flag, method_t methods, std::string &pathname)
 		{
 			chain_link_t	link;
 
+			link.flag = flag;
 			link.methods = methods;
 			link.pathname = "";
 			link.middleware.obj = NULL;
@@ -203,38 +220,22 @@ class   Chain
 		
         RunningChain	*exec(int connection, uint32_t events, Log &logger)
         {
-			Request			req(connection, events);
-			Response		res(connection, logger);
-            RunningChain	*instance	= new RunningChain(req, res, events, _raw_chain.begin());
+            RunningChain	*instance	= new RunningChain(connection, events, _alive, logger, _raw_chain.begin());
 
 			if (!_exec_instance(*instance))
 				_running.push_back(instance);
 			else
 			{
-				delete (instance);
+				_remove_instance(instance);
 				instance = NULL;
 			}
 
 			return (instance);
         }
-		
-        // void	exec(Request &req, Response &res, uint32_t events)
-        // {
-        //     RunningChain	*instance	= new RunningChain(req, res, events, _raw_chain.begin());
-
-		// 	if (!_exec_instance(*instance))
-		// 	{
-		// 		_running.push_back(instance);
-		// 		// @TODO: add FD to poll
-		// 	}
-		// 	else
-		// 		delete (instance);
-        // }
 
 		bool	retake(RunningChain *instance, uint32_t events)
 		{
-			instance->req.fire(events);
-			if (instance->state == CS_AWAIT_EVENT)
+			if (instance->req.fire(events) && instance->state == CS_AWAIT_EVENT)
 			{
 				instance->state = CS_OTHER;
 				
@@ -244,34 +245,9 @@ class   Chain
 					return (true);
 				}
 			}
+			
 			return (false);
 		}
-
-		// bool	retake(int fd, uint32_t events)
-		// {
-		// 	// Should also support POLLHUP for closed streams
-		// 	running_chains_t::iterator	it	= _running.begin();
-
-		// 	while (it != _running.end())
-		// 	{
-		// 		if ((*it)->req.fd == fd)
-		// 		{
-		// 			if (((*it)->state == CS_AWAIT_IN && ))
-		// 			{
-		// 				if (_exec_instance(**it))
-		// 				{
-		// 					delete *it;
-		// 					_running.erase(it);
-		// 					// Remove FD from poll
-		// 				}
-		// 			}
-		// 			return (true);
-		// 		}
-		// 		++it;
-		// 	}
-			
-		// 	return (false);
-		// }
 
 		void	retake()
 		{
@@ -280,24 +256,21 @@ class   Chain
 			while (it != _running.end())
 			{
 				if ((*it)->state == CS_OTHER && _exec_instance(**it))
-				{
-					delete *it;
-					it = _running.erase(it);
-					// @TODO: Remove FD from poll
-				}
+					_remove_instance(*it);
 				else
 					++it;
 			}
 		}
 
-		class CantHandleRequest : public std::exception
+		bool	alive()
 		{
-			public:
-				virtual const char* what() const throw () 
-				{
-					return ("No more fallback error chain");
-				}
-		};
+			return (_alive || _running.size());
+		}
+
+		void	stop()
+		{
+			_alive = false;
+		}
 };
 
 #endif

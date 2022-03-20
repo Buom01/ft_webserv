@@ -6,15 +6,27 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/17 12:59:44 by badam             #+#    #+#             */
-/*   Updated: 2021/08/17 15:09:02 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 18:31:43 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef __File_HPP
 # define __File_HPP
+# include <stdlib.h>
+# include <fcntl.h>
 # include <sys/stat.h>
 # include <sys/types.h>
 # include <dirent.h>
+
+void	nothrow_close(int fd)
+{
+	try
+	{
+		close(fd);
+	}
+	catch(...)
+	{}
+}
 
 /*
 ** Following function limit parenting to root and simplify path as much as possible.
@@ -85,6 +97,19 @@ bool	fileExists(const std::string &path)
 	struct stat	sb;
 
 	return (!stat(path.c_str(), &sb) && S_ISREG(sb.st_mode));
+}
+
+/*
+** It also allow us to know if the FD belongs to a file
+*/
+intmax_t	fdFileSize(int fd)
+{
+	struct stat	sb;
+
+	if (fstat(fd, &sb) < 0)
+		return (-1);
+	else
+		return (sb.st_size);
 }
 
 std::vector<std::string>	listFile(const std::string &path)

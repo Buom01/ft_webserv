@@ -6,21 +6,24 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/01/10 18:43:37 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 08:01:27 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef __STATIC_MIDDLEWARE_CPP
 # define __STATIC_MIDDLEWARE_CPP
 
+# include "IMiddleware.hpp"
 # include "Response.hpp"
 # include "Request.hpp"
 # include "Regex.hpp"
 # include "File.hpp"
-# include "IMiddleware.hpp"
+# include "AEpoll.hpp"
 
 class Static: public IMiddleware
 {
+	typedef	IMiddleware	_parent;
+
 	public:
 		typedef struct	options_s
 		{
@@ -52,6 +55,8 @@ class Static: public IMiddleware
 			if (!hasReadPermissions(path))
 				return (false);
 
+			// @TODO: Serve the content of a directory
+
 			// std::vector<std::string>	files	= listFile(path);
 			// write res.body here with template
 			// res.code = C_OK;
@@ -61,19 +66,17 @@ class Static: public IMiddleware
 			return (false);
 		}
 
-		bool	serveFile(Response &res, const std::string &path)
+		void	serveFile(Response &res, const std::string &path)
 		{
-			std::ifstream	fs;
+			int	fd = open(path.c_str(), O_NOATIME | O_NOFOLLOW | O_NONBLOCK, O_RDONLY);
 
-			fs.open(path.c_str(), std::fstream::in | std::ios::binary);
-			if (!fs || !fs.is_open())
-				return (false);
-
-			res.body << fs.rdbuf();
-			fs.close();
-			res.code = C_OK;
-
-			return (true);
+			if (fd > 0)
+			{
+				res.response_fd = fd;
+				res.code = C_OK;
+			}
+			else
+				res.code = C_FORBIDDEN;
 		}
 
 		std::string getIndex(const std::string &path, const options_t &options)
@@ -103,6 +106,15 @@ class Static: public IMiddleware
 		{
 			if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
 				return (true);
+			if (res.response_fd > 0 || res.body.length() > 0)
+				return (true);
+			if (req.finish())
+				return (true);
+			if (req.timeout())
+			{
+				res.code = C_REQUEST_TIMEOUT;
+				return (true);
+			}
 
 			std::string				path	= sanitizeRelativePath(req.pathname);
 
@@ -115,10 +127,7 @@ class Static: public IMiddleware
 					std::string index = getIndex(path, options);
 
 					if (index.size() > 0)
-					{
-						if (!serveFile(res, index))
-							res.code = C_FORBIDDEN;
-					}
+						serveFile(res, index);
 					else if (options.directory_listing)
 					{
 						if (!serveDirectory(res, path))
@@ -133,10 +142,7 @@ class Static: public IMiddleware
 			else if (directoryExists(path + "/"))
 				redirect(res, req.pathname + "/");
 			else if (fileExists(path))
-			{
-				if (!serveFile(res, path))
-					res.code = C_FORBIDDEN;
-			}
+				serveFile(res, path);
 			else
 				res.code = C_NOT_FOUND;
 			

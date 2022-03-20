@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/02/17 02:31:31 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 08:20:34 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,16 +20,12 @@
 # include "Regex.hpp"
 # include "File.hpp"
 
-/*
-** @todo: retake should not enter into these chain part if there are no incomming event in epoll
-** alternative should be to change a variable in request if new epoll event happpened
-*/
 bool	parseStartLine(Request &req, Response &)
 {
 	std::string	line;
 	Regex		regex;
 
-	if (req.closed())
+	if (req.finish())
 		return (true);
 	if (!req.await(EPOLLIN))
 		return (false);
@@ -39,7 +35,7 @@ bool	parseStartLine(Request &req, Response &)
 
 	regex.Match(line, "^([A-Z]+)\\ ([^\\ ]+)\\ HTTP\\/([0-9\\.]+)$");
 	if (regex.GetSize() != 4)
-		throw new Serve::ServerSocketException("Malformed request start line");
+		throw Serve::ServerSocketException("Malformed request start line");
 
 	std::string &method = regex.GetMatch()[1].occurence;
 	std::string &pathname = regex.GetMatch()[2].occurence;
@@ -67,9 +63,9 @@ bool	parseStartLine(Request &req, Response &)
 	req.http_version = http_version;
 
 	if (http_version != "1.0" && http_version != "1.1")
-		throw new Serve::ServerSocketException("Unsupported HTTP version");
+		throw Serve::ServerSocketException("Unsupported HTTP version");
 	if (req.method == M_UNKNOWN)
-		throw new Serve::ServerSocketException("Unsupported method");
+		throw Serve::ServerSocketException("Unsupported method");
 
 	return (true);
 }
@@ -78,7 +74,7 @@ bool	parseRequestHeaders(Request &req, Response &)
 {
 	std::string	line;
 
-	if (req.closed())
+	if (req.finish())
 		return (true);
 	if (!req.await(EPOLLIN))
 		return (false);

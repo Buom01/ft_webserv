@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:50:37 by badam             #+#    #+#             */
-/*   Updated: 2022/01/31 20:29:37 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/16 06:05:40 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,7 @@ class Response
 {
 	public:
 		int						fd;
-		Log						*logger;
+		Log						&logger;
 		const std::exception	*error;
 		
 		std::string				used_file;
@@ -31,60 +31,30 @@ class Response
 		Header					headers;
 		std::string				headers_buff;
 		bool					headers_sent;
-		std::stringstream		body;
+		int						response_fd;
+		std::string				response_fd_buff;
+		std::string				body;
+		size_t					send_chunksize;
 		bool					sent;
-		
-		Response() :
-			fd(1),
-			logger(NULL),
-			error(NULL),
-			used_file(""),
-			code(C_NOT_IMPLEMENTED),
-			headers(),
-			headers_buff(""),
-			headers_sent(false),
-			body(""),
-			sent(false)
-		{}
-
-		Response 	(const Response &rhs)
-		{
-			*this = rhs;
-		}
 
 		Response(int connection, Log &_logger) :
 			fd(connection),
-			logger(&_logger),
+			logger(_logger),
 			error(NULL),
 			used_file(""),
 			code(C_NOT_IMPLEMENTED),
 			headers(),
 			headers_buff(""),
 			headers_sent(false),
+			response_fd(0),
+			response_fd_buff(""),
 			body(""),
+			send_chunksize(1024),
 			sent(false)
 		{}
 
 		virtual ~Response()
 		{}
-
-		Response 	&operator=(const Response &rhs)
-		{
-			if (this != &rhs)
-			{
-				fd		= rhs.fd;
-				logger	= rhs.logger;
-				error	= rhs.error;
-
-				used_file	= rhs.used_file;
-				code		= rhs.code;
-				headers		= rhs.headers;
-				body << rhs.body.str();
-				sent		= rhs.sent;
-			}
-
-			return (*this);
-		}
 };
 
 #endif

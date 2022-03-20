@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/02/17 16:14:11 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/18 07:25:07 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,17 +25,19 @@
 
 class	Serve
 {
-	Log				_logger;
 	Epoll			_epoll;
 	binds_t			_binds;
 	Chain			_response_chain;
-	Chain			_error_chain;
+	bool			_alive;
 
 	public:
-		Serve(void): _epoll(_logger)
-		{
-			_response_chain.setErrorChain(_error_chain);
-		}
+		Log				logger;
+
+		Serve(void):
+			_epoll(logger),
+			_response_chain(_epoll),
+			_alive(false)
+		{}
 	
 		virtual ~Serve(void)
 		{
@@ -51,46 +53,16 @@ class	Serve
 	private:
 		void			_destroyBind(server_bind_t &bind)
 		{
-			try
+			if (bind.fd)
 			{
-				if (bind.fd)
-					close(bind.fd);
+				_epoll.remove(bind.fd);
+				nothrow_close(bind.fd);
 			}
-			catch(...)
-			{}
 		}
 
 		std::string		_netIpToStr(in_addr_t ip)
 		{
 			return (inet_ntoa(*reinterpret_cast<in_addr *>(&ip)));
-		}
-
-		server_bind_t	&_bindFromFD(int fd)
-		{
-			static server_bind_t	nullBind;
-			binds_t::iterator		it			= _binds.begin();
-
-			while (it != _binds.end())
-			{
-				if (it->fd == fd)
-					return (*it);
-			}
-			
-			_logger.warn("Bind not found for gived FD");
-			return (nullBind);
-		}
-
-		bool	_doesBelongToBinds(int fd)
-		{
-			binds_t::iterator		it		= _binds.begin();
-
-			while (it != _binds.end())
-			{
-				if (it->fd == fd)
-					return (true);
-			}
-			
-			return (false);
 		}
 
 		in_addr_t		_ipFromHost(std::string host)
@@ -104,19 +76,19 @@ class	Serve
 				if ((domain = gethostbyname(host.c_str())) == NULL)
 				{
 					error << "\"" << host << "\" is not recognized as a valid IP v4 address or know host";
-					_logger.fail(error.str());
+					logger.fail(error.str());
 					return (INADDR_NONE);
 				}
 				if (domain->h_addrtype != AF_INET)
 				{
 					error << "\"" << host << "\" is not IP v4";
-					_logger.fail(error.str());
+					logger.fail(error.str());
 					return (INADDR_NONE);
 				}
 				if ((ip = *(reinterpret_cast<in_addr_t *>(domain->h_addr))) == INADDR_NONE)
 				{
 					error << "\"" << host << "\" is can't be resolved as a valid IP v4 address";
-					_logger.fail(error.str());
+					logger.fail(error.str());
 					return (INADDR_NONE);
 				}
 			}
@@ -125,7 +97,7 @@ class	Serve
 		}
 
 	public:
-		void	bind(std::string host, int port)
+		void	bind(std::string host, uint16_t port)
 		{
 			in_addr_t			ip;
 			server_bind_t		bind;
@@ -135,11 +107,11 @@ class	Serve
 			if ((ip = _ipFromHost(host)) == INADDR_NONE)
 				return ;
 			if ((bind.fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
-				throw new ServerSocketException("Socket creation failed");
+				throw ServerSocketException("Socket creation failed");
 			if (setsockopt(bind.fd, SOL_SOCKET, SO_REUSEADDR, &opts, sizeof(opts)) == -1)
 			{
 				_destroyBind(bind);
-				throw new ServerSocketException("Failed to set socket options");
+				throw ServerSocketException("Failed to set socket options");
 			}
 
 			bind.host = host;
@@ -153,7 +125,7 @@ class	Serve
 			if (::bind(bind.fd, bind.sockaddr, bind.len) == -1)
 			{
 				error << "Fail to bind " << host << " [" << bind.ip << "] to port " << port;
-				_logger.fail(error.str(), errno);
+				logger.fail(error.str(), errno);
 				_destroyBind(bind);
 			}
 			else
@@ -170,35 +142,30 @@ class	Serve
 				bind = *it;
 
 				if (listen(bind.fd, 1) == -1)
-					throw new ServerSocketException("Socket failed to listen");
+					throw ServerSocketException("Socket failed to listen");
 			
 				_epoll.add(bind.fd, ET_BIND, NULL);
 
-				_logger.greeting(bind.host, bind.port);
+				logger.greeting(bind.host, bind.port);
 
 				++it;
 			}
+			_alive = true;
 		}
 
-		void	use(IMiddleware &middleware, chain_flag_t flag = F_NORMAL, method_t methods = M_ALL)
+		void	use(IMiddleware &middleware, chain_flag_t flag = F_NORMAL, method_t methods = M_ALL, std::string pathname = "")
 		{
-			if (flag & F_NORMAL)
-				_response_chain.use(middleware, methods);
-			if (flag & F_ERROR)
-				_error_chain.use(middleware, methods);
+			_response_chain.use(middleware, flag, methods, pathname);
 		}
 
-		void	use(bool (&middleware)(Request&, Response&), chain_flag_t flag = F_NORMAL, method_t methods = M_ALL)
+		void	use(bool (&middleware)(Request&, Response&), chain_flag_t flag = F_NORMAL, method_t methods = M_ALL, std::string pathname = "")
 		{
-			if (flag & F_NORMAL)
-				_response_chain.use(middleware, methods);
-			if (flag & F_ERROR)
-				_error_chain.use(middleware, methods);
+			_response_chain.use(middleware, flag, methods, pathname);
 		}
 
 		RunningChain	*exec(int connection, uint32_t events)
 		{
-			return (_response_chain.exec(connection, events, _logger));
+			return (_response_chain.exec(connection, events, logger));
 		}
 
 		bool	retake(RunningChain *instance, uint32_t events)
@@ -206,21 +173,8 @@ class	Serve
 			return (_response_chain.retake(instance, events));
 		}
 
-		// bool	retake(int fd, uint32_t events)
-		// {
-		// 	if (_error_chain.retake(fd, events))
-		// 		return (true);
-		// 	if (_response_chain.retake(fd, events))
-		// 		return (true);
-
-		// 	_logger.warn("FD doesn't match with any instances");
-			
-		// 	return (false);
-		// }
-
 		void	retake()
 		{
-			_error_chain.retake();
 			_response_chain.retake();
 		}
 
@@ -251,70 +205,54 @@ class	Serve
 
 					if (connection >= 0)
 					{
-						chainInstance = exec(connection, 0);
-						
-						if (chainInstance)
-							_epoll.add(connection, ET_CONNECTION, chainInstance);
+						if (_alive)
+						{
+							chainInstance = exec(connection, 0);
+							
+							if (chainInstance)
+								_epoll.add(connection, ET_CONNECTION, chainInstance);
+						}
+						else
+						{
+							nothrow_close(connection);
+							logger.warn("Reject connection");
+						}
 					}
-					// else if (errno == EWOULDBLOCK)  // Le sujet interdit la lecture d'errno après lecture ou écriture
-					// 	_logger.warn("EWOULDBLOCK happened with EPOLL");
 					else
-						_logger.fail("Fail to grab connection", errno);
+						logger.fail("Fail to grab connection", errno);
 				}
 
 				++it;
 			}
 		}
 
-		// void	accept(void)
-		// {
-		// 	server_bind_t			bind;
-		// 	events_t				events;
-		// 	events_t::iterator		it;
-		// 	int						connection;
+		bool	alive()
+		{
+			return (_alive || _response_chain.alive());
+		}
 
-		// 	events = _epoll.accept();
-		// 	it = events.begin();
-
-		// 	while (it != events.end())
-		// 	{
-		// 		if (!retake(it->data.fd, it->events))
-		// 		{
-		// 			connection	= ::accept(it->data.fd, NULL, NULL);
-
-		// 			if (connection >= 0)
-		// 			{
-		// 				bind = _bindFromFD(it->data.fd);
-		// 				exec(connection, bind, it->events);
-		// 			}
-		// 			else if (errno == EWOULDBLOCK)
-		// 				_logger.warn("EWOULDBLOCK happened with EPOLL");
-		// 			else
-		// 				_logger.fail("Fail to grab connection", errno);
-		// 		}
-
-		// 		++it;
-		// 	}
-
-		// 	retake();
-		// }
+		void	stop()
+		{
+			if (!_alive)
+				return ;
+			logger.stopping();
+			_alive = false;
+			_response_chain.stop();
+		}
 
 		class	ServerException: public std::runtime_error
 		{
 			public:
-				ServerException(std::string msg = "Unknown internal server error.") :
+				ServerException(const std::string &msg = "Unknown internal server error.") :
 					std::runtime_error(msg)
-				{}
-
-				virtual ~ServerException() throw()
 				{}
 		};
 
 		class	ServerSocketException: public ServerException
 		{
 			public:
-				ServerSocketException(std::string msg = "Server socket exception.") :
-					ServerException(msg)
+				ServerSocketException(const std::string &msg = "Server socket exception.") :
+					ServerException("ServerSocketException: " + msg)
 				{}
 		};
 };
