@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 08:01:27 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/19 06:14:21 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,18 +52,24 @@ class Static: public IMiddleware
 	protected:
 		bool	serveDirectory(Response &res, const std::string &path)
 		{
+			std::vector<std::string>::const_iterator	it;
 			if (!hasReadPermissions(path))
 				return (false);
 
-			// @TODO: Serve the content of a directory
+			std::vector<std::string>	files	= listFile(path);
 
-			// std::vector<std::string>	files	= listFile(path);
-			// write res.body here with template
-			// res.code = C_OK;
+			it = files.begin();
+			res.body.append("List of file in " + path + "\n");
+			while (it != files.end())
+			{
+				res.body.append(*it + "\n");
+				++it;
+			}
+			res.code = C_OK;
+			res.headers.set("Content-Type: text/plain");
 
-			// return (true);
+			return (true);
 
-			return (false);
 		}
 
 		void	serveFile(Response &res, const std::string &path)
@@ -74,6 +80,7 @@ class Static: public IMiddleware
 			{
 				res.response_fd = fd;
 				res.code = C_OK;
+				res.used_file = path;
 			}
 			else
 				res.code = C_FORBIDDEN;
@@ -116,7 +123,7 @@ class Static: public IMiddleware
 				return (true);
 			}
 
-			std::string				path	= sanitizeRelativePath(req.pathname);
+			std::string				path	= req.trusted_pathname;
 
 			path.insert(0, options.root);
 

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/17 12:59:44 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 18:31:43 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/19 06:07:10 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -99,6 +99,12 @@ bool	fileExists(const std::string &path)
 	return (!stat(path.c_str(), &sb) && S_ISREG(sb.st_mode));
 }
 
+
+std::string	getExtension(std::string path)
+{
+	return (path.substr(path.find_last_of(".") + 1));
+}
+
 /*
 ** It also allow us to know if the FD belongs to a file
 */
@@ -121,7 +127,7 @@ std::vector<std::string>	listFile(const std::string &path)
 	if ((dir = opendir(path.c_str())) != NULL)
 	{
 		while ((ent = readdir(dir)) != NULL)
-			files.push_back(path + ent->d_name);
+			files.push_back(ent->d_name);
 		closedir (dir);
 	}
 

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 07:32:18 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/19 06:17:01 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 # include "read.cpp"
 # include "write_headers.cpp"
 # include "write_body.cpp"
+# include "mimetypes.cpp"
 # include "Static.cpp"
 
 
@@ -43,10 +44,13 @@ int	main(void)
 	Serve 			app;
 	Static			serveStatic;
 	SendBodyFromFD	sendBodyFromFD(app.logger);
+	Mimetypes		mimetypes;
 
 	serveStatic.options.root				= "./staticfiles";
-	serveStatic.options.directory_listing	= false;
+	serveStatic.options.directory_listing	= true;
 	serveStatic.options.indexes.push_back("index.html");
+
+	mimetypes.add("html", "text/html");
 
 	app.bind("0.0.0.0", 8888);
 
@@ -59,6 +63,7 @@ int	main(void)
 	app.use(serveStatic);
 	// app.use(error, F_ALL);
 	
+	app.use(mimetypes, F_ALL);
 	app.use(addResponseHeaders, F_ALL);
 	app.use(serializeHeaders, F_ALL);
 	app.use(sendHeader, F_ALL);
