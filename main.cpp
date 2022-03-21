@@ -1,16 +1,15 @@
 #include <iostream>
 #include <unistd.h>
 #include "Parse.hpp"
-#include "Serve.hpp"
-#include "Static.cpp"
+//#include "Serve.hpp"
+//#include "Static.cpp"
 
 int main(int argc, char **argv)
 {
-	Parse									config;
-	Parse::serversVector					servers;
-	Parse::locationsVector					locations;
-	std::vector<std::pair<bool, Serve> >	serves;
-	size_t									isAlive;
+	Parse					config;
+	Parse::serversVector	servers;
+	Parse::locationsVector	locations;
+//	std::vector<Serve>		serves;
 
 	#pragma region Initiale check & Parse configuration file
 	if (argc <= 1)
@@ -42,7 +41,7 @@ int main(int argc, char **argv)
 	}
 	#pragma endregion Parse configuration file
 	
-	
+/*	
 	#pragma region Start server
 	for (Parse::serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
@@ -59,41 +58,35 @@ int main(int argc, char **argv)
 		
 		#pragma region Add middleware here
 		
-		app.use(parseStartLine, F_ALL);
-		app.use(parseRequestHeaders, F_ALL);
-		app.use(cgi);
-		app.use(serveStatic);
-		app.use(error, F_ALL);
-		app.use(addResponseHeaders, F_ALL);
-		app.use(serializeHeaders, F_ALL);
-		app.use(sendHeader, F_ALL);
-		app.use(sendBodyFromBuffer, F_ALL);
-		app.use(sendBodyFromFD, F_ALL);
+		server.use(parseStartLine, F_ALL);
+		server.use(parseRequestHeaders, F_ALL);
+		server.use(cgi);
+		server.use(serveStatic);
+		server.use(error, F_ALL);
+		server.use(addResponseHeaders, F_ALL);
+		server.use(serializeHeaders, F_ALL);
+		server.use(sendHeader, F_ALL);
+		server.use(sendBodyFromBuffer, F_ALL);
+		server.use(sendBodyFromFD, F_ALL);
 		
 		#pragma endregion Add middleware here
-
+		
 		server.begin();
-		serves.push_back(std::make_pair(true, server));
+		serves.push_back(server);
 	}
 
-	isAlive = serves.size();
-	while (isAlive > 0)
+	while (serves.size() > 0)
 	{
-		for (std::vector<std::pair<bool, Serve> >::const_iterator it = serves.begin(); it != serves.end(); it++)
+		for (std::vector<Serve>::iterator it = serves.begin(); it != serves.end(); it++)
 		{
-			if ((*it)->first == true)
-			{
-				if (!(*it)->second.alive())
-				{
-					(*it)->first = false;
-					--isAlive;
-				}
-				else
-					(*it).second.accept();
-			}
+			if ((*it).alive() == false)
+				serves.erase(it);
+			else
+				(*it).accept();
+			usleep(10);
 		}
-		usleep(10);
 	}
 	#pragma endregion Start server
+*/
 	return (EXIT_SUCCESS);
 }
