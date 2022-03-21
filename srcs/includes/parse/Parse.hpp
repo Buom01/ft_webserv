@@ -704,7 +704,6 @@ class Parse : public ParseTypedef
 					}
 				}
 			}
-
 			for (std::vector<std::string>::const_iterator it = checkServer.begin(); it != checkServer.end(); it++)
 			{
 				count = std::count(checkServer.begin(), checkServer.end(), *it);
