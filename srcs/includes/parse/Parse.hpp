@@ -1,6 +1,6 @@
 #ifndef __PARSE
 # define __PARSE
-# define REGEX_SIZE 13
+# define REGEX_SIZE 12
 # define NO_KEY "NO_KEY"
 # include <algorithm>
 # include <iostream>
@@ -30,15 +30,15 @@ struct s_defineRegex
 	{ "location", "^[ \t]*location[ \t]+([a-zA-Z0-9_/.]*)[ \t]*\\{*$", false},
 	{ "endBlock", "^[ \t]*(});*$", false },
 
-	{ "allow", "^[ \t]*allow[ \t]+(.*);$", true },
-	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);$", true },
-	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)(\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);$", true },
-	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);$", true },
-	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x ]*)(\\/.*);$", false },
-	{ "index", "^[ \t]*index[ \t]+(.*);$", true },
-	{ "root", "^[ \t]*root[ \t]+(\\/.*);$", true },
-	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);$", true },
-	{ "listen", "^[ \t]*listen[ \t]+(.+);$", true }
+	{ "allow", "^[ \t]*allow[ \t]+(.*);[ \t]*$", true },
+	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);[ \t]*$", true },
+	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)(\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);[ \t]*$", true },
+	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);[ \t]*$", true },
+	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\/.*);[ \t]*$", false },
+	{ "index", "^[ \t]*index[ \t]+(.*);[ \t]*$", true },
+	{ "root", "^[ \t]*root[ \t]+(\\/.*);[ \t]*$", true },
+	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);[ \t]*$", true },
+	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", true }
 };
 
 struct ParseTypedef
@@ -130,7 +130,7 @@ struct ParseTypedef
 class Parse : public ParseTypedef
 {
 	private:
-		Regex			regex;
+		Regex			Regex, expand;
 		serversVector	servers;
 		std::string		configPath;
 		std::ifstream	stream;
@@ -179,8 +179,8 @@ class Parse : public ParseTypedef
 				line = trim(line);
 				for (int i = 0; i < REGEX_SIZE; i++)
 				{
-					regex.exec(line, REGEX[i].regex, GLOBAL_FLAG);
-					if (regex.size() == 0)
+					Regex.exec(line, REGEX[i].regex, GLOBAL_FLAG);
+					if (Regex.size() == 0)
 						continue;
 					if (REGEX[i].name == "endBlock")
 					{
@@ -207,9 +207,9 @@ class Parse : public ParseTypedef
 						isLocationBlock = true;
 						locationTemp.first.clear();
 						locationTemp.second.clear();
-						for (size_t m = 0; m < regex.size(); m++)
-							if (!regex.match()[m].occurence.empty())
-								locationTemp.first += trim(regex.match()[m].occurence);
+						for (size_t m = 0; m < Regex.size(); m++)
+							if (!Regex.match()[m].occurence.empty())
+								locationTemp.first += trim(Regex.match()[m].occurence);
 					}
 					else if (REGEX[i].name == "server")
 					{
@@ -224,9 +224,9 @@ class Parse : public ParseTypedef
 							generateParseError(lineNumber, "configuration: no server block is present. A configuration must be in at least one server block");
 
 						stringVector ret;
-						for (size_t m = 0; m < regex.size(); m++)
-							if (!regex.match()[m].occurence.empty())
-								ret.push_back(trim(regex.match()[m].occurence));
+						for (size_t m = 0; m < Regex.size(); m++)
+							if (!Regex.match()[m].occurence.empty())
+								ret.push_back(trim(Regex.match()[m].occurence));
 						pairOptions newPair = std::make_pair(REGEX[i].name, ret);
 						if (REGEX[i].noDuplication)
 						{
@@ -289,7 +289,7 @@ class Parse : public ParseTypedef
 	public:
 		/**
 		 * Get stringVector of arguments of key element
-		 * @param key (std::string) key of element (allow, ...)
+		 * @param key (std::string) key of element (alias, allow, ...)
 		 * @param toSearch (optionsVector) vector of options
 		 * @return stringVector of arguments, if not exist, first element of 
 		 * vector is set to `NO_KEY` value
@@ -353,10 +353,10 @@ class Parse : public ParseTypedef
 	private:
 		void _allow(std::string str, std::string err, s_allow *allow)
 		{
-			regex.exec(str, "([-a-zA-Z0-9_]+)", GLOBAL_FLAG);
-			for (size_t x = 0; x < regex.size(); x++)
+			Regex.exec(str, "([-a-zA-Z0-9_]+)", GLOBAL_FLAG);
+			for (size_t x = 0; x < Regex.size(); x++)
 			{
-				std::string occ = regex.match()[x].occurence;
+				std::string occ = Regex.match()[x].occurence;
 				if (occ == "DELETE")
 				{
 					if (allow->DELETE)
@@ -422,9 +422,9 @@ class Parse : public ParseTypedef
 
 		s_autoindex autoindex(optionsVector vec)
 		{
-			stringVector	get = findKey("autoindex", vec);
-			s_autoindex		autoindex;
-			std::string		err = "rule 'autoindex': ";
+			stringVector get = findKey("autoindex", vec);
+			s_autoindex autoindex;
+			std::string err = "rule 'autoindex': ";
 
 			autoindex.active = false;
 			if (!get.empty() && get[0] != NO_KEY)
@@ -434,19 +434,19 @@ class Parse : public ParseTypedef
 					err += "there can be only one argument";
 					throw IncorrectConfig(err);
 				}
-				regex.exec(get[0], "([-a-zA-Z0-9_]+)", GLOBAL_FLAG);
-				if (regex.size() > 1)
+				Regex.exec(get[0], "([-a-zA-Z0-9_]+)", GLOBAL_FLAG);
+				if (Regex.size() > 1)
 				{
 					err += "there can be only one argument";
 					throw IncorrectConfig(err);
 				}
-				if (regex.match()[0].occurence != "on" && regex.match()[0].occurence != "off")
+				if (Regex.match()[0].occurence != "on" && Regex.match()[0].occurence != "off")
 				{
 					err += "the argument can only be on or off, not ";
-					err += regex.match()[0].occurence;
+					err += Regex.match()[0].occurence;
 					throw IncorrectConfig(err);
 				}
-				autoindex.active = (regex.match()[0].occurence == "off") ? true : false;
+				autoindex.active = (Regex.match()[0].occurence == "off") ? true : false;
 			}
 			return autoindex;
 		}
@@ -464,9 +464,9 @@ class Parse : public ParseTypedef
 				err += "there must be at least [extension] [path to executable] [http request allowed]";
 				throw IncorrectConfig(err.c_str());
 			}
-			regex.exec(get[0], "(\\.[a-zA-Z0-9_]+)", GLOBAL_FLAG);
-			for (size_t x = 0; x < regex.size(); x++)
-				cgi.extensions.push_back(regex.match()[x].occurence);
+			Regex.exec(get[0], "(\\.[a-zA-Z0-9_]+)", GLOBAL_FLAG);
+			for (size_t x = 0; x < Regex.size(); x++)
+				cgi.extensions.push_back(Regex.match()[x].occurence);
 
 			if (!exist(get[1]))
 			{
@@ -521,6 +521,7 @@ class Parse : public ParseTypedef
 			}
 			return client;
 		}
+	
 	private:
 		int generate(int hundred, int ten, int unit)
 		{
@@ -533,7 +534,6 @@ class Parse : public ParseTypedef
 	public:
 		mapErrors errorPage(optionsVector vec)
 		{
-			Regex						expand;
 			std::vector<stringVector>	errorsList;
 			mapErrors					errors;
 			int							hundred, ten, unit;
@@ -545,15 +545,15 @@ class Parse : public ParseTypedef
 			{
 				for (std::vector<stringVector>::iterator page = errorsList.begin(); page != errorsList.end(); page++)
 				{
-					regex.exec((*page)[0], "(-?[0-9x]+)", GLOBAL_FLAG);
-					for (size_t x = 0; x < regex.size(); x++)
+					Regex.exec((*page)[0], "(-?[0-9x]+)", GLOBAL_FLAG);
+					for (size_t x = 0; x < Regex.size(); x++)
 					{
-						expand.exec(regex.match()[x].occurence, "^([0-9]|x)([0-9]|x)([0-9]|x)$", GLOBAL_FLAG);
+						expand.exec(Regex.match()[x].occurence, "^([0-9]|x)([0-9]|x)([0-9]|x)$", GLOBAL_FLAG);
 						hundred = (expand.match()[0].occurence != "x") ? std::atoi(expand.match()[0].occurence.c_str()) : -1;
 						ten =  (expand.match()[1].occurence != "x") ? std::atoi(expand.match()[1].occurence.c_str()) : -1;
 						unit =  (expand.match()[2].occurence != "x") ? std::atoi(expand.match()[2].occurence.c_str()) : -1;
 						if (hundred != -1 && ten != -1 && unit != -1)
-							errors.insert(std::pair<int,std::string>(std::atoi(regex.match()[x].occurence.c_str()), trim((*page)[1])));
+							errors.insert(std::pair<int,std::string>(std::atoi(Regex.match()[x].occurence.c_str()), trim((*page)[1])));
 						else
 							for (int one = (hundred == -1) ? 1 : hundred; one <= ((hundred == -1) ? 5 : hundred); one++)
 								for (int two = (ten == -1) ? 0 : ten; two <= ((ten == -1) ? 9 : ten); two++)
@@ -572,10 +572,10 @@ class Parse : public ParseTypedef
 
 			if (get[0] == NO_KEY)
 				return ret;
-			regex.exec(get[0], "([-a-zA-Z0-9_.]+)", GLOBAL_FLAG);
-			if (regex.size() > 1)
+			Regex.exec(get[0], "([-a-zA-Z0-9_.]+)", GLOBAL_FLAG);
+			if (Regex.size() > 1)
 				throw IncorrectConfig("rule 'allow': only one file definition is allowed");
-			return regex.match()[0].occurence;
+			return Regex.match()[0].occurence;
 		}
 
 		std::string root(optionsVector vec, bool optional = false)
@@ -589,10 +589,10 @@ class Parse : public ParseTypedef
 				else
 					return "";
 			}
-			regex.exec(get[0], "([-a-zA-Z0-9_./\\]+)", GLOBAL_FLAG);
-			if (regex.size() > 1)
+			Regex.exec(get[0], "([-a-zA-Z0-9_./\\]+)", GLOBAL_FLAG);
+			if (Regex.size() > 1)
 				throw IncorrectConfig("rule 'root': only one directory definition is allowed");
-			return regex.match()[0].occurence;
+			return Regex.match()[0].occurence;
 		}
 
 		std::vector<std::string> serverName(optionsVector vec)
@@ -604,9 +604,9 @@ class Parse : public ParseTypedef
 				ret.push_back("localhost");
 			else
 			{
-				regex.exec(get[0], "([a-zA-Z0-9_.]+)", GLOBAL_FLAG);
-				for (size_t x = 0; x < regex.size(); x++)
-					ret.push_back(regex.match()[x].occurence);
+				Regex.exec(get[0], "([a-zA-Z0-9_.]+)", GLOBAL_FLAG);
+				for (size_t x = 0; x < Regex.size(); x++)
+					ret.push_back(Regex.match()[x].occurence);
 			}
 			return ret;
 		}
@@ -622,17 +622,17 @@ class Parse : public ParseTypedef
 			if (get[0] != NO_KEY)
 			{
 				// Apparently this regex leak ???
-				regex.exec(get[0], "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?([0-9]+)?", GLOBAL_FLAG);
-				for (size_t x = 0; x < regex.size(); x++)
+				Regex.exec(get[0], "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?([0-9]+)?", GLOBAL_FLAG);
+				for (size_t x = 0; x < Regex.size(); x++)
 				{
-					if (regex.match()[x].occurence.size() == 0)
+					if (Regex.match()[x].occurence.size() == 0)
 						continue;
-					temp.push_back(regex.match()[x].occurence);
+					temp.push_back(Regex.match()[x].occurence);
 				}
 				for (std::vector<std::string>::iterator it = temp.begin(); it != temp.end(); it++)
 				{
-					regex.exec(*it, "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+)");
-					if (regex.size() == 1)
+					Regex.exec(*it, "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+)");
+					if (Regex.size() == 1)
 						ip = *it;
 					else
 						port = atoi((*it).c_str());
