@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/03/19 06:14:21 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/21 16:35:48 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,10 @@
 # include "Regex.hpp"
 # include "File.hpp"
 # include "AEpoll.hpp"
+# include "components/page.hpp"
+# include "components/utils.hpp"
+# include "components/list.hpp"
+
 
 class Static: public IMiddleware
 {
@@ -50,23 +54,20 @@ class Static: public IMiddleware
 		}
 
 	protected:
-		bool	serveDirectory(Response &res, const std::string &path)
+		bool	serveDirectory(Response &res, const std::string &server_path, const std::string &client_path)
 		{
-			std::vector<std::string>::const_iterator	it;
-			if (!hasReadPermissions(path))
+			if (!hasReadPermissions(server_path))
 				return (false);
 
-			std::vector<std::string>	files	= listFile(path);
+			std::vector<std::string>	files	= listFile(server_path);
 
-			it = files.begin();
-			res.body.append("List of file in " + path + "\n");
-			while (it != files.end())
-			{
-				res.body.append(*it + "\n");
-				++it;
-			}
+			res.headers.set("Content-Type: text/html");
 			res.code = C_OK;
-			res.headers.set("Content-Type: text/plain");
+			res.body = page(
+				"List of file in " + client_path,
+				title("List of files in " + client_path) +
+				list(files, linkify)
+			);
 
 			return (true);
 
@@ -137,7 +138,7 @@ class Static: public IMiddleware
 						serveFile(res, index);
 					else if (options.directory_listing)
 					{
-						if (!serveDirectory(res, path))
+						if (!serveDirectory(res, path, req.trusted_pathname))
 							res.code = C_FORBIDDEN;
 					}
 					else

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 08:25:08 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/21 13:57:52 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -131,6 +131,7 @@ class   Chain
 				instance.state = CS_OTHER;
 				_log_error(instance, e);
 				instance.res.error = &e;
+				instance.res.code = C_INTERNAL_SERVER_ERROR;
 			}
 		}
 

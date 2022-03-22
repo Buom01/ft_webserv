@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/16 03:49:16 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 17:44:49 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/23 00:30:53 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 # define __UTILS_HPP
 
 # include <time.h>
+# include <string>
 
 inline size_t	min(size_t a, size_t b)
 {
@@ -48,6 +49,19 @@ int64_t	get_elasped_ns(struct timespec since)
 float	get_elasped_ms(struct timespec since)
 {
 	return difftimespec_ms(get_time(), since);
+}
+
+std::string *replace_all(std::string *str, const std::string& from, const std::string& to)
+{
+    size_t	start_pos   = 0;
+
+    while((start_pos = str->find(from, start_pos)) != std::string::npos)
+	{
+        str->replace(start_pos, from.length(), to);
+        start_pos += to.length();
+    }
+	
+    return str;
 }
 
 #endif
