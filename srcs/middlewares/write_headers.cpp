@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/18 07:48:59 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/23 00:39:37 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,7 +82,7 @@ bool	sendHeader(Request &req, Response &res)
 
 		if (send_ret > 0)
 			res.headers_buff.erase(0, send_ret);
-		if (send_ret < write_size)
+		if (send_ret < static_cast<ssize_t>(write_size))
 		{
 			req.unfire(EPOLLOUT);
 			return (false);

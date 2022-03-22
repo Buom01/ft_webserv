@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/03/21 13:57:52 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/23 00:38:49 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -199,7 +199,7 @@ class   Chain
 
 			link.flag = flag;
 			link.methods = methods;
-			link.pathname = "";
+			link.pathname = pathname;
 			link.middleware.obj = &middleware;
 			link.middleware.fct = NULL;
 
@@ -212,7 +212,7 @@ class   Chain
 
 			link.flag = flag;
 			link.methods = methods;
-			link.pathname = "";
+			link.pathname = pathname;
 			link.middleware.obj = NULL;
 			link.middleware.fct = &middleware;
 

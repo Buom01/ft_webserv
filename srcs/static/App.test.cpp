@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/03/23 00:34:16 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/23 00:39:53 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,7 @@ bool	hangForeverTest(Request &req, Response &res)
 	return (false);
 }
 
-bool	throwErrorChain(Request &req, Response &res)
+bool	throwErrorChain(Request &, Response &)
 {
 	throw Serve::ServerSocketException("throwErrorChain");
 	

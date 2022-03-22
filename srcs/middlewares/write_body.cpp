@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 21:55:09 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 08:18:58 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/23 00:40:18 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,6 @@ class SendBodyFromFD: public AEpoll
 		{
 			ssize_t	read_ret = -1;
 			ssize_t	send_ret = -1;
-			size_t	write_size;
 			char	read_buffer[res.send_chunksize];
 			
 			if (res.sent)
@@ -109,7 +108,7 @@ bool	sendBodyFromBuffer(Request &req, Response &res)
 		
 		if (send_ret > 0)
 			res.body.erase(0, send_ret);
-		if (send_ret < write_size)
+		if (send_ret < static_cast<ssize_t>(write_size))
 		{
 			req.unfire(EPOLLOUT);
 			return (false);
