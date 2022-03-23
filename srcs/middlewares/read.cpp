@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/18 08:20:34 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/23 00:51:54 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,11 +61,6 @@ bool	parseStartLine(Request &req, Response &)
 	req.pathname = pathname;
 	req.trusted_pathname = sanitizeRelativePath(req.pathname);
 	req.http_version = http_version;
-
-	if (http_version != "1.0" && http_version != "1.1")
-		throw Serve::ServerSocketException("Unsupported HTTP version");
-	if (req.method == M_UNKNOWN)
-		throw Serve::ServerSocketException("Unsupported method");
 
 	return (true);
 }

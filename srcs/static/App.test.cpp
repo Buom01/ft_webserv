@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/03/23 00:39:53 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/23 01:44:33 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 # include <time.h>
 # include "Serve.hpp"
 # include "read.cpp"
+# include "eject.cpp"
 # include "write_headers.cpp"
 # include "write_body.cpp"
 # include "mimetypes.cpp"
@@ -43,6 +44,7 @@ bool	throwErrorChain(Request &, Response &)
 int	main(void)
 {
 	Serve 			app;
+	Eject			eject;
 	Static			serveStatic;
 	SendBodyFromFD	sendBodyFromFD(app.logger);
 	Error			error(app.logger);
@@ -60,6 +62,7 @@ int	main(void)
 
 	app.use(parseStartLine, F_ALL);
 	app.use(parseRequestHeaders, F_ALL);
+	app.use(eject);
 
 	// app.use(throwErrorChain);
 	// app.use(hangForeverTest);
