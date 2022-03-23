@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/03/23 01:44:33 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/23 02:52:14 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,8 @@ int	main(void)
 	serveStatic.options.directory_listing	= true;
 	serveStatic.options.indexes.push_back("index.html");
 
-	// error.add(404, "errorpages/404.html");
+	for (int i = 300; i < 600; ++i)
+		error.add(i, "errorpages/generic_demo.html");
 
 	mimetypes.add("html", "text/html");
 

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/10 18:19:19 by badam             #+#    #+#             */
-/*   Updated: 2022/03/08 23:32:14 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/23 02:31:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,6 +89,7 @@ typedef enum http_code_e
 	C_NOT_MODIFIED = 304,
 	C_USE_PROXY = 305,
 	C_TEMPORARY_REDIRECT = 307,
+	C_PERMANENT_REDIRECT = 308,
 
 	C_BAD_REQUEST = 400,
 	C_UNAUTHORIZED = 401,
@@ -108,6 +109,7 @@ typedef enum http_code_e
 	C_UNSUPPORTED_MEDIA_TYPE = 415,
 	C_REQUEST_RANGE_NOT_SATISFIABLE = 416,
 	C_EXPECTATION_FAILED = 417,
+	C_IM_A_TEAPOT = 418,
 
 	C_INTERNAL_SERVER_ERROR = 500,
 	C_NOT_IMPLEMENTED = 501,
