@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/23 00:51:54 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/26 17:09:51 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,13 +20,18 @@
 # include "Regex.hpp"
 # include "File.hpp"
 
-bool	parseStartLine(Request &req, Response &)
+bool	parseStartLine(Request &req, Response &res)
 {
 	std::string	line;
 	Regex		regex;
 
 	if (req.finish())
 		return (true);
+	if (req.timeout())
+	{
+		res.code = C_REQUEST_TIMEOUT;
+		return (true);
+	}
 	if (!req.await(EPOLLIN))
 		return (false);
 
@@ -65,12 +70,17 @@ bool	parseStartLine(Request &req, Response &)
 	return (true);
 }
 
-bool	parseRequestHeaders(Request &req, Response &)
+bool	parseRequestHeaders(Request &req, Response &res)
 {
 	std::string	line;
 
 	if (req.finish())
 		return (true);
+	if (req.timeout())
+	{
+		res.code = C_REQUEST_TIMEOUT;
+		return (true);
+	}
 	if (!req.await(EPOLLIN))
 		return (false);
 
