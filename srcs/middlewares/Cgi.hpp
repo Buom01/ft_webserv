@@ -12,6 +12,7 @@
 # include <sys/types.h>
 # include <sys/wait.h>
 # include <unistd.h>
+# include "Split.hpp"
 # include "MimeType.hpp"
 # include "Header.hpp"
 # include "Request.hpp"
@@ -200,18 +201,18 @@ class CGI : public cgiEnv
 				env.addVariable("CONTENT_LENGTH", headers.find("CONTENT_LENGTH")->second);
 				env.addVariable("CONTENT_TYPE", headers.find("CONTENT_TYPE")->second);
 				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
-				env.addVariable("PATH_INFO", "/test/one");
+				env.addVariable("PATH_INFO", _url.pathname());
 				env.addVariable("QUERY_STRING", _url.search());
-				env.addVariable("REMOTE_ADDR", _url.search());
+				env.addVariable("REMOTE_ADDR", "127.0.0.1"); // IP of the agent sending the request to the server, need change
 				env.addVariable("REQUEST_METHOD", convertMethod(req.method));
-				env.addVariable("SCRIPT_NAME", "");
-				env.addVariable("SERVER_NAME", "");
-				env.addVariable("SERVER_PORT", "");
-				env.addVariable("SERVER_PROTOCOL", "");
+				env.addVariable("SCRIPT_NAME", _url.pathname());
+				env.addVariable("SERVER_NAME", _url.host());
+				env.addVariable("SERVER_PORT", _url.port());
+				env.addVariable("SERVER_PROTOCOL", _url.protocol());
 				env.addVariable("SERVER_SOFTWARE", SERVER_SOFTWARE);
 			#pragma endregion Mandatory
 			#pragma region Should
-				env.addVariable("AUTH_TYPE", "");
+				env.addVariable("AUTH_TYPE", (_url.username()) ? "Basic" : NULL);
 				env.addVariable("HTTP_ACCEPT", "");
 				env.addVariable("HTTP_ACCEPT_CHARSET", "");
 				env.addVariable("HTTP_ACCEPT_ENCODING", "");
@@ -221,14 +222,16 @@ class CGI : public cgiEnv
 				env.addVariable("HTTP_HOST", "");
 				env.addVariable("HTTP_PROXY_AUTHORIZATION", "");
 				env.addVariable("HTTP_USER_AGENT", "");
-				env.addVariable("REMOTE_HOST", "");
+				env.addVariable("REMOTE_HOST", NULL);
 			#pragma endregion Should
 			#pragma region May
 				env.addVariable("PATH_TRANSLATED", "");
-				env.addVariable("REDIRECT_STATUS", "");
-				env.addVariable("REMOTE_USER", "");
+				env.addVariable("REDIRECT_STATUS", 200);
+				env.addVariable("REMOTE_USER", _url.username());
+				env.addVariable("REMOTE_PASS", _url.password());
 				env.addVariable("REQUEST_URI", "");
-				env.addVariable("SCRIPT_FILENAME", "");
+				std::vector<std::string> _split = split(_url.pathname(), "/");
+				env.addVariable("SCRIPT_FILENAME", _split[_split.size() - 1]);
 			#pragma endregion May
 		}
 	public:
