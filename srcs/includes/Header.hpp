@@ -6,7 +6,7 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 14:41:25 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/13 00:29:21 by cbertran         ###   ########.fr       */
+/*   Updated: 2022/03/26 14:06:15 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,7 +36,7 @@ static std::string HEADERS[HEADERS_SIZE] =
 
 class Header
 {
-	private:
+	public:
 		typedef std::multimap<std::string, std::string> _Container;
 	private:
 		Regex			_regex;

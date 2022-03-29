@@ -3,16 +3,17 @@
 /*                                                        :::      ::::::::   */
 /*   http.hpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
+/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/10 18:19:19 by badam             #+#    #+#             */
-/*   Updated: 2022/03/08 23:32:14 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/29 12:59:27 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef HTTP_HPP
 # define HTTP_HPP
 
+# define SERVER_SOFTWARE "FT_WebServ"
 # include <sys/types.h>
 # include <sys/epoll.h>
 # include <netdb.h>

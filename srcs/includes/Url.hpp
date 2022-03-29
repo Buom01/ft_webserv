@@ -6,7 +6,7 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/20 14:05:57 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/20 20:07:58 by cbertran         ###   ########.fr       */
+/*   Updated: 2022/03/28 13:57:51 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,13 +64,13 @@ class URL
 				while (end != -1) {
 					_regex.exec(_data.search.substr(start, end - start), "^(.*)=(.*)$", GLOBAL_FLAG);
 					if (_regex.size() > 2)
-						_data.searchParams.push_back(std::make_pair(_regex.match()[1].occurence, _regex.match()[2].occurence));
+						_data.searchParams.push_back(std::make_pair(_regex.match()[0].occurence, _regex.match()[1].occurence));
 					start = end + del.size();
 					end = _data.search.find(del, start);
 				}
 				_regex.exec(_data.search.substr(start, end - start), "^(.*)=(.*)$", GLOBAL_FLAG);
 				if (_regex.size() > 2)
-					_data.searchParams.push_back(std::make_pair(_regex.match()[1].occurence, _regex.match()[2].occurence));
+					_data.searchParams.push_back(std::make_pair(_regex.match()[0].occurence, _regex.match()[1].occurence));
 			}
 			_data.hash = getHash();
 		}
@@ -93,7 +93,7 @@ class URL
 		{
 			_regex.exec(_url, "^(http|https)", GLOBAL_FLAG);
 			if (_regex.size() >= 2)
-				return (_regex.match()[1].occurence);
+				return (_regex.match()[0].occurence);
 			return "";
 		}
 
@@ -101,7 +101,7 @@ class URL
 		{
 			_regex.exec(_url, "://(.*):(.*)@", GLOBAL_FLAG);
 			if (_regex.size() > 1)
-				return _regex.match()[1].occurence;
+				return _regex.match()[0].occurence;
 			return "";
 		}
 		
@@ -109,7 +109,7 @@ class URL
 		{
 			_regex.exec(_url, "://(.*):(.*)@", GLOBAL_FLAG);
 			if (_regex.size() > 2)
-				return _regex.match()[2].occurence;
+				return _regex.match()[0].occurence;
 			return "";
 		}
 		
@@ -120,7 +120,7 @@ class URL
 			else
 				_regex.exec(_url, "://(\\w+\\.\\w+)", GLOBAL_FLAG);
 			if (_regex.size() > 1)
-				return _regex.match()[1].occurence;
+				return _regex.match()[0].occurence;
 			return "";
 		}
 
@@ -131,7 +131,7 @@ class URL
 			else
 				_regex.exec(_url, "://(\\w+\\.\\w+:?\\w+)", GLOBAL_FLAG);
 			if (_regex.size() > 1)
-				return _regex.match()[1].occurence;
+				return _regex.match()[0].occurence;
 			return "";
 		}
 
@@ -142,7 +142,7 @@ class URL
 			else
 				_regex.exec(_url, "://\\w+\\.\\w+:(\\w+)?", GLOBAL_FLAG);
 			if (_regex.size() > 1)
-				return _regex.match()[1].occurence;
+				return _regex.match()[0].occurence;
 			return "";
 		}
 		
@@ -153,7 +153,7 @@ class URL
 			else
 				_regex.exec(_url, "://\\w+\\.\\w+:?\\w+([^ ?#]+)", GLOBAL_FLAG);
 			if (_regex.size() > 1)
-				return _regex.match()[1].occurence;
+				return _regex.match()[0].occurence;
 			return "/";
 		}
 		
@@ -164,7 +164,7 @@ class URL
 			else
 				_regex.exec(_url, "://\\w+\\.\\w+:?\\w+([^ #]+)", GLOBAL_FLAG);
 			if (_regex.size() > 1)
-				return _regex.match()[1].occurence;
+				return _regex.match()[0].occurence;
 			return "/";
 		}
 		
@@ -172,7 +172,7 @@ class URL
 		{
 			_regex.exec(_url, "://.*(\\?[^ #]+)", GLOBAL_FLAG);
 			if (_regex.size() > 1)
-				return _regex.match()[1].occurence;
+				return _regex.match()[0].occurence;
 			return "";
 		}
 
@@ -180,7 +180,7 @@ class URL
 		{
 			_regex.exec(_url, "://.*(#[^ ]+)", GLOBAL_FLAG);
 			if (_regex.size() > 1)
-				return _regex.match()[1].occurence;
+				return _regex.match()[0].occurence;
 			return "";
 		}
 
