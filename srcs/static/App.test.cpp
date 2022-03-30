@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/03/30 02:07:17 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/30 04:16:18 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@
 
 Serve 			app;
 
-void	stop_signal(int signal)
+void	stop_signal(int)
 {
 	app.stop();
 }

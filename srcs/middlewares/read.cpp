@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/30 04:03:12 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/30 04:16:07 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -98,7 +98,7 @@ bool	parseStartLine(Request &req, Response &res)
 	return (true);
 }
 
-void	fulfillHostFromHeader(Request &req, Response &res)
+bool	fulfillHostFromHeader(Request &req, Response &)
 {
 	Regex   									regex;
 	std::vector<std::string>					header_values;
@@ -119,6 +119,8 @@ void	fulfillHostFromHeader(Request &req, Response &res)
 		if (regex.GetSize() >= 4)
 			req.port = regex.GetMatch()[3].occurence;
 	}
+
+	return (true);
 }
 
 bool	parseRequestHeaders(Request &req, Response &res)
