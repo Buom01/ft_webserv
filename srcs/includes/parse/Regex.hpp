@@ -118,11 +118,16 @@ class Regex
 				point = std::strlen(to_match) - std::strlen(_pos);
 				for (size_t pass = 0; pass < n_matches; pass++)
 				{
+					if (pmatch[pass].rm_so == -1)
+					{
+						_is_end = true;
+						break;
+					}
 					temp.start = pmatch[pass].rm_so + point;
 					temp.end = pmatch[pass].rm_eo + point;
 					temp.width = temp.end - temp.start;
 					occ_is_null = !!(temp.width == 0);
-						_is_end = !!(temp.start == _size_line || temp.start == _size_line);
+					_is_end = !!(temp.start == _size_line || temp.end == _size_line);
 					temp.occurence = std::string(_pos + pmatch[pass].rm_so, temp.width);
 					if (pass > 0)
 					{

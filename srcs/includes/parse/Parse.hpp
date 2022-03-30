@@ -1,6 +1,6 @@
 #ifndef __PARSE
 # define __PARSE
-# define REGEX_SIZE 13
+# define REGEX_SIZE 12
 # define NO_KEY "NO_KEY"
 # include <algorithm>
 # include <iostream>
@@ -30,16 +30,15 @@ struct s_defineRegex
 	{ "location", "^[ \t]*location[ \t]+([a-zA-Z0-9_/.]*)[ \t]*\\{*$", false},
 	{ "endBlock", "^[ \t]*(});*$", false },
 
-	{ "alias", "^[ \t]*alias[ \t]+(.*);$", true },
-	{ "allow", "^[ \t]*allow[ \t]+(.*);$", true },
-	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);$", true },
-	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)(\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);$", true },
-	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);$", true },
-	{ "error_page", "^[ \t]*error_page[ \t]+([0-9 ]*)(\\/.*);$", false },
-	{ "index", "^[ \t]*index[ \t]+(.*);$", true },
-	{ "root", "^[ \t]*root[ \t]+(\\/.*);$", true },
-	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);$", true },
-	{ "listen", "^[ \t]*listen[ \t]+(.+);$", true }
+	{ "allow", "^[ \t]*allow[ \t]+(.*);[ \t]*$", true },
+	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);[ \t]*$", true },
+	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)(\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);[ \t]*$", true },
+	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);[ \t]*$", true },
+	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\/.*);[ \t]*$", false },
+	{ "index", "^[ \t]*index[ \t]+(.*);[ \t]*$", true },
+	{ "root", "^[ \t]*root[ \t]+(\\/.*);[ \t]*$", true },
+	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);[ \t]*$", true },
+	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", true }
 };
 
 struct ParseTypedef
@@ -59,6 +58,7 @@ struct ParseTypedef
 		s_server() : id(-1) {};
 	};
 	typedef std::vector<s_server>					serversVector;
+	typedef std::map<int, std::string>				mapErrors;
 
 	/**
 	 * @param GET (bool), false by default
@@ -102,16 +102,6 @@ struct ParseTypedef
 	};
 
 	/**
-	 * @param codes (std::vector<<std::string>>), error codes to be redirected
-	 * @param path (std::string), relative path from website directory to error page
-	 */
-	struct s_errorPage
-	{
-		std::vector<std::string>	codes;
-		std::string					path;
-	};
-	
-	/**
 	 * @param ip (uint32_t), INADDR_ANY by default
 	 * @param port (uint16_t), 80 by default
 	 */
@@ -140,7 +130,7 @@ struct ParseTypedef
 class Parse : public ParseTypedef
 {
 	private:
-		Regex			Regex;
+		Regex			Regex, expand;
 		serversVector	servers;
 		std::string		configPath;
 		std::ifstream	stream;
@@ -360,17 +350,6 @@ class Parse : public ParseTypedef
 			return optionsVector();
 		}
 
-	public:
-		std::string	alias(optionsVector vec)
-		{
-			stringVector get = findKey("alias", vec);
-
-			if (get[0] == NO_KEY)
-				return std::string();
-			if (get.empty())
-				throw IncorrectConfig("rule 'alias': no argument is set");
-			return get[0];
-		}
 	private:
 		void _allow(std::string str, std::string err, s_allow *allow)
 		{
@@ -542,13 +521,22 @@ class Parse : public ParseTypedef
 			}
 			return client;
 		}
-
-		typedef std::vector<s_errorPage>	errorPageVector;
-		errorPageVector errorPage(optionsVector vec)
+	
+	private:
+		int generate(int hundred, int ten, int unit)
+		{
+			int ret = 0;
+			ret += hundred * 100;
+			ret += ten * 10;
+			ret += unit;
+			return ret;
+		}
+	public:
+		mapErrors errorPage(optionsVector vec)
 		{
 			std::vector<stringVector>	errorsList;
-			errorPageVector				errors;
-			s_errorPage					temp;
+			mapErrors					errors;
+			int							hundred, ten, unit;
 
 			for (optionsVector::iterator it = vec.begin(); it != vec.end(); it++)
 				if (it->first == "error_page")
@@ -557,11 +545,21 @@ class Parse : public ParseTypedef
 			{
 				for (std::vector<stringVector>::iterator page = errorsList.begin(); page != errorsList.end(); page++)
 				{
-					Regex.exec((*page)[0], "(-?[0-9]+)", GLOBAL_FLAG);
+					Regex.exec((*page)[0], "(-?[0-9x]+)", GLOBAL_FLAG);
 					for (size_t x = 0; x < Regex.size(); x++)
-						temp.codes.push_back(Regex.match()[x].occurence);
-					temp.path = trim((*page)[1]);
-					errors.push_back(temp);
+					{
+						expand.exec(Regex.match()[x].occurence, "^([0-9]|x)([0-9]|x)([0-9]|x)$", GLOBAL_FLAG);
+						hundred = (expand.match()[0].occurence != "x") ? std::atoi(expand.match()[0].occurence.c_str()) : -1;
+						ten =  (expand.match()[1].occurence != "x") ? std::atoi(expand.match()[1].occurence.c_str()) : -1;
+						unit =  (expand.match()[2].occurence != "x") ? std::atoi(expand.match()[2].occurence.c_str()) : -1;
+						if (hundred != -1 && ten != -1 && unit != -1)
+							errors.insert(std::pair<int,std::string>(std::atoi(Regex.match()[x].occurence.c_str()), trim((*page)[1])));
+						else
+							for (int one = (hundred == -1) ? 1 : hundred; one <= ((hundred == -1) ? 5 : hundred); one++)
+								for (int two = (ten == -1) ? 0 : ten; two <= ((ten == -1) ? 9 : ten); two++)
+									for (int three = (unit == -1) ? 0 : unit; three <= ((unit == -1) ? 9 : unit); three++)
+										errors.insert(std::pair<int,std::string>(generate(one, two, three), trim((*page)[1])));
+					}
 				}
 			}
 			return errors;
@@ -677,7 +675,6 @@ class Parse : public ParseTypedef
 
 			for (serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 			{
-				alias((*it).options);
 				allow((*it).options);
 				autoindex((*it).options);
 				cgi((*it).options);
@@ -693,7 +690,6 @@ class Parse : public ParseTypedef
 				{
 					for (locationsVector::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
 					{
-						alias((*itLoc).second);
 						allow((*itLoc).second);
 						autoindex((*itLoc).second);
 						cgi((*itLoc).second);
@@ -704,7 +700,6 @@ class Parse : public ParseTypedef
 					}
 				}
 			}
-
 			for (std::vector<std::string>::const_iterator it = checkServer.begin(); it != checkServer.end(); it++)
 			{
 				count = std::count(checkServer.begin(), checkServer.end(), *it);

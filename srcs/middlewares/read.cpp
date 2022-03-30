@@ -39,13 +39,13 @@ bool	parseStartLine(Request &req, Response &res)
 	if (get_next_line_string(req.fd, line, req.buff, SERVER_BUFFER_SIZE) < 0)
 		return (false);
 
-	regex.Match(line, "^([A-Z]+)\\ ([^\\ ]+)\\ HTTP\\/([0-9\\.]+)$");
-	if (regex.GetSize() != 4)
+	regex.exec(line, "^([A-Z]+)\\ ([^\\ ]+)\\ HTTP\\/([0-9\\.]+)$", GLOBAL_FLAG);
+	if (regex.size() != 3)
 		throw Serve::ServerSocketException("Malformed request start line");
 
-	std::string &method = regex.match()[1].occurence;
-	std::string &pathname = regex.match()[2].occurence;
-	std::string &http_version = regex.match()[3].occurence;
+	std::string &method = regex.match()[0].occurence;
+	std::string &pathname = regex.match()[1].occurence;
+	std::string &http_version = regex.match()[2].occurence;
 
 	if (method == "GET")
 		req.method = M_GET;

@@ -1,7 +1,8 @@
 #ifndef __CGI
 # define __CGI
-# define ENV_SIZE 28
 # define BUFFER_SIZE 1024
+# define GATEWAY_VERSION "CGI/1.1"
+# define ENV_NULL "NULL"
 # include <cstring>
 # include <cstdio>
 # include <cstdlib>
@@ -11,7 +12,13 @@
 # include <sys/types.h>
 # include <sys/wait.h>
 # include <unistd.h>
+# include "Split.hpp"
 # include "MimeType.hpp"
+# include "Header.hpp"
+# include "Request.hpp"
+# include "Response.hpp"
+# include "Url.hpp"
+# include "nullptr_t.hpp"
 
 class cgiEnv
 {
@@ -20,12 +27,15 @@ class cgiEnv
 		{
 			std::string key;
 			std::string value;
-		} ENV[ENV_SIZE] =
+		};
+		
+		/*
 		{
 			{ "AUTH_TYPE", "" }, // Name of the authentication scheme (BASIC, SSL, or null)
 			{ "CONTENT_LENGTH", "" }, // Length of the request body in bytes
 			{ "CONTENT_TYPE", "" }, // MIME type of the body of the request, or null
 			{ "GATEWAY_INTERFACE", "" }, // CGI specification. It is "CGI/1.1"
+
 			{ "HTTP_ACCEPT", "" }, // Content types your browser supports
 			{ "HTTP_ACCEPT_CHARSET", "" }, // Character preference information (utf-8;q=0.5)
 			{ "HTTP_ACCEPT_ENCODING", "" }, // Defines type of encoding (compress;q=0.5)
@@ -35,6 +45,7 @@ class cgiEnv
 			{ "HTTP_PROXY_AUTHORIZATION", "" }, // Used by a client to identify itself (or its user) to a proxy
 			{ "HTTP_USER_AGENT", "" }, // Type and version of the browser of client (Mozilla/1.5)
 			{ "HTTP_COOKIE", "" }, // HTTP Cookie String
+
 			{ "PATH_INFO", "" }, // Identifies resource or sub-resource to be returned by CGI, derived from URI portion following the script name but preceding any query data
 			{ "PATH_TRANSLATED", "" }, // Maps the script's virtual path to the physical path used to call the script
 			{ "QUERY_STRING", "" }, // Query string that is contained in the request URL after the path
@@ -51,22 +62,25 @@ class cgiEnv
 			{ "REDIRECT_STATUS", "" }, // HTML request code (200)
 			{ "SCRIPT_FILENAME", "" } // Full pathname of current CGI
 		};
-
+		*/
+	#pragma region one
 		std::map<std::string, std::string>	env;
+	public:
+		std::vector<s_environment>			ENV;
 		char								**generateEnv;
 	private:
-		cgiEnv(cgiEnv const &rhs) {};
-		cgiEnv &operator=(cgiEnv const &rhs) {};
-
 		void clean()
 		{
+			if (generateEnv == NULL)
+				return;
 			for (int x = 0; generateEnv[x]; x++)
-				delete generateEnv[x];
+				delete [] generateEnv[x];
 			delete [] generateEnv;
+			generateEnv = NULL;
 		}
 	public:
-		cgiEnv() {};
-		~cgiEnv() { clean(); };
+		cgiEnv() { generateEnv = NULL; };
+		virtual ~cgiEnv() { clean(); };
 
 		/**
 		 * Get environment variable
@@ -75,9 +89,11 @@ class cgiEnv
 		 */
 		s_environment	getVariable(std::string key)
 		{
-			for (int x = 0; x < ENV_SIZE; x++)
-				if (ENV[x].key == key)
-					return ENV[x];
+			for (std::vector<s_environment>::const_iterator it = ENV.begin(); it != ENV.end(); it++)
+			{
+				if ((*it).key == key)
+					return (*it);
+			}
 			return s_environment();
 		}
 
@@ -89,16 +105,12 @@ class cgiEnv
 		 */
 		bool			addVariable(std::string key, std::string value)
 		{
-			for (int x = 0; x < ENV_SIZE; x++)
-			{
-				if (ENV[x].key == key)
-				{
-					ENV[x].value.clear();
-					ENV[x].value = value;
-					return true;
-				}
-			}
-			return false;
+			s_environment temp;
+			temp.key = key;
+			temp.value = (!value.empty()) ? value : ENV_NULL;
+			deleteVariable(key);
+			ENV.push_back(temp);
+			return true;
 		}
 
 		/**
@@ -108,14 +120,12 @@ class cgiEnv
 		 */
 		bool			deleteVariable(std::string key)
 		{
-			for (int x = 0; x < ENV_SIZE; x++)
-			{
-				if (ENV[x].key == key)
+			for (std::vector<s_environment>::iterator it = ENV.begin(); it != ENV.end(); it++)
+				if ((*it).key == key)
 				{
-					ENV[x].value.clear();
+					ENV.erase(it);
 					return true;
 				}
-			}
 			return false;
 		}
 
@@ -125,17 +135,13 @@ class cgiEnv
 		 */
 		char 			**envForCGI()
 		{
-			std::vector<s_environment>	temp;
-			std::string					tempString;
-			int x = 0;
+			std::string	tempString;
+			int			x = 0;
 
-			for (x = 0; x < ENV_SIZE; x++)
-				if (!ENV[x].value.empty())
-					temp.push_back(ENV[x]);
 			clean();
-			generateEnv = new char *[temp.size() + 1];
+			generateEnv = new char *[ENV.size() + 1];
 			x = 0;
-			for (std::vector<s_environment>::iterator it = temp.begin(); it != temp.end(); it++)
+			for (std::vector<s_environment>::iterator it = ENV.begin(); it != ENV.end(); it++)
 			{
 				tempString = (*it).key + "=" + (*it).value;
 				generateEnv[x] = new char[tempString.size() + 1];
@@ -154,38 +160,107 @@ class CGI : public cgiEnv
 		cgiEnv	env;
 	public:
 		CGI() {};
-		~CGI() {};
+		virtual ~CGI() {};
+	#pragma endregion two
 	private:
-		CGI(CGI const &rhs) {};
-		CGI &operator=(CGI const &rhs) {};
+		std::string convertMethod(method_t method)
+		{
+			if (method == 0)
+				return "UNKNOWN";
+			if (method == (1 << 0))
+				return "GET";
+			if (method == (1 << 1))
+				return "HEAD";
+			if (method == (1 << 2))
+				return "POST";
+			if (method == (1 << 3))
+				return "PUT";
+			if (method == (1 << 4))
+				return "DELETE";
+			if (method == (1 << 5))
+				return "CONNECT";
+			if (method == (1 << 6))
+				return "OPTIONS";
+			if (method == (1 << 7))
+				return "TRACE";
+			return "ALL";
+		}
+
+		void	setHeader(Request &req)
+		{
+			URL _url(req.pathname);
+			Header::_Container headers = req.headers.GetEveryHeader();
+
+			#pragma region Mandatory
+				env.addVariable("CONTENT_LENGTH", "14");
+				env.addVariable("CONTENT_TYPE", "application/octet-stream");
+				env.addVariable("CONTENT_LENGTH", headers.find("CONTENT_LENGTH")->second);
+				env.addVariable("CONTENT_TYPE", headers.find("CONTENT_TYPE")->second);
+				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
+				env.addVariable("PATH_INFO", _url.pathname());
+				env.addVariable("QUERY_STRING", _url.search());
+				env.addVariable("REMOTE_ADDR", "127.0.0.1"); // IP of the agent sending the request to the server, need change
+				env.addVariable("REQUEST_METHOD", convertMethod(req.method));
+				env.addVariable("REQUEST_METHOD", "GET");
+				env.addVariable("SCRIPT_NAME", _url.pathname());
+				env.addVariable("SERVER_NAME", _url.hostname());
+				env.addVariable("SERVER_PORT", _url.port());
+				env.addVariable("SERVER_PROTOCOL", _url.protocol());
+				env.addVariable("SERVER_SOFTWARE", SERVER_SOFTWARE);
+			#pragma endregion Mandatory
+			#pragma region Should
+				env.addVariable("AUTH_TYPE", (!_url.username().empty()) ? "Basic" : ENV_NULL);
+				env.addVariable("HTTP_ACCEPT", "");
+				env.addVariable("HTTP_ACCEPT_CHARSET", "");
+				env.addVariable("HTTP_ACCEPT_ENCODING", "");
+				env.addVariable("HTTP_ACCEPT_LANGUAGE", "");
+				env.addVariable("HTTP_COOKIE", "");
+				env.addVariable("HTTP_FORWARDED", "");
+				env.addVariable("HTTP_HOST", "");
+				env.addVariable("HTTP_PROXY_AUTHORIZATION", "");
+				env.addVariable("HTTP_USER_AGENT", "");
+				env.addVariable("REMOTE_HOST", ENV_NULL);
+			#pragma endregion Should
+			#pragma region May
+				env.addVariable("PATH_TRANSLATED", "");
+				env.addVariable("REDIRECT_STATUS", "200");
+				env.addVariable("REMOTE_USER", _url.username());
+				env.addVariable("REMOTE_PASS", _url.password());
+				env.addVariable("REQUEST_URI", "");
+				std::vector<std::string> _split = split(_url.pathname(), "/");
+				env.addVariable("SCRIPT_FILENAME", _split[_split.size() - 1]);
+			#pragma endregion May
+		}
 	public:
 		/**
 		 * Execute cgi
 		 * @return body generated by the cgi
 		 */
-		std::string	exec()
+		int	exec(Request &req, Response &res)
 		{
 			FILE		*tempIN = tmpfile(), *tempOUT = tmpfile();
 			int			fdIN = fileno(tempIN), fdOUT = fileno(tempOUT);
 			int			saveSTDIN = dup(STDIN_FILENO), saveSTDOUT = dup(STDOUT_FILENO);
-			std::string	body;
-			char		buffer[BUFFER_SIZE];
+			std::string body;
 			pid_t		pid;
+			//char		buffer[BUFFER_SIZE];
 			
-			write(fdIN, body.c_str(), std::atoi(getVariable("CONTENT_LENGTH").value.c_str()));
+			setHeader(req);
+			write(fdIN, body.c_str(), std::atoi(env.getVariable("CONTENT_LENGTH").value.c_str()));
 			lseek(fdIN, 0, SEEK_SET);
 			if ((pid = fork()) == -1)
-				return ("Status: 500\r\n");
+				return -1;
 			if (pid == 0)
 			{
 				dup2(fdIN, STDIN_FILENO); dup2(fdOUT, STDOUT_FILENO);
-				if (execve(getVariable("SCRIPT_FILENAME").value.c_str(), NULL, envForCGI()) == -1)
+				if (execve(getVariable("SCRIPT_FILENAME").value.c_str(), NULL, env.envForCGI()) == -1)
 					write(STDOUT_FILENO, "Status: 500\r\n", 15);
 			}
 			else
 			{
 				waitpid(pid, NULL, 0);
 				lseek(fdOUT, 0, SEEK_SET);
+				/*
 				memset(buffer, 0, sizeof(buffer));
 				for (int ret = 1; ret > 0;)
 				{
@@ -194,6 +269,7 @@ class CGI : public cgiEnv
 					body += buffer;
 					memset(buffer, 0, sizeof(buffer));
 				}
+				*/
 			}
 			dup2(saveSTDIN, STDIN_FILENO); dup2(saveSTDOUT, STDOUT_FILENO);
 			fclose(tempIN); fclose(tempOUT);
@@ -202,8 +278,17 @@ class CGI : public cgiEnv
 
 			if (pid == 0)
 				exit(EXIT_SUCCESS); // Child come if finished
-			return body;
+			return fdOUT;
 		}
 };
+
+
+bool cgi(Request &req, Response &res)
+{
+	CGI	instance;
+
+	res.response_fd = instance.exec(req, res);
+	return !!(res.response_fd != -1);
+}
 
 #endif
