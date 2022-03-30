@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'">
+		<title>Zoupladou</title>
+	</head>
+	<body>
+		<div class="uk-flex uk-flex-around uk-flex-middle" id="main-nav">
+			<a class="uk-navbar-item uk-logo" href="#">
+				<img src="./dist/img/logo.png" style="width: 15vw; max-width: 110px;"/>
+			</a>
+			<a class="nav-light uk-button uk-button-text" href="index.html">Home</a>
+			<a class="nav-light uk-button uk-button-text" href="random.html">Random article</a>
+			<a class="nav-light uk-button uk-button-text" href="phpTest.php">PHP test</a>
+			<a class="nav-light uk-button uk-button-text" href="nodeTest.html">Node.js test</a>
+		</div>
+		<div uk-parallax="bgy: -100" class="uk-background-cover hello uk-panel uk-flex uk-flex-center uk-flex-middle" style="background-image: url(dist/img/dark.jpg);">
+			<div class="uk-flex uk-flex-column uk-flex-center uk-flex-middle">
+				<img src="dist/img/logo.png"/>
+				<h1 class="uk-margin-remove-top">Welcome to Zoupladou !</h1>
+				<p class="uk-margin-remove-top"> A incredible website made for testing Webserv</p>
+			</div>
+		</div>
+		<div class="uk-container uk-margin-large-top">
+			<h1 class="uk-text-center">Testing zone</h1>
+			<hr class="uk-divider-icon">
+			<div class="uk-flex uk-flex-around uk-flex-stretch uk-flex-middle uk-card uk-card-default uk-margin uk-padding-large">
+				<h2>Base</h2>
+				<div>
+					<ol>
+						<li>
+							<a href="index.html">Go to index.html</a>
+						</li>
+						<li>
+							<a href="random.html">Go to random.html</a>
+						</li>
+						<li>
+							<a href="not_exist.html">Go to no exist page (404 error)</a>
+						</li>
+						<li>
+							<a href="index.html" target="_blank">Open index.html in another tab</a>
+						</li>
+						<li>
+							<a href="https://duckduckgo.com" target="_blank">Test extern https link</a>
+						</li>
+					</ol>
+				</div>
+			</div>
+			<div class="uk-flex uk-flex-around uk-flex-stretch uk-flex-middle uk-card uk-card-default uk-margin uk-padding-large">
+				<h2>Base</h2>
+				<div>
+					<ol>
+						<li>
+							<a href="index.html">Go to index.html</a>
+						</li>
+						<li>
+							<a href="random.html">Go to random.html</a>
+						</li>
+						<li>
+							<a href="not_exist.html">Go to no exist page (404 error)</a>
+						</li>
+						<li>
+							<a href="index.html" target="_blank">Open index.html in another tab</a>
+						</li>
+						<li>
+							<a href="https://duckduckgo.com" target="_blank">Test extern https link</a>
+						</li>
+					</ol>
+				</div>
+			</div>
+		</div>
+	</body>
+	<link rel="stylesheet" href="dist/css/uikit.css" />
+	<link rel="stylesheet" href="dist/css/dark_theme.css" />
+	<link rel="stylesheet" href="dist/css/editor.css" />
+	<script defer src="dist/js/uikit.min.js"></script>
+	<script defer src="dist/js/uikit-icons.min.js"></script>
+</html>

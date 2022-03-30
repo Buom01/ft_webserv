@@ -1,42 +1,41 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Regex.test.cpp                                     :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/11 14:49:27 by badam             #+#    #+#             */
-/*   Updated: 2021/07/30 22:32:09 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "Regex.hpp"
 
 int	main(int argc, char **argv)
 {
+	std::string line, reg;
 	Regex	regex;
-	size_t	i		= 0;
 
 	if (argc < 3)
 	{
-		std::cout << "Usage: [TEXT] [REGEX]" << std::endl;
-		return (0);
+		std::cout << "No args, default value set" << std::endl;
+		line = "One     Two Three Four Five Six ";
+		reg = "([a-zA-Z0-9_]+)";
 	}
-	argv++;
-	std::cout << "Testing: \"" << argv[0] << "\"" << std::endl;
-	std::cout << "With: \"" << argv[1] << "\"" << std::endl;
-	regex.Match(argv[0], argv[1]);
-
-	std::cout << "Found " << regex.GetSize() << " matches." << std::endl;
-	std::cout << "[" << std::endl;
-	while (i < regex.GetSize())
+	else
 	{
-		std::cout << "\t\"" << regex.GetMatch()[i].occurence << "\"";
-
-		if (++i < regex.GetSize())
-			std::cout << "," << std::endl;
-		else
-			std::cout << std::endl;
+		line = argv[0];
+		reg = argv[1];
 	}
-	std::cout << "]" << std::endl;
+	std::cout << "Testing: \"" << line << "\"" << std::endl;
+	std::cout << "With: \"" << reg << "\"" << std::endl;
+
+	std::cout << "With no flag:" << std::endl;
+	while (regex.exec(line, reg))
+	{
+		if (regex.size() <= 0)
+			break;
+		regex.print();
+	}
+	std::cout << "Restart string to start occurence with reset to true" << std::endl;
+	regex.exec(line, reg, NO_FLAG, true);
+	regex.print();
+	regex.exec(line, reg, NO_FLAG, true);
+	regex.print();
+	regex.exec(line, reg, NO_FLAG);
+	regex.print();
+
+	std::cout << "With GLOBAL_FLAG:" << std::endl;
+	regex.exec(line, reg, GLOBAL_FLAG, true);
+	regex.print();
+	return 0;
 }
