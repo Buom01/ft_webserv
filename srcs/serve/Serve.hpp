@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/03/30 02:03:58 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/30 04:52:29 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -179,9 +179,9 @@ class	Serve
 			_response_chain.use(middleware, flag, methods, pathname);
 		}
 
-		RunningChain	*exec(int connection, uint32_t events)
+		RunningChain	*exec(int connection, std::string client_ip, uint32_t events)
 		{
-			return (_response_chain.exec(connection, events, logger));
+			return (_response_chain.exec(connection, client_ip, events, logger));
 		}
 
 		bool	retake(RunningChain *instance, uint32_t events)
@@ -225,7 +225,12 @@ class	Serve
 				}
 				else if (data.type == ET_BIND)
 				{
-					connection	= ::accept(data.fd, NULL, NULL);
+					struct sockaddr_in	client_ip;
+					int					client_ip_len	= 0;
+
+					bzero(&client_ip, sizeof(client_ip));
+
+					connection		= ::accept(data.fd, (struct sockaddr *)(&client_ip), (socklen_t *)(&client_ip_len));
 
 					if (connection >= 0)
 					{
@@ -233,7 +238,7 @@ class	Serve
 						{
 							try
 							{
-								chainInstance = exec(connection, 0);
+								chainInstance = exec(connection, inet_ntoa(client_ip.sin_addr), 0);
 								
 								if (chainInstance)
 									_epoll.add(connection, ET_CONNECTION, chainInstance);

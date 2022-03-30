@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/03/30 02:01:44 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/30 04:29:15 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,8 +44,8 @@ class	RunningChain
 		chain_t::iterator	pos;
 		chain_state_t		state;
 
-		RunningChain(int connection, uint32_t _events, bool &_alive, Log &logger, chain_t::iterator _pos):
-			req(connection, _events, _alive, logger),
+		RunningChain(int connection, std::string &client_ip, uint32_t _events, bool &_alive, Log &logger, chain_t::iterator _pos):
+			req(connection, client_ip, _events, _alive, logger),
 			res(connection, logger),
 			events(_events),
 			pos(_pos),
@@ -220,9 +220,9 @@ class   Chain
             _raw_chain.push_back(link);
 		}
 		
-        RunningChain	*exec(int connection, uint32_t events, Log &logger)
+        RunningChain	*exec(int connection, std::string &client_ip, uint32_t events, Log &logger)
         {
-            RunningChain	*instance	= new RunningChain(connection, events, _alive, logger, _raw_chain.begin());
+            RunningChain	*instance	= new RunningChain(connection, client_ip, events, _alive, logger, _raw_chain.begin());
 
 			if (!_exec_instance(*instance))
 				_running.push_back(instance);

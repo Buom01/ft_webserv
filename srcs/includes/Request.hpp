@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/03/30 03:22:17 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/30 05:07:46 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,7 @@ class Request
 	public:
 		struct timespec		start;
 		int					fd;
+		std::string			client_ip;
 		Log					&logger;
 		uint32_t			events;
 		bool				&alive;
@@ -49,15 +50,23 @@ class Request
 		std::string			http_version;
 		Header				headers;
 
-		Request(int connection, uint32_t _events, bool &_alive, Log &_logger) :
+		Request(int connection, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
 			start(get_time()),
 			fd(connection),
+			client_ip(_client_ip),
 			logger(_logger),
 			events(_events),
 			alive(_alive),
 			state(NULL),
+			method_str(""),
 			method(M_UNKNOWN),
+			raw_pathname(""),
+			protocol(""),
+			host(""),
+			hostname(""),
+			port(""),
 			pathname(""),
+			querystring(""),
 			trusted_pathname(""),
 			http_version(""),
 			headers()
