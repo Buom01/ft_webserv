@@ -6,12 +6,13 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/03/23 02:52:14 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/30 02:07:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include <unistd.h>
 # include <time.h>
+# include <signal.h>
 # include "Serve.hpp"
 # include "read.cpp"
 # include "eject.cpp"
@@ -21,6 +22,12 @@
 # include "error.cpp"
 # include "Static.cpp"
 
+Serve 			app;
+
+void	stop_signal(int signal)
+{
+	app.stop();
+}
 
 bool	hangForeverTest(Request &req, Response &res)
 {
@@ -43,7 +50,6 @@ bool	throwErrorChain(Request &, Response &)
 
 int	main(void)
 {
-	Serve 			app;
 	Eject			eject;
 	Static			serveStatic;
 	SendBodyFromFD	sendBodyFromFD(app.logger);
@@ -77,6 +83,8 @@ int	main(void)
 	app.use(sendHeader, F_ALL);
 	app.use(sendBodyFromBuffer, F_ALL);
 	app.use(sendBodyFromFD, F_ALL);
+
+   signal(SIGINT, stop_signal);
 
 	app.begin();
 	while (app.alive())
