@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 07:08:34 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/30 03:22:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,8 +36,15 @@ class Request
 		chain_state_t		*state;
 		char				buff[SERVER_BUFFER_SIZE];
 		
+		std::string			method_str;
 		method_t			method;
+		std::string			raw_pathname;
+		std::string			protocol;
+		std::string			host;
+		std::string			hostname;
+		std::string			port;
 		std::string			pathname;
+		std::string			querystring;
 		std::string			trusted_pathname;
 		std::string			http_version;
 		Header				headers;

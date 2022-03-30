@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/26 17:09:51 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/30 04:03:12 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 # include "Response.hpp"
 # include "Serve.hpp"
 # include "Regex.hpp"
+# include "Url.hpp"
 # include "File.hpp"
 
 bool	parseStartLine(Request &req, Response &res)
@@ -63,11 +64,61 @@ bool	parseStartLine(Request &req, Response &res)
 	else if (method == "TRACE") 
 		req.method = M_TRACE;
 
-	req.pathname = pathname;
-	req.trusted_pathname = sanitizeRelativePath(req.pathname);
+	req.method_str = method;
+	req.raw_pathname = pathname;
 	req.http_version = http_version;
 
+	if (pathname[0] == '/' || pathname[0] == '*')
+	{
+		Regex   regex;
+
+		regex.Match(pathname, "^(\\/[^?]+)(\\?.*)?$");
+		if (regex.GetSize() >= 3)
+		{
+			req.pathname = regex.GetMatch()[1].occurence;
+			req.querystring = regex.GetMatch()[2].occurence;
+		}
+		else
+			req.pathname = pathname;
+		req.trusted_pathname = sanitizeRelativePath(req.pathname);
+	}
+	else
+	{
+		URL	uri(pathname);
+
+		req.protocol = uri.protocol();
+		req.host = uri.host();
+		req.hostname = uri.hostname();
+		req.port = uri.port();
+		req.pathname = uri.pathname();
+		req.querystring = uri.search();
+		req.trusted_pathname = sanitizeRelativePath(req.pathname);
+	}
+
 	return (true);
+}
+
+void	fulfillHostFromHeader(Request &req, Response &res)
+{
+	Regex   									regex;
+	std::vector<std::string>					header_values;
+	std::vector<std::string>::const_iterator	header_values_it;
+
+	header_values = req.headers.GetHeader("host");
+	header_values_it = header_values.begin();
+
+	if (header_values_it != header_values.end())
+	{
+		std::string	host(*header_values_it);
+
+		regex.Match(host, "^([^:]+)(:([0-9]{1,16}))?$");
+		req.host = host;
+
+		if (regex.GetSize() >= 2)
+			req.hostname = regex.GetMatch()[1].occurence;
+		if (regex.GetSize() >= 4)
+			req.port = regex.GetMatch()[3].occurence;
+	}
 }
 
 bool	parseRequestHeaders(Request &req, Response &res)
@@ -84,10 +135,13 @@ bool	parseRequestHeaders(Request &req, Response &res)
 	if (!req.await(EPOLLIN))
 		return (false);
 
-	while (get_next_line_string(req.fd, line, req.buff, SERVER_BUFFER_SIZE) > 0 && line.length())
+	while (get_next_line_string(req.fd, line, req.buff, SERVER_BUFFER_SIZE) > 0)
 	{
-		if (line.length())
+		if (!line.length())
+		{
+			fulfillHostFromHeader(req, res);
 			return (true);
+		}
 		else
 			req.headers.set(line);
 	}
