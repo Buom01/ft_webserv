@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/03/23 00:38:49 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/30 02:01:44 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -155,26 +155,6 @@ class   Chain
 				return (true);
 			}
 		}
-
-		void _remove_instance(RunningChain *instance)
-		{
-			running_chains_t::iterator	it	= _running.begin();
-
-			while (it != _running.end())
-			{
-				if (*it == instance)
-				{
-					it = _running.erase(it);
-					_epoll.remove(instance->req.fd);
-					break ;
-				}
-				else
-					++it;
-			}
-
-			nothrow_close(instance->req.fd);
-			delete instance;
-		}
     
     public:
         Chain(Epoll &epoll):
@@ -188,9 +168,30 @@ class   Chain
 
 			while (it != _running.end())
 			{
-				_remove_instance(*it);
+				unsafe_remove_instance(*it);
 				++it;
 			}
+		}
+
+		void unsafe_remove_instance(RunningChain *instance)
+		{
+			running_chains_t::iterator	it	= _running.begin();
+
+			while (it != _running.end())
+			{
+				if (*it == instance)
+				{
+					it = _running.erase(it);
+					if (_epoll.has(instance->req.fd))
+						_epoll.remove(instance->req.fd);
+					break ;
+				}
+				else
+					++it;
+			}
+
+			nothrow_close(instance->req.fd);
+			delete instance;
 		}
 
 		void	use(IMiddleware &middleware, chain_flag_t flag, method_t methods, std::string &pathname)
@@ -227,7 +228,7 @@ class   Chain
 				_running.push_back(instance);
 			else
 			{
-				_remove_instance(instance);
+				unsafe_remove_instance(instance);
 				instance = NULL;
 			}
 
@@ -242,7 +243,7 @@ class   Chain
 				
 				if (_exec_instance(*instance))
 				{
-					_remove_instance(instance);
+					unsafe_remove_instance(instance);
 					return (true);
 				}
 			}
@@ -257,7 +258,7 @@ class   Chain
 			while (it != _running.end())
 			{
 				if ((*it)->state == CS_OTHER && _exec_instance(**it))
-					_remove_instance(*it);
+					unsafe_remove_instance(*it);
 				else
 					++it;
 			}

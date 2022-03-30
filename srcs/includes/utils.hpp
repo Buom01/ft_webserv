@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/16 03:49:16 by badam             #+#    #+#             */
-/*   Updated: 2022/03/23 00:30:53 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/30 01:29:30 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,8 @@
 
 # include <time.h>
 # include <string>
+# include <sstream>
+# include "http.hpp"
 
 inline size_t	min(size_t a, size_t b)
 {
@@ -62,6 +64,17 @@ std::string *replace_all(std::string *str, const std::string& from, const std::s
     }
 	
     return str;
+}
+
+std::string bind_to_string(server_bind_t &bind)
+{
+    std::stringstream    sstr;
+
+    sstr << bind.host;
+    sstr << ":";
+    sstr << bind.port;
+
+    return (sstr.str());
 }
 
 #endif

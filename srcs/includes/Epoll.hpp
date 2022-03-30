@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/26 22:16:47 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 08:22:52 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/30 01:50:40 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,30 +73,49 @@ class	Epoll
 
 		void	add(int fd, event_type_t type, void *data, uint32_t events = EPOLLIN | EPOLLOUT)
 		{
-			epoll_event_t	*ev			= new epoll_event_t();
-			event_data_t	*ev_data	= new event_data_t();
+			epoll_event_t	*ev;
+			event_data_t	*ev_data;
 			inner_event_t	inner_ev;
 
-			bzero(ev, sizeof(epoll_event_t));
-
-			ev_data->fd		= fd;
-			ev_data->type	= type;
-			ev_data->data	= data;
-
-			ev->events		= events;
-			ev->data.ptr	= ev_data;
-
-			inner_ev.fallback	= false;
-			inner_ev.event		= ev;
-			
-			if (epoll_ctl(_fd, EPOLL_CTL_ADD, fd, ev) == -1)
+			try
 			{
-				if (errno == EPERM)
-					inner_ev.fallback = true;
-				else
-					throw EpollException("EPOLL setup failed");
+				ev		= new epoll_event_t();
+				ev_data	= new event_data_t();
+
+				bzero(ev, sizeof(epoll_event_t));
+
+				ev_data->fd		= fd;
+				ev_data->type	= type;
+				ev_data->data	= data;
+
+				ev->events		= events;
+				ev->data.ptr	= ev_data;
+
+				inner_ev.fallback	= false;
+				inner_ev.event		= ev;
+				
+				if (epoll_ctl(_fd, EPOLL_CTL_ADD, fd, ev) == -1)
+				{
+					if (errno == EPERM)
+						inner_ev.fallback = true;
+					else
+						throw EpollException("EPOLL setup failed");
+				}
+				_events.insert(std::pair<int, inner_event_t>(fd, inner_ev));
 			}
-			_events.insert(std::pair<int, inner_event_t>(fd, inner_ev));
+			catch(...)
+			{
+				if (ev && ev_data)
+					epoll_ctl(_fd, EPOLL_CTL_DEL, fd, NULL);
+				if (ev)
+				{
+					delete ev;
+					if (ev_data)
+						delete ev_data;
+				}
+
+				throw EpollException("EPOLL setup failed");
+			}
 		}
 
 		void	remove(int fd)

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 07:25:07 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/30 02:03:58 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 # include <string>
 # include <vector>
 # include "http.hpp"
+# include "utils.hpp"
 # include "IMiddleware.hpp"
 # include "Log.hpp"
 # include "Epoll.hpp"
@@ -142,15 +143,30 @@ class	Serve
 				bind = *it;
 
 				if (listen(bind.fd, 1) == -1)
-					throw ServerSocketException("Socket failed to listen");
+					logger.fail("Socket failed to listen on " + bind_to_string(bind));
+				else
+				{
+					try
+					{
+						_epoll.add(bind.fd, ET_BIND, NULL);
+						logger.greeting(bind.host, bind.port);
+						_alive = true;
+					}
+					catch (...)
+					{
+						logger.fail("Failed to add bind FD of " + bind_to_string(bind) + " to epoll");
+					}
+				}
 			
-				_epoll.add(bind.fd, ET_BIND, NULL);
-
-				logger.greeting(bind.host, bind.port);
 
 				++it;
 			}
-			_alive = true;
+
+			if (!_alive)
+			{
+				_alive = true;
+				stop();
+			}
 		}
 
 		void	use(IMiddleware &middleware, chain_flag_t flag = F_NORMAL, method_t methods = M_ALL, std::string pathname = "")
@@ -183,12 +199,20 @@ class	Serve
 			events_t				events;
 			events_t::iterator		it;
 			int						connection;
-			RunningChain			*chainInstance;
+			RunningChain			*chainInstance	= NULL;
 			event_data_t			data;
 
 			retake();
 
-			events = _epoll.accept();
+			try
+			{
+				events = _epoll.accept();
+			}
+			catch(const std::exception &e)
+			{
+				logger.fail(e.what());
+				return ;
+			}
 			it = events.begin();
 
 			while (it != events.end())
@@ -207,10 +231,22 @@ class	Serve
 					{
 						if (_alive)
 						{
-							chainInstance = exec(connection, 0);
-							
-							if (chainInstance)
-								_epoll.add(connection, ET_CONNECTION, chainInstance);
+							try
+							{
+								chainInstance = exec(connection, 0);
+								
+								if (chainInstance)
+									_epoll.add(connection, ET_CONNECTION, chainInstance);
+							}
+							catch (const std::exception &e)
+							{
+								logger.fail(std::string("Fail to initialize response chain: ") + e.what());
+								
+								if (chainInstance)
+									_response_chain.unsafe_remove_instance(chainInstance);
+								else
+									nothrow_close(connection);
+							}
 						}
 						else
 						{
