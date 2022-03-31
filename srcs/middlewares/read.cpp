@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   read.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/30 04:16:07 by badam            ###   ########.fr       */
+/*   Updated: 2022/03/31 01:15:22 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,11 +72,11 @@ bool	parseStartLine(Request &req, Response &res)
 	{
 		Regex   regex;
 
-		regex.Match(pathname, "^(\\/[^?]+)(\\?.*)?$");
-		if (regex.GetSize() >= 3)
+		regex.exec(pathname, "^(\\/[^?]+)(\\?.*)?$");
+		if (regex.size() >= 2)
 		{
-			req.pathname = regex.GetMatch()[1].occurence;
-			req.querystring = regex.GetMatch()[2].occurence;
+			req.pathname = regex.match()[0].occurence;
+			req.querystring = regex.match()[1].occurence;
 		}
 		else
 			req.pathname = pathname;
@@ -111,13 +111,13 @@ bool	fulfillHostFromHeader(Request &req, Response &)
 	{
 		std::string	host(*header_values_it);
 
-		regex.Match(host, "^([^:]+)(:([0-9]{1,16}))?$");
+		regex.exec(host, "^([^:]+)(:([0-9]{1,16}))?$", GLOBAL_FLAG);
 		req.host = host;
 
-		if (regex.GetSize() >= 2)
-			req.hostname = regex.GetMatch()[1].occurence;
-		if (regex.GetSize() >= 4)
-			req.port = regex.GetMatch()[3].occurence;
+		if (regex.size() >= 1)
+			req.hostname = regex.match()[0].occurence;
+		if (regex.size() >= 3)
+			req.port = regex.match()[2].occurence;
 	}
 
 	return (true);
