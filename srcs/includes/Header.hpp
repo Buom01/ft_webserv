@@ -6,13 +6,12 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 14:41:25 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/26 14:06:15 by cbertran         ###   ########.fr       */
+/*   Updated: 2022/03/31 14:13:18 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef __PARSE_HEADER
 # define __PARSE_HEADER
-# define HEADERS_SIZE 10
 # include <iostream>
 # include <utility>
 # include <string>
@@ -21,177 +20,155 @@
 # include <map>
 # include "Regex.hpp"
 
-static std::string HEADERS[HEADERS_SIZE] =
-{
-	"Accept-Charsets",
-	"Accept-Language",
-	"Allow",
-	"Authorization",
-	"Content-Language",
-	"Content-Length",
-	"Content-Location",
-	"Content-Type",
-	"Host"
-};
-
 class Header
 {
 	public:
-		typedef std::multimap<std::string, std::string> _Container;
+		typedef std::vector<std::string>					_vectors;
+		typedef std::map<std::string, _vectors>				_headers;
+		typedef std::map<std::string, _vectors>::iterator	_headers_it;
+		typedef std::pair<std::string, _vectors>			_pair;
 	private:
-		Regex			_regex;
-		_Container		_header;
+		Regex		regex;
+		_headers	headersMap;
+	public:
+		Header() {}
+		~Header() {}
 	private:
-		/**
-		 * 	Return parsed header containing key followed by value(s)
-		 *  or an empty vector if match failed.
-		 */
-		std::vector<std::string>	parseHeader(std::string raw)
-		{
-			match_t						*match;
-			std::string					key;
-			std::string					rawValue;
-			std::vector<std::string>	results;
-
-			if (!(match = _regex.exec(raw, "^([^ ]+): ([^,].*)$", GLOBAL_FLAG)))
-				return results;
-			key = toLowerCase(match[1].occurence);
-			rawValue = match[2].occurence;
-
-			results.push_back(key);
-			
-			_regex.exec(rawValue, " *([^,]+),? *", GLOBAL_FLAG);
-			for (size_t x = 0; x < _regex.size(); x++)
-				results.push_back(_regex.match()[x].occurence);
-			return (results);
-		}
-
-		std::string toLowerCase(std::string const _string)
+		std::string toLowerCase(std::string _string)
 		{
 			std::string ret = _string;
 			std::transform(ret.begin(), ret.end(), ret.begin(), ::tolower);
 			return ret;
 		}
+
+		std::string	&trim(std::string& str, std::string chars = " \t\n\r\f\v")
+		{
+			str.erase(0, str.find_first_not_of(chars)); // left
+			str.erase(str.find_last_not_of(chars) + 1); // right
+			return str;
+		}
+		
+		_headers_it	find(std::string key)
+		{
+			for (_headers_it check = headersMap.begin(); check != headersMap.end(); check++)
+				if (toLowerCase((*check).first) == toLowerCase(key))
+					return check;
+			return headersMap.end();
+		}
+
+		_pair	parse(std::string header)
+		{
+			_pair vect;
+			regex.exec(header, "^([^:]+):(.*)$", GLOBAL_FLAG);
+			if (regex.size() == 2)
+			{
+				vect.first = trim(regex.match()[0].occurence);
+				regex.exec(trim(regex.match()[1].occurence), "([^,]+)", GLOBAL_FLAG);
+				for (size_t x = 0; x < regex.size(); x++)
+					vect.second.push_back(trim(regex.match()[x].occurence));
+			}
+			return vect;
+		}
 	public:
-		Header() {}
-		~Header() {}
-
 		/**
-		 * 	Get map of every header.
-		 */
-		_Container GetEveryHeader()
-		{ return _header; }
-		
-		/**
-		 * 	Get vector of every HTTP header in map
-		 */
-		std::vector<std::string> VectorOfEveryHeaders()
-		{
-			std::vector<std::string>	keys;
-			std::vector<std::string>	headers;
-			for (_Container::iterator it = _header.begin(); it != _header.end(); ++it)
-			{
-				if (std::find(keys.begin(), keys.end(), (*it).first) == keys.end())
-					keys.push_back((*it).first);
-			}
-			for (std::vector<std::string>::iterator it = keys.begin(); it != keys.end(); ++it)
-				headers.push_back(HTTPheader(*it));
-			return (headers);
-		}
-
-		/**
-		 * 	Return well formated string represent HTTP header
-		 * 	@param it: iterator of multimap
-		 */
-		std::string HTTPheader(_Container::iterator &it)
-		{
-			return (HTTPheader((*it).first));
-		}
-		
-		/**
-		 * 	Return well formated string represent HTTP header
-		 * 	@param search: case-insensitive name of header
-		 */
-		std::string HTTPheader(std::string const search)
-		{
-			std::vector<std::string> HTTP = GetHeader(toLowerCase(search));
-			std::string ret = toLowerCase(search);
-			ret += ": ";
-			for (std::vector<std::string>::iterator it2 = HTTP.begin(); it2 != HTTP.end(); ++it2)
-			{
-				if (it2 != HTTP.begin())
-					ret += ",";
-				ret += *it2;
-			}
-			return ret;
-		}
-		
-		/**
-		 * 	Get value(s) of specific header.
-		 *	@param search: case-insensitive name of header
-		 */
-		std::vector<std::string> GetHeader(std::string const search)
-		{
-			std::vector<std::string>	ret;
-			if (_header.count(search))
-			{
-				std::pair<std::multimap<std::string, std::string>::iterator, std::multimap<std::string, std::string>::iterator> _itr = _header.equal_range(search);
-				for (_Container::iterator it = _itr.first; it != _itr.second; ++it)
-					ret.push_back(it->second);
-			}
-			return ret;
-		}
-		
-		/**
-		 *	Remove header if exist; if not exist return true.
-		 * 	Older iterator is invalid.
-		 *	@param key: name of header
+		 *	Remove header if exist
+		 * 	Older iterator is invalid
+		 *	@param key (std::string) name of header
+		 *	@return true if error
 		 */
 		bool remove(std::string key)
 		{
-			std::multimap<std::string, std::string>::iterator it;
-			it = _header.find(toLowerCase(key));
-			if (it != _header.end())
-				_header.erase(toLowerCase(key));
+			_headers_it it = headersMap.find(toLowerCase(key));
+			if (it != headersMap.end())
+				headersMap.erase(toLowerCase(key));
 			else
 				return true;
 			return false;
 		}
 
 		/**
-		 * 	Add header to container; if exist nothing is change.
-		 * 	Older iterator is invalid. If error occur return true.
-		 *	@param header: complete header line
+		 * 	Add header to container
+		 * 	Older iterator is invalid
+		 *	@param header (std::string) complete header line
+		 *	@return true if error
 		 */
 		bool add(std::string header)
 		{
-			std::vector<std::string>	parsedHeader	= parseHeader(header);
-			std::string					key;
+			_pair	ret = parse(header);
 			
-			if (parsedHeader.size() < 2) return true;
-			key = parsedHeader[0];
-			if (_header.count(key)) return true;
-			for (size_t i = 1; i < parsedHeader.size(); ++i)
-				_header.insert(std::make_pair(key, parsedHeader[i]));
+			if (ret.first.empty() && ret.second.empty())
+				return true;
+			if (headersMap.count(ret.first))
+				return true;
+			headersMap.insert(ret);
 			return false;
 		}
-		
+
 		/**
-		 * 	Set header to container; if exist delete old and replace with new.
-		 * 	Older iterator is invalid. If error occur return true.
-		 *	@param header: complete header line
+		 * 	Set header to container, if exist delete old and replace with new
+		 * 	Older iterator is invalid
+		 *	@param header (std::string) complete header line
+		 *	@return true if error
 		 */
 		bool set(std::string header)
 		{
-			std::vector<std::string>	parsedHeader	= parseHeader(header);
-			std::string					key;
+			_pair	ret = parse(header);
 			
-			if (parsedHeader.size() < 2) return true;
-			key = parsedHeader[0];
-			if (_header.count(key)) _header.erase(key);
-			for (size_t i = 1; i < parsedHeader.size(); ++i)
-				_header.insert(std::make_pair(key, parsedHeader[i]));
+			if (ret.first.empty() && ret.second.empty())
+				return true;
+			if (headersMap.count(ret.first))
+				headersMap.erase(ret.first);
+			headersMap.insert(ret);
 			return false;
-		}		
+		}
+	public:
+		/**
+		 *	Get parsing of HTTP headers
+		 *	@return _headers map of headers
+		 */
+		_headers	map() { return headersMap; }
+
+		/**
+		 *	Get every HTTP headers
+		 *	@return std::vector<std::string> headers
+		 */
+		std::vector<std::string> headers()
+		{
+			std::string					temp;
+			std::vector<std::string>	list;
+			for (_headers_it it = headersMap.begin(); it != headersMap.end(); it++)
+			{
+				temp.clear();
+				temp = (*it).first + ": ";
+				for (_vectors::const_iterator it2 = (*it).second.begin(); it2 != (*it).second.end();)
+				{
+					temp += *it2;
+					if (++it2 != (*it).second.end())
+						temp += ",";
+				}
+				list.push_back(temp);
+			}
+			return list;
+		}
+
+		/**
+		 *	Get specific HTTP header
+		 *	@param key (std::string) of search header
+		 *	@return (std::string) header
+		 */
+		std::string	header(std::string key)
+		{
+			std::string temp;
+			_headers_it it = find(key);
+
+			if (it != headersMap.end())
+			{
+				temp = (*it).first + ": ";
+				for (_vectors::const_iterator it2 = (*it).second.begin(); it2 != (*it).second.end(); it++)
+					temp += *it2 + ",";
+			}
+			return temp;
+		}
 };
+
 #endif
