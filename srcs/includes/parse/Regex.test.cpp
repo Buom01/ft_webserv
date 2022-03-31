@@ -13,8 +13,8 @@ int	main(int argc, char **argv)
 	}
 	else
 	{
-		line = argv[0];
-		reg = argv[1];
+		line = argv[1];
+		reg = argv[2];
 	}
 	std::cout << "Testing: \"" << line << "\"" << std::endl;
 	std::cout << "With: \"" << reg << "\"" << std::endl;
