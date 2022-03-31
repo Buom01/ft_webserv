@@ -199,7 +199,7 @@ class Regex
 		 * 	@param line (std::string) line to search occurence
 		 * 	@param regex (std::string) regex rules
 		 * 	@param flag (int) (optional) by default regex stop at first occurence,
-		 *	pass FLAG_GLOBAL for get all occurences in string
+		 *	pass GLOBAL_FLAG for get all occurences in string
 		 *	@param reset (bool) (optional) if set to true, regex position is reset to zero
 		 *  @return match_t[size()] containing the match(s)
 		 *	If no flag pass & no reset and function recall, regex saved last position and return next match
