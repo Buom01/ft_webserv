@@ -11,13 +11,21 @@
 # include <exception>
 # include <vector>
 
+struct	group_t
+{
+	int			start;
+	int			end;
+	int			width;
+	std::string occurence;
+};
+
 struct match_t
 {
 	int			start;
 	int			end;
 	int			width;
-	std::string	group;
 	std::string	occurence;
+	group_t		group;
 };
 
 class Regex
@@ -109,7 +117,7 @@ class Regex
 			std::vector<match_t>	matches;
 			regmatch_t				pmatch[n_matches];
 			match_t					temp;
-			std::string				tempGroup;
+			group_t					tempGroup;
 
 			for (size_t x = 0; regexec(r, _pos, n_matches, pmatch , 0) == 0 && !_is_end; x++)
 			{
@@ -135,7 +143,12 @@ class Regex
 						matches.push_back(temp);
 					}
 					else
-						tempGroup = temp.occurence;
+					{
+						tempGroup.occurence = temp.occurence;
+						tempGroup.start = temp.start;
+						tempGroup.end = temp.end;
+						tempGroup.width = temp.width;
+					}
 				}
 				_pos += pmatch[0].rm_eo;
 				if (occ_is_null && !_is_end)
@@ -179,9 +192,14 @@ class Regex
 			for (size_t x = 0; x < _size; x++)
 			{
 				std::replace(__match[x].occurence.begin(), __match[x].occurence.end(),'\t',' ');
-				std::replace(__match[x].group.begin(), __match[x].group.end(),'\t',' ');
+				std::replace(__match[x].group.occurence.begin(), __match[x].group.occurence.end(),'\t',' ');
 				std::cout << "  {" << std::endl;
-				std::cout << "     \"Group\"     : \""	<< __match[x].group		<< "\","	<< std::endl;
+				std::cout << "     \"Group\" : {" << std::endl;
+				std::cout << "         \"Start\"     : " << __match[x].group.start << "," << std::endl;
+				std::cout << "         \"End\"       : " << __match[x].group.end << "," << std::endl;
+				std::cout << "         \"Width\"     : " << __match[x].group.width << "," << std::endl;
+				std::cout << "         \"Occurence\" : " << __match[x].group.occurence << "," << std::endl;
+				std::cout << "     }," << std::endl;
 				std::cout << "     \"Start\"     : "	<< __match[x].start		<< ","		<< std::endl;
 				std::cout << "     \"End\"       : "	<< __match[x].end		<< ","		<< std::endl;
 				std::cout << "     \"Width\"     : "	<< __match[x].width		<< ","		<< std::endl;
