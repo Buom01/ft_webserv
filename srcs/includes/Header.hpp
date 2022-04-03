@@ -6,7 +6,7 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 14:41:25 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/31 14:13:18 by cbertran         ###   ########.fr       */
+/*   Updated: 2022/04/03 21:42:30 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -149,6 +149,20 @@ class Header
 				list.push_back(temp);
 			}
 			return list;
+		}
+
+		/**
+		 * Get value(s) of header
+		 * @param key (std::string) of search header
+		 * @return (std::string) _vectors of values, empty if not exist
+		 */
+		_vectors	headerValues(std::string key)
+		{
+			_headers_it it = find(key);
+
+			if (it != headersMap.end())
+				return (*it).second;
+			return _vectors();
 		}
 
 		/**
