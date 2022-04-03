@@ -36,7 +36,7 @@ std::string sanitizeRelativePath(std::string path)
 {
 	size_t	i;
 	Regex	parent;
-	match_t	*match;
+	//match_t *match
 
 	// Prepend a slash if missing
 	if (path[0] != '/')
@@ -54,14 +54,15 @@ std::string sanitizeRelativePath(std::string path)
 	}
 
 	// Applying parenting
-	while ((match = parent.exec(path, "(^/|/[^/]+/)(\\.+)(/|$)", GLOBAL_FLAG)))
+	while (parent.exec(path, "(^/|/[^/]+/)(\\.+)(/|$)"))
 	{
-		if (match[2].occurence.size() >= 2)
-			path.replace(match[0].start, match[0].width, std::string("/"));
+		if (parent.size() <= 0)
+			break;
+		if (parent.match()[1].occurence.size() >= 2)
+			path.replace(parent.match()[0].group.start, parent.match()[0].group.width, std::string("/"));
 		else
-			path.replace(match[0].start, match[0].width, match[1].occurence);
+			path.replace(parent.match()[0].group.start, parent.match()[0].group.width, parent.match()[0].occurence);
 	}
-
 	return (path);
 }
 
