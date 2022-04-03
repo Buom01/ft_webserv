@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/23 00:49:38 by badam             #+#    #+#             */
-/*   Updated: 2022/03/23 01:46:29 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/03 21:40:40 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,7 +50,7 @@ class Eject: public IMiddleware
 				return (true);
 			}
 
-			header_values = res.headers.GetHeader("content-length");
+			header_values = res.headers.headerValues("content-length");
 			header_values_it = header_values.begin();
 			while (header_values_it != header_values.end())
 			{
