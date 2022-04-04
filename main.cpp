@@ -14,7 +14,7 @@ int main(int argc, char **argv)
 {
 	Parse					config;
 	Parse::serversVector	servers;
-	Parse::locationsVector	locations;
+	Parse::locationsMap		locations;
 	std::vector<Serve>		serves;
 
 	#pragma region Initiale check & Parse configuration file
@@ -47,7 +47,6 @@ int main(int argc, char **argv)
 	}
 	#pragma endregion Parse configuration file
 	
-
 	#pragma region Start server
 	for (Parse::serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
