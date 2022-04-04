@@ -153,7 +153,7 @@ class Parse : public ParseTypedef
 		Parse() {}
 		Parse(std::string configFilePath) : configPath(configFilePath) { init(configPath); }
 		
-		void init(std::string configFilePath)
+		void init(std::string configFilePath, bool setDefaultLocation = true)
 		{
 			pairLocations	locationTemp;
 			s_server		serverTemp;
@@ -254,6 +254,22 @@ class Parse : public ParseTypedef
 			stream.close();
 			if (!asServerBlock)
 				generateParseError(lineNumber, "configuration: no server block is present. A configuration must be in at least one server block");
+			if (!setDefaultLocation)
+				return;
+			for (serversVector::iterator it = servers.begin(); it != servers.end(); it++)
+			{
+				pairLocations root;
+				root.first = "/";
+				for (optionsVector::iterator itConf = (*it).options.begin(); itConf != (*it).options.end(); itConf++)
+				{
+					if ((*itConf).first == "listen" || (*itConf).first == "server_name" || (*itConf).first == "client_body_buffer_size")
+						continue;
+					root.second.push_back((*itConf));
+					(*it).options.erase(itConf);
+					itConf = (*it).options.begin();
+				}
+				(*it).locations.insert((*it).locations.begin(), root);
+			}
 		}
 	private:
 		bool isEmpty(std::string str)
@@ -621,7 +637,6 @@ class Parse : public ParseTypedef
 
 			if (get[0] != NO_KEY)
 			{
-				// Apparently this regex leak ???
 				Regex.exec(get[0], "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?([0-9]+)?", GLOBAL_FLAG);
 				for (size_t x = 0; x < Regex.size(); x++)
 				{
@@ -664,7 +679,7 @@ class Parse : public ParseTypedef
 	
 	#pragma region Check config
 	public:
-		inline void check()
+		inline void check(bool isDefaultLocation = true)
 		{
 			std::vector<s_listen>		checkListen;
 			std::vector<std::string>	checkServer;
@@ -675,13 +690,16 @@ class Parse : public ParseTypedef
 
 			for (serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 			{
-				allow((*it).options);
-				autoindex((*it).options);
-				cgi((*it).options);
+				if (!isDefaultLocation)
+				{
+					allow((*it).options);
+					autoindex((*it).options);
+					cgi((*it).options);
+					errorPage((*it).options);
+					index((*it).options);
+					root((*it).options, false);
+				}
 				clientBodyBufferSize((*it).options);
-				errorPage((*it).options);
-				index((*it).options);
-				root((*it).options);
 				tempServer = serverName((*it).options);
 				for (std::vector<std::string>::const_iterator itC = tempServer.begin(); itC != tempServer.end(); itC++)
 					checkServer.push_back(*itC);
@@ -696,7 +714,7 @@ class Parse : public ParseTypedef
 						clientBodyBufferSize((*itLoc).second);
 						errorPage((*itLoc).second);
 						index((*itLoc).second);
-						root((*itLoc).second, true);
+						root((*itLoc).second, !(isDefaultLocation && (*itLoc).first == "/"));
 					}
 				}
 			}

@@ -54,6 +54,7 @@ int main(int argc, char **argv)
 		Serve			server;
 		Static			serverStatic;
 		SendBodyFromFD	sendBodyFromFD(server.logger);
+		Error			error(server.logger);
 	
 		Parse::s_autoindex autoindex = config.autoindex((*it).options);
 		Parse::s_listen bind = config.listen((*it).options);
@@ -61,6 +62,7 @@ int main(int argc, char **argv)
 		serverStatic.options.root = config.root((*it).options);
 		serverStatic.options.directory_listing = autoindex.active;
 		serverStatic.options.indexes.push_back(config.index((*it).options));
+		//error.options.errorpages = config.
 		server.bind(bind.ipSave, bind.port);
 		
 		#pragma region Add middleware here
@@ -68,7 +70,7 @@ int main(int argc, char **argv)
 		server.use(parseRequestHeaders, F_ALL);
 		server.use(cgi);
 		server.use(serverStatic);
-		//server.use(error F_ALL);
+		//server.use(error, F_ALL);
 		server.use(addResponseHeaders, F_ALL);
 		server.use(serializeHeaders, F_ALL);
 		server.use(sendHeader, F_ALL);
