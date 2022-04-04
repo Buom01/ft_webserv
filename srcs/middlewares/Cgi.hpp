@@ -13,7 +13,6 @@
 # include <sys/types.h>
 # include <sys/wait.h>
 # include <unistd.h>
-# include "GNL.hpp"
 # include "Split.hpp"
 # include "MimeType.hpp"
 # include "Header.hpp"
@@ -21,6 +20,7 @@
 # include "Response.hpp"
 # include "Url.hpp"
 # include "nullptr_t.hpp"
+# include "http.hpp"
 
 class cgiEnv
 {
@@ -209,6 +209,7 @@ class CGI : public cgiEnv
 			int		fd[2];
 			pid_t	pid;
 
+			res.code = -1;
 			if (pipe(fd))
 				return -1;
 			if ((pid = fork()) == -1)
@@ -220,7 +221,10 @@ class CGI : public cgiEnv
 				close(fd[0]);
 				close(fd[1]);
 				if (execve(getVariable("SCRIPT_FILENAME").value.c_str(), NULL, env.envForCGI()) == -1)
+				{
+					res.code = C_INTERNAL_SERVER_ERROR;
 					std::cout << "Status: 500\r\n";
+				}
 			}
 			else
 			{
@@ -231,7 +235,7 @@ class CGI : public cgiEnv
 				waitpid(pid, NULL, 0);
 			}
 			dup2(saveSTDIN, STDIN_FILENO); dup2(saveSTDOUT, STDOUT_FILENO);
-			fclose(OUT); close(fdOUT);
+			fclose(OUT);
 			close(saveSTDIN); close(saveSTDOUT);
 			if (pid == 0)
 				exit(EXIT_SUCCESS);
@@ -244,8 +248,9 @@ bool cgi(Request &req, Response &res)
 {
 	CGI	instance;
 
+	if (res.code == -1) res.code = C_OK;
 	res.response_fd = instance.exec(req, res);
-	return !!(res.response_fd != -1);
+	return true;
 }
 
 #endif
