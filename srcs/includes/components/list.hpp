@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/20 21:37:00 by badam             #+#    #+#             */
-/*   Updated: 2022/03/21 01:00:14 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/07 14:58:15 by bastien          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@
 # include <string>
 # include "components/utils.hpp"
 
-template<class List, class ItemType = std::string>
+template<class List, class ItemType>
 std::string list(List &list, std::string (*convert)(ItemType item) = escape_html)
 {
 	typename List::const_iterator	it		= list.begin();
