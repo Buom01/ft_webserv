@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/03/30 05:07:46 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/07 17:09:06 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -95,11 +95,6 @@ class Request
 		{
 			if (!(~events & _events))
 			{
-				if (*state == CS_AWAIT_EVENT)
-				{
-					logger.warn("Were waiting on an unused event");
-					*state = CS_OTHER;
-				}
 				return (false);
 			}
 			else
