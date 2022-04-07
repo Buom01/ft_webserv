@@ -6,7 +6,7 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/10 18:19:19 by badam             #+#    #+#             */
-/*   Updated: 2022/03/29 12:59:27 by cbertran         ###   ########.fr       */
+/*   Updated: 2022/04/07 15:15:17 by bastien          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,7 @@
 # include <arpa/inet.h>
 # include <errno.h>
 # include <unistd.h>
+# include <vector>
 
 typedef	struct sockaddr		sockaddr_t;
 typedef	struct sockaddr_in	sockaddr_in_t;
