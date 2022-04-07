@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/03/21 16:35:48 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/07 15:51:27 by bastien          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,6 +52,9 @@ class Static: public IMiddleware
 		{
 			options = opts;
 		}
+
+		virtual ~Static()
+		{}
 
 	protected:
 		bool	serveDirectory(Response &res, const std::string &server_path, const std::string &client_path)

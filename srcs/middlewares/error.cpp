@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/21 01:02:06 by badam             #+#    #+#             */
-/*   Updated: 2022/03/23 02:42:20 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/07 15:52:16 by bastien          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -219,6 +219,9 @@ class Error: public AEpoll
 		{
 			options = opts;
 		}
+
+		virtual ~Error()
+		{}
 
 		void	add(int error, std::string page)
 		{
