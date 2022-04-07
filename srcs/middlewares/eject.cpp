@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/23 00:49:38 by badam             #+#    #+#             */
-/*   Updated: 2022/04/03 21:40:40 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/07 15:29:39 by bastien          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,7 @@ class Eject: public IMiddleware
 	public:
 		size_t	max_payload_size;
 
-		Eject(size_t _max_payload_size = 2048 * 200) :
+		Eject(size_t _max_payload_size = 1024 * 200) :
 			max_payload_size(_max_payload_size)
 		{}
 		
