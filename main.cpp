@@ -4,6 +4,7 @@
 #include "Parse.hpp"
 #include "Serve.hpp"
 #include "Static.cpp"
+#include "error.cpp"
 #include "read.cpp"
 #include "Cgi.hpp"
 #include "Response.hpp"

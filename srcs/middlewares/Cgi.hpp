@@ -72,9 +72,11 @@ class cgiEnv
 		 */
 		bool			addVariable(std::string key, std::string value)
 		{
+			if (!value.empty())
+				return false;
 			s_environment temp;
 			temp.key = key;
-			temp.value = (!value.empty()) ? value : ENV_NULL;
+			temp.value = value;
 			deleteVariable(key);
 			ENV.push_back(temp);
 			return true;
@@ -156,15 +158,14 @@ class CGI : public cgiEnv
 		void	setHeader(Request &req)
 		{
 			URL _url(req.pathname);
-			Header::_Container headers = req.headers.GetEveryHeader();
 
 			#pragma region Mandatory
-				env.addVariable("CONTENT_LENGTH", headers.find("CONTENT_LENGTH")->second);
-				env.addVariable("CONTENT_TYPE", headers.find("CONTENT_TYPE")->second);
+				env.addVariable("CONTENT_LENGTH", req.headers.header("CONTENT_LENGTH"));
+				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT_TYPE"));
 				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
 				env.addVariable("PATH_INFO", _url.pathname());
 				env.addVariable("QUERY_STRING", _url.search());
-				env.addVariable("REMOTE_ADDR", req._client_ip);Z
+				env.addVariable("REMOTE_ADDR", req.client_ip);
 				env.addVariable("REQUEST_METHOD", convertMethod(req.method));
 				env.addVariable("SCRIPT_NAME", _url.pathname());
 				env.addVariable("SERVER_NAME", _url.hostname());
@@ -204,23 +205,25 @@ class CGI : public cgiEnv
 		int	exec(Request &req, Response &res)
 		{
 			FILE	*OUT = tmpfile();
-			int		fdOUT = fileno(tempOUT);
+			int		fdOUT = fileno(OUT);
 			int		saveSTDIN = dup(STDIN_FILENO), saveSTDOUT = dup(STDOUT_FILENO);
 			int		fd[2];
 			pid_t	pid;
 
-			res.code = -1;
+			res.code = C_OK;
 			if (pipe(fd))
 				return -1;
 			if ((pid = fork()) == -1)
 				return -1;
 			else if (pid == 0)
 			{
+				char* const* _null = NULL;
+
 				dup2(fd[0], STDIN_FILENO);
 				dup2(fdOUT, STDOUT_FILENO);
 				close(fd[0]);
 				close(fd[1]);
-				if (execve(getVariable("SCRIPT_FILENAME").value.c_str(), NULL, env.envForCGI()) == -1)
+				if (execve(getVariable("SCRIPT_FILENAME").value.c_str(), _null, env.envForCGI()) == -1)
 				{
 					res.code = C_INTERNAL_SERVER_ERROR;
 					std::cout << "Status: 500\r\n";
@@ -248,7 +251,17 @@ bool cgi(Request &req, Response &res)
 {
 	CGI	instance;
 
-	if (res.code == -1) res.code = C_OK;
+	if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
+		return (true);
+	if (res.response_fd > 0 || res.body.length() > 0)
+		return (true);
+	if (req.finish())
+		return (true);
+	if (req.timeout())
+	{
+		res.code = C_REQUEST_TIMEOUT;
+		return (true);
+	}
 	res.response_fd = instance.exec(req, res);
 	return true;
 }
