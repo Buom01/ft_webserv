@@ -57,6 +57,7 @@ struct ParseTypedef
 	};
 	typedef std::vector<s_server>					serversVector;
 	typedef std::map<int, std::string>				mapErrors;
+	bool											isDefaultLocation;
 
 	/**
 	 * @param GET (bool), false by default
@@ -66,6 +67,7 @@ struct ParseTypedef
 	 */
 	struct s_allow
 	{
+		bool isDefined;
 		bool GET, PUT, POST, DELETE;
 	};
 
@@ -74,6 +76,7 @@ struct ParseTypedef
 	 */
 	struct s_autoindex
 	{
+		bool isDefined;
 		bool active;
 	};
 
@@ -84,9 +87,10 @@ struct ParseTypedef
 	 */
 	struct s_cgi
 	{
+		bool						isDefined;
 		std::vector<std::string>	extensions;
 		std::string					path;
-		s_allow						allow;							
+		s_allow						allow;
 	};
 
 	/**
@@ -95,6 +99,7 @@ struct ParseTypedef
 	 */
 	struct s_clientBodyBufferSize
 	{
+		bool	isDefined;
 		size_t	bits;
 		size_t	size;
 	};
@@ -160,6 +165,7 @@ class Parse : public ParseTypedef
 			bool asServerBlock = false;
 			bool isServerBlock = false, isLocationBlock = false;
 
+			isDefaultLocation = setDefaultLocation;
 			configPath = configFilePath;
 			serverTemp.id = 0;
 			stream.open(configPath.c_str());
@@ -422,12 +428,16 @@ class Parse : public ParseTypedef
 			std::string		err = "rule 'allow': flag ";
 			s_allow			allow;
 			
+			allow.isDefined = true;
 			allow.DELETE = false;
 			allow.GET = false;
 			allow.POST = false;
 			allow.PUT = false;
 			if (get[0] == NO_KEY)
+			{
+				allow.isDefined = false;
 				return allow;
+			}
 			if (get.empty())
 				throw IncorrectConfig("rule 'allow': no argument is set");
 			_allow(get[0], "rule 'allow': flag ", &allow);
@@ -440,9 +450,11 @@ class Parse : public ParseTypedef
 			s_autoindex autoindex;
 			std::string err = "rule 'autoindex': ";
 
+			autoindex.isDefined = false;
 			autoindex.active = false;
 			if (!get.empty() && get[0] != NO_KEY)
 			{
+				autoindex.isDefined = true;
 				if (get.size() > 1)
 				{
 					err += "there can be only one argument";
@@ -471,8 +483,12 @@ class Parse : public ParseTypedef
 			s_cgi cgi;
 			std::string err = "rule 'cgi': ";
 			
+			cgi.isDefined = true;
 			if (get.size() == 1 && get[0] == "NO_KEY")
+			{
+				cgi.isDefined = false;
 				return cgi;
+			}
 			if (get.size() != 3)
 			{
 				err += "there must be at least [extension] [path to executable] [http request allowed]";
@@ -677,7 +693,7 @@ class Parse : public ParseTypedef
 	
 	#pragma region Check config
 	public:
-		inline void check(bool isDefaultLocation = true)
+		inline void check(bool defaultLocation = true)
 		{
 			std::vector<s_listen>		checkListen;
 			std::vector<std::string>	checkServer;
@@ -688,7 +704,7 @@ class Parse : public ParseTypedef
 
 			for (serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 			{
-				if (!isDefaultLocation)
+				if (!defaultLocation)
 				{
 					allow((*it).options);
 					autoindex((*it).options);
@@ -712,7 +728,7 @@ class Parse : public ParseTypedef
 						clientBodyBufferSize((*itLoc).second);
 						errorPage((*itLoc).second);
 						index((*itLoc).second);
-						root((*itLoc).second, !(isDefaultLocation && (*itLoc).first == "/"));
+						root((*itLoc).second, !(defaultLocation && (*itLoc).first == "/"));
 					}
 				}
 			}

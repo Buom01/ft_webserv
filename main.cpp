@@ -12,6 +12,20 @@
 #include "write_headers.cpp"
 #include "write_body.cpp"
 
+method_t method(Parse::s_allow allow)
+{
+	method_t ret = M_UNKNOWN;
+	if (allow.GET)
+		ret = static_cast<method_t>(ret | M_GET);
+	if (allow.POST)
+		ret = static_cast<method_t>(ret | M_POST);
+	if (allow.PUT)
+		ret = static_cast<method_t>(ret | M_PUT);
+	if (allow.DELETE)
+		ret = static_cast<method_t>(ret | M_DELETE);
+	return ret;
+}
+
 int main(int argc, char **argv)
 {
 	Parse					config;
@@ -40,7 +54,6 @@ int main(int argc, char **argv)
 		config.init(argv[1]);
 		config.check();
 		servers = config.getServers();
-		config.print();
 	}
 	catch (std::ifstream::failure &e)
 	{
@@ -63,37 +76,81 @@ int main(int argc, char **argv)
 		Error			*error			= new Error(server->logger);
 		SendBodyFromFD	*sendBodyFromFD	= new SendBodyFromFD(server->logger);
 	
-		Parse::s_autoindex	autoindex	= config.autoindex((*it).options);
-		Parse::s_listen		bind		= config.listen((*it).options);
-
-		serveStatic->options.root				= config.root((*it).options);
-		serveStatic->options.directory_listing	= autoindex.active;
-		serveStatic->options.indexes.push_back(config.index((*it).options));
-		//error->options.errorpages				= config.
-		server->bind(bind.ipSave, bind.port);
+		Parse::s_listen bind 					= config.listen((*it).options);
+		Parse::s_clientBodyBufferSize bodySize 	= config.clientBodyBufferSize((*it).options);
+		std::vector<std::string> server_name	= config.serverName((*it).options);
 		
-		#pragma region Add middleware here
-		server->use(parseStartLine, F_ALL);
-		server->use(parseRequestHeaders, F_ALL);
-		server->use(*eject);
+		server->bind(bind.ipSave, bind.portSave);
+		if (bodySize.isDefined)
+			eject->max_payload_size = bodySize.size;
 
-		server->use(cgi);
-		server->use(*serveStatic);
-		server->use(*error, F_ALL);
+		if (!((*it).locations.empty()))
+		{
+			for (Parse::locationsMap::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
+			{
+				/*
+				Serve			*_server			= new Serve();
+				Eject			*_eject				= new Eject();
+				Static			*_serveStatic		= new Static();
+				Error			*_error				= new Error(_server->logger);
+				SendBodyFromFD	*_sendBodyFromFD	= new SendBodyFromFD(_server->logger);
+				*/
 
-		server->use(addResponseHeaders, F_ALL);
-		server->use(serializeHeaders, F_ALL);
-		server->use(sendHeader, F_ALL);
-		server->use(sendBodyFromBuffer, F_ALL);
-		server->use(*sendBodyFromFD, F_ALL);
-		#pragma endregion Add middleware here
-		
-		server->begin();
-		serves.push_back(server);
-		ejectMiddlewares.push_back(eject);
-		staticMiddlewares.push_back(serveStatic);
-		errorMiddlewares.push_back(error);
-		sendBodyFDMiddlewares.push_back(sendBodyFromFD);
+				Parse::s_allow 					getAllow = config.allow((*itLoc).second);
+				Parse::s_clientBodyBufferSize	getBodySize = config.clientBodyBufferSize((*itLoc).second);
+				Parse::s_autoindex				getAutoindex = config.autoindex((*itLoc).second);
+				std::string 					getRoot = config.root((*itLoc).second, true);
+				std::string						getIndex = config.index((*itLoc).second);
+				Parse::mapErrors 				getErrors = config.errorPage((*itLoc).second);
+				Parse::s_cgi					getCgi = config.cgi((*itLoc).second);
+				method_t 						methods = method(getAllow);
+
+				serveStatic->options.directory_listing	= getAutoindex.active;
+				serveStatic->options.root				= (!getRoot.empty()) ? getRoot : "";
+				if (!getIndex.empty())
+					serveStatic->options.indexes.push_back(getIndex);
+				
+				if (getBodySize.isDefined)
+					eject->max_payload_size = getBodySize.size;
+				
+				for (Parse::mapErrors::const_iterator itErr = getErrors.begin(); itErr != getErrors.end(); itErr++)
+					error->add((*itErr).first, (*itErr).second);
+				
+				server->use(parseStartLine, F_ALL, methods, (*itLoc).first);
+				server->use(parseRequestHeaders, F_ALL, methods, (*itLoc).first);
+				server->use(*eject, F_ALL, methods, (*itLoc).first);
+				if (getCgi.isDefined)
+					server->use(cgi, F_ALL, methods, (*itLoc).first);
+				server->use(*serveStatic, F_ALL, methods, (*itLoc).first);
+				server->use(*error, F_ALL, methods, (*itLoc).first);
+				server->use(addResponseHeaders, F_ALL, methods, (*itLoc).first);
+				server->use(serializeHeaders, F_ALL, methods, (*itLoc).first);
+				server->use(sendHeader, F_ALL, methods, (*itLoc).first);
+				server->use(sendBodyFromBuffer, F_ALL, methods, (*itLoc).first);
+				server->use(*sendBodyFromFD, F_ALL, methods, (*itLoc).first);
+			}
+		}
+		/*
+			#pragma region Add middleware here
+			server->use(parseStartLine, F_ALL);
+			server->use(parseRequestHeaders, F_ALL);
+			server->use(*eject);
+			server->use(cgi);
+			server->use(*serveStatic);
+			server->use(*error, F_ALL);
+			server->use(addResponseHeaders, F_ALL);
+			server->use(serializeHeaders, F_ALL);
+			server->use(sendHeader, F_ALL);
+			server->use(sendBodyFromBuffer, F_ALL);
+			server->use(*sendBodyFromFD, F_ALL);
+			#pragma endregion Add middleware here
+		*/
+			server->begin();
+			serves.push_back(server);
+			ejectMiddlewares.push_back(eject);
+			staticMiddlewares.push_back(serveStatic);
+			errorMiddlewares.push_back(error);
+			sendBodyFDMiddlewares.push_back(sendBodyFromFD);
 	}
 
 	while (serves.size() > 0)
@@ -130,6 +187,6 @@ int main(int argc, char **argv)
 		delete (*it);
 	}
 	#pragma endregion Middlewares cleanup 
-
+	
 	return (EXIT_SUCCESS);
 }
