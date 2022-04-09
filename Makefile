@@ -1,8 +1,7 @@
 CXX 		:=	clang++
 NAME		:= 	webserv
 
-SRCS		:=	main.cpp \
-				srcs/middlewares/read.cpp srcs/middlewares/write.cpp
+SRCS		:=	main.cpp
 
 OBJS		:=	$(SRCS:.cpp=.o)
 RM			:=	rm -f

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 16:28:32 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 07:24:24 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/07 15:13:41 by bastien          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 # include <cstring>
 # include <string>
 # include <iostream>
+# include "http.hpp"
 # define COLOR_RESET "\e[0m"
 # define COLOR_ERROR "\e[91m"
 # define COLOR_WARNING "\e[93m"

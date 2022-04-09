@@ -45,20 +45,19 @@ struct ParseTypedef
 {
 	typedef std::vector<std::string>				stringVector;
 	typedef std::pair<std::string, stringVector>	pairOptions;
-	typedef std::vector<pairOptions>				optionsVector;
-
-	typedef std::pair<std::string, optionsVector>	pairLocations;
-	typedef std::vector<pairLocations>				locationsVector;
-
+	typedef std::map<std::string, stringVector>		optionsMap;
+	typedef std::pair<std::string, optionsMap>		pairLocations;
+	typedef std::map<std::string, optionsMap>		locationsMap;
 	struct s_server
 	{
 		int				id;
-		optionsVector	options;
-		locationsVector	locations;
+		optionsMap		options;
+		locationsMap	locations;
 		s_server() : id(-1) {};
 	};
 	typedef std::vector<s_server>					serversVector;
 	typedef std::map<int, std::string>				mapErrors;
+	bool											isDefaultLocation;
 
 	/**
 	 * @param GET (bool), false by default
@@ -68,6 +67,7 @@ struct ParseTypedef
 	 */
 	struct s_allow
 	{
+		bool isDefined;
 		bool GET, PUT, POST, DELETE;
 	};
 
@@ -76,6 +76,7 @@ struct ParseTypedef
 	 */
 	struct s_autoindex
 	{
+		bool isDefined;
 		bool active;
 	};
 
@@ -86,9 +87,10 @@ struct ParseTypedef
 	 */
 	struct s_cgi
 	{
+		bool						isDefined;
 		std::vector<std::string>	extensions;
 		std::string					path;
-		s_allow						allow;							
+		s_allow						allow;
 	};
 
 	/**
@@ -97,6 +99,7 @@ struct ParseTypedef
 	 */
 	struct s_clientBodyBufferSize
 	{
+		bool	isDefined;
 		size_t	bits;
 		size_t	size;
 	};
@@ -153,7 +156,7 @@ class Parse : public ParseTypedef
 		Parse() {}
 		Parse(std::string configFilePath) : configPath(configFilePath) { init(configPath); }
 		
-		void init(std::string configFilePath)
+		void init(std::string configFilePath, bool setDefaultLocation = true)
 		{
 			pairLocations	locationTemp;
 			s_server		serverTemp;
@@ -162,6 +165,7 @@ class Parse : public ParseTypedef
 			bool asServerBlock = false;
 			bool isServerBlock = false, isLocationBlock = false;
 
+			isDefaultLocation = setDefaultLocation;
 			configPath = configFilePath;
 			serverTemp.id = 0;
 			stream.open(configPath.c_str());
@@ -186,7 +190,7 @@ class Parse : public ParseTypedef
 					{
 						if (isLocationBlock && isServerBlock)
 						{
-							serverTemp.locations.push_back(locationTemp);
+							serverTemp.locations.insert(locationTemp);
 							locationTemp.first.clear();
 							locationTemp.second.clear();
 							isLocationBlock = false;
@@ -232,21 +236,21 @@ class Parse : public ParseTypedef
 						{
 							if (isLocationBlock && isServerBlock)
 							{
-								optionsVector::iterator it = find(locationTemp.second.begin(),  locationTemp.second.end(), newPair);
+								optionsMap::iterator it = find(locationTemp.second.begin(),  locationTemp.second.end(), newPair);
 								if (it != locationTemp.second.end())
 									locationTemp.second.erase(it);
 							}
 							else
 							{
-								optionsVector::iterator it = find(serverTemp.options.begin(),  serverTemp.options.end(), newPair);
+								optionsMap::iterator it = find(serverTemp.options.begin(),  serverTemp.options.end(), newPair);
 								if (it != serverTemp.options.end())
 									serverTemp.options.erase(it);
 							}
 						}
 						if (isLocationBlock)
-							locationTemp.second.push_back(newPair);
+							locationTemp.second.insert(newPair);
 						else
-							serverTemp.options.push_back(newPair);
+							serverTemp.options.insert(newPair);
 					}
 					break;
 				}
@@ -254,6 +258,22 @@ class Parse : public ParseTypedef
 			stream.close();
 			if (!asServerBlock)
 				generateParseError(lineNumber, "configuration: no server block is present. A configuration must be in at least one server block");
+			if (!setDefaultLocation)
+				return;
+			for (serversVector::iterator it = servers.begin(); it != servers.end(); it++)
+			{
+				pairLocations root;
+				root.first = "/";
+				for (optionsMap::iterator itConf = (*it).options.begin(); itConf != (*it).options.end(); itConf++)
+				{
+					if ((*itConf).first == "listen" || (*itConf).first == "server_name" || (*itConf).first == "client_body_buffer_size")
+						continue;
+					root.second.insert((*itConf));
+					(*it).options.erase(itConf);
+					itConf = (*it).options.begin();
+				}
+				(*it).locations.insert((*it).locations.begin(), root);
+			}
 		}
 	private:
 		bool isEmpty(std::string str)
@@ -266,7 +286,7 @@ class Parse : public ParseTypedef
 			return true;
 		}
 
-		inline const optionsVector::iterator find(optionsVector::iterator first, optionsVector::iterator last, pairOptions pair)
+		inline const optionsMap::iterator find(optionsMap::iterator first, optionsMap::iterator last, pairOptions pair)
 		{
 			while (first != last)
 			{
@@ -290,13 +310,13 @@ class Parse : public ParseTypedef
 		/**
 		 * Get stringVector of arguments of key element
 		 * @param key (std::string) key of element (alias, allow, ...)
-		 * @param toSearch (optionsVector) vector of options
+		 * @param toSearch (optionsMap) vector of options
 		 * @return stringVector of arguments, if not exist, first element of 
 		 * vector is set to `NO_KEY` value
 		 */
-		stringVector	findKey(std::string key, optionsVector toSearch)
+		stringVector	findKey(std::string key, optionsMap toSearch)
 		{
-			for (optionsVector::iterator it = toSearch.begin(); it != toSearch.end(); it++)
+			for (optionsMap::iterator it = toSearch.begin(); it != toSearch.end(); it++)
 				if (it->first == key)
 					return it->second;
 			return stringVector(1, NO_KEY);
@@ -342,12 +362,12 @@ class Parse : public ParseTypedef
 		 * @param server server block
 		 * @param locationMatch	path of location block search
 		 */
-		optionsVector	getSpecificLocation(s_server server, std::string locationMatch)
+		optionsMap	getSpecificLocation(s_server server, std::string locationMatch)
 		{
-			for (locationsVector::iterator it = server.locations.begin(); it != server.locations.end(); it++)
+			for (locationsMap::iterator it = server.locations.begin(); it != server.locations.end(); it++)
 				if ((*it).first == locationMatch)
 					return (*it).second;
-			return optionsVector();
+			return optionsMap();
 		}
 
 	private:
@@ -402,33 +422,39 @@ class Parse : public ParseTypedef
 			}
 		}
 	public:
-		s_allow	allow(optionsVector vec)
+		s_allow	allow(optionsMap vec)
 		{
 			stringVector	get = findKey("allow", vec);
 			std::string		err = "rule 'allow': flag ";
 			s_allow			allow;
 			
+			allow.isDefined = true;
 			allow.DELETE = false;
 			allow.GET = false;
 			allow.POST = false;
 			allow.PUT = false;
 			if (get[0] == NO_KEY)
+			{
+				allow.isDefined = false;
 				return allow;
+			}
 			if (get.empty())
 				throw IncorrectConfig("rule 'allow': no argument is set");
 			_allow(get[0], "rule 'allow': flag ", &allow);
 			return allow;
 		}
 
-		s_autoindex autoindex(optionsVector vec)
+		s_autoindex autoindex(optionsMap vec)
 		{
 			stringVector get = findKey("autoindex", vec);
 			s_autoindex autoindex;
 			std::string err = "rule 'autoindex': ";
 
+			autoindex.isDefined = false;
 			autoindex.active = false;
 			if (!get.empty() && get[0] != NO_KEY)
 			{
+				autoindex.isDefined = true;
 				if (get.size() > 1)
 				{
 					err += "there can be only one argument";
@@ -451,14 +477,18 @@ class Parse : public ParseTypedef
 			return autoindex;
 		}
 	
-		s_cgi cgi(optionsVector vec)
+		s_cgi cgi(optionsMap vec)
 		{
 			stringVector get = findKey("cgi", vec);
 			s_cgi cgi;
 			std::string err = "rule 'cgi': ";
 			
+			cgi.isDefined = true;
 			if (get.size() == 1 && get[0] == "NO_KEY")
+			{
+				cgi.isDefined = false;
 				return cgi;
+			}
 			if (get.size() != 3)
 			{
 				err += "there must be at least [extension] [path to executable] [http request allowed]";
@@ -492,7 +522,7 @@ class Parse : public ParseTypedef
 			return true;
 		}
 	public:
-		s_clientBodyBufferSize clientBodyBufferSize(optionsVector vec)
+		s_clientBodyBufferSize clientBodyBufferSize(optionsMap vec)
 		{
 			stringVector get = findKey("client_body_buffer_size", vec);
 			s_clientBodyBufferSize client;
@@ -532,13 +562,13 @@ class Parse : public ParseTypedef
 			return ret;
 		}
 	public:
-		mapErrors errorPage(optionsVector vec)
+		mapErrors errorPage(optionsMap vec)
 		{
 			std::vector<stringVector>	errorsList;
 			mapErrors					errors;
 			int							hundred, ten, unit;
 
-			for (optionsVector::iterator it = vec.begin(); it != vec.end(); it++)
+			for (optionsMap::iterator it = vec.begin(); it != vec.end(); it++)
 				if (it->first == "error_page")
 					errorsList.push_back(it->second);
 			if (errorsList.size() > 0)
@@ -565,7 +595,7 @@ class Parse : public ParseTypedef
 			return errors;
 		}
 
-		std::string index(optionsVector vec)
+		std::string index(optionsMap vec)
 		{
 			stringVector	get = findKey("index", vec);
 			std::string		ret = "index.html";
@@ -578,7 +608,7 @@ class Parse : public ParseTypedef
 			return Regex.match()[0].occurence;
 		}
 
-		std::string root(optionsVector vec, bool optional = false)
+		std::string root(optionsMap vec, bool optional = false)
 		{
 			stringVector	get = findKey("root", vec);
 		
@@ -595,7 +625,7 @@ class Parse : public ParseTypedef
 			return Regex.match()[0].occurence;
 		}
 
-		std::vector<std::string> serverName(optionsVector vec)
+		std::vector<std::string> serverName(optionsMap vec)
 		{
 			stringVector				get = findKey("server_name", vec);
 			std::vector<std::string>	ret;
@@ -611,7 +641,7 @@ class Parse : public ParseTypedef
 			return ret;
 		}
 
-		s_listen	listen(optionsVector vec)
+		s_listen	listen(optionsMap vec)
 		{
 			stringVector				get = findKey("listen", vec);
 			std::vector<std::string>	temp;
@@ -621,7 +651,6 @@ class Parse : public ParseTypedef
 
 			if (get[0] != NO_KEY)
 			{
-				// Apparently this regex leak ???
 				Regex.exec(get[0], "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?([0-9]+)?", GLOBAL_FLAG);
 				for (size_t x = 0; x < Regex.size(); x++)
 				{
@@ -664,7 +693,7 @@ class Parse : public ParseTypedef
 	
 	#pragma region Check config
 	public:
-		inline void check()
+		inline void check(bool defaultLocation = true)
 		{
 			std::vector<s_listen>		checkListen;
 			std::vector<std::string>	checkServer;
@@ -675,20 +704,23 @@ class Parse : public ParseTypedef
 
 			for (serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 			{
-				allow((*it).options);
-				autoindex((*it).options);
-				cgi((*it).options);
+				if (!defaultLocation)
+				{
+					allow((*it).options);
+					autoindex((*it).options);
+					cgi((*it).options);
+					errorPage((*it).options);
+					index((*it).options);
+					root((*it).options, false);
+				}
 				clientBodyBufferSize((*it).options);
-				errorPage((*it).options);
-				index((*it).options);
-				root((*it).options);
 				tempServer = serverName((*it).options);
 				for (std::vector<std::string>::const_iterator itC = tempServer.begin(); itC != tempServer.end(); itC++)
 					checkServer.push_back(*itC);
 				checkListen.push_back(listen((*it).options));
 				if (!((*it).locations.empty()))
 				{
-					for (locationsVector::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
+					for (locationsMap::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
 					{
 						allow((*itLoc).second);
 						autoindex((*itLoc).second);
@@ -696,7 +728,7 @@ class Parse : public ParseTypedef
 						clientBodyBufferSize((*itLoc).second);
 						errorPage((*itLoc).second);
 						index((*itLoc).second);
-						root((*itLoc).second, true);
+						root((*itLoc).second, !(defaultLocation && (*itLoc).first == "/"));
 					}
 				}
 			}
@@ -750,22 +782,22 @@ class Parse : public ParseTypedef
 			for (serversVector::iterator it = servers.begin(); it != servers.end(); )
 			{
 				std::cout << TAB << "{" << std::endl;
-				std::cout << TAB << TAB << SEP << "ID" << SEP << ": " << SEP << (*it).id << SEP << std::endl;
+				std::cout << TAB << TAB << SEP << "ID" << SEP << ": " << SEP << (*it).id << SEP << "," << std::endl;
 				size = (*it).options.size();
 				if (!(*it).locations.empty())
 					size = -1;
-				for (optionsVector::iterator itConf = (*it).options.begin(); itConf != (*it).options.end(); itConf++)
+				for (optionsMap::iterator itConf = (*it).options.begin(); itConf != (*it).options.end(); itConf++)
 					printArgs(*itConf, false, size--);
 				if (!(*it).locations.empty())
 				{
 					std::cout << TAB << TAB << SEP << "location" << SEP << ": {" << std::endl;
-					locationsVector::iterator itLocBegin = (*it).locations.begin();
-					locationsVector::iterator itLocEnd = (*it).locations.end();
+					locationsMap::iterator itLocBegin = (*it).locations.begin();
+					locationsMap::iterator itLocEnd = (*it).locations.end();
 					while (itLocBegin != itLocEnd)
 					{
 						size = (*itLocBegin).second.size();
 						std::cout << TAB << TAB << TAB << SEP << (*itLocBegin).first << SEP << ": {" << std::endl;
-						for (optionsVector::iterator itConf = (*itLocBegin).second.begin(); itConf != (*itLocBegin).second.end(); itConf++)
+						for (optionsMap::iterator itConf = (*itLocBegin).second.begin(); itConf != (*itLocBegin).second.end(); itConf++)
 							printArgs(*itConf, true, size--);
 						++itLocBegin;
 						std::cout << TAB << TAB << TAB << "}";

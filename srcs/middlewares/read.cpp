@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/31 01:15:22 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/03 21:40:42 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -104,7 +104,7 @@ bool	fulfillHostFromHeader(Request &req, Response &)
 	std::vector<std::string>					header_values;
 	std::vector<std::string>::const_iterator	header_values_it;
 
-	header_values = req.headers.GetHeader("host");
+	header_values = req.headers.headerValues("host");
 	header_values_it = header_values.begin();
 
 	if (header_values_it != header_values.end())

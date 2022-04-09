@@ -178,8 +178,12 @@ class Header
 			if (it != headersMap.end())
 			{
 				temp = (*it).first + ": ";
-				for (_vectors::const_iterator it2 = (*it).second.begin(); it2 != (*it).second.end(); it++)
-					temp += *it2 + ",";
+				for (_vectors::const_iterator it2 = (*it).second.begin(); it2 != (*it).second.end();)
+				{
+					temp += *it2;
+					if (++it2 != (*it).second.end())
+						temp += ",";
+				}
 			}
 			return temp;
 		}

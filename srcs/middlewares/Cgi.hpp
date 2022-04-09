@@ -6,6 +6,7 @@
 # include <cstring>
 # include <cstdio>
 # include <cstdlib>
+# include <iostream>
 # include <string>
 # include <map>
 # include <vector>
@@ -19,6 +20,7 @@
 # include "Response.hpp"
 # include "Url.hpp"
 # include "nullptr_t.hpp"
+# include "http.hpp"
 
 class cgiEnv
 {
@@ -28,41 +30,6 @@ class cgiEnv
 			std::string key;
 			std::string value;
 		};
-		
-		/*
-		{
-			{ "AUTH_TYPE", "" }, // Name of the authentication scheme (BASIC, SSL, or null)
-			{ "CONTENT_LENGTH", "" }, // Length of the request body in bytes
-			{ "CONTENT_TYPE", "" }, // MIME type of the body of the request, or null
-			{ "GATEWAY_INTERFACE", "" }, // CGI specification. It is "CGI/1.1"
-
-			{ "HTTP_ACCEPT", "" }, // Content types your browser supports
-			{ "HTTP_ACCEPT_CHARSET", "" }, // Character preference information (utf-8;q=0.5)
-			{ "HTTP_ACCEPT_ENCODING", "" }, // Defines type of encoding (compress;q=0.5)
-			{ "HTTP_ACCEPT_LANGUAGE", "" }, // Languages you would prefer to receive content in (en;q=0.5)
-			{ "HTTP_FORWARDED", "" }, // If the request was forwarded, shows address and port throw proxy server
-			{ "HTTP_HOST", "" }, // Specifies Internet host and port number (Required for all HTTP/1.1 req)
-			{ "HTTP_PROXY_AUTHORIZATION", "" }, // Used by a client to identify itself (or its user) to a proxy
-			{ "HTTP_USER_AGENT", "" }, // Type and version of the browser of client (Mozilla/1.5)
-			{ "HTTP_COOKIE", "" }, // HTTP Cookie String
-
-			{ "PATH_INFO", "" }, // Identifies resource or sub-resource to be returned by CGI, derived from URI portion following the script name but preceding any query data
-			{ "PATH_TRANSLATED", "" }, // Maps the script's virtual path to the physical path used to call the script
-			{ "QUERY_STRING", "" }, // Query string that is contained in the request URL after the path
-			{ "REMOTE_ADDR", "" }, // IP address of the client that sent the request
-			{ "REMOTE_HOST", "" }, // Name of the client that sent the request, or the IP address
-			{ "REMOTE_USER", "" }, // Login of the user making this request if the user has been authenticated, or null
-			{ "REQUEST_METHOD", "" }, // Name of the HTTP method (GET, POST, ...)
-			{ "SCRIPT_NAME", "" }, // Returns part of URL from the protocol name up to the query string in the first line of the HTTP request
-			{ "SERVER_NAME", "" }, // Returns the host name of the server that received the request
-			{ "SERVER_PORT", "" }, // Returns the port number on which this request was received
-			{ "SERVER_PROTOCOL", "" }, // Returns the name and version of the protocol (HTTP/1.1)
-			{ "SERVER_SOFTWARE", "" }, // Name and version of the server software is running
-			{ "REQUEST_URI", "" }, // Interpreted pathname of the request document or CGI relative to root document
-			{ "REDIRECT_STATUS", "" }, // HTML request code (200)
-			{ "SCRIPT_FILENAME", "" } // Full pathname of current CGI
-		};
-		*/
 	#pragma region one
 		std::map<std::string, std::string>	env;
 	public:
@@ -105,9 +72,11 @@ class cgiEnv
 		 */
 		bool			addVariable(std::string key, std::string value)
 		{
+			if (!value.empty())
+				return false;
 			s_environment temp;
 			temp.key = key;
-			temp.value = (!value.empty()) ? value : ENV_NULL;
+			temp.value = value;
 			deleteVariable(key);
 			ENV.push_back(temp);
 			return true;
@@ -189,19 +158,15 @@ class CGI : public cgiEnv
 		void	setHeader(Request &req)
 		{
 			URL _url(req.pathname);
-			Header::_Container headers = req.headers.GetEveryHeader();
 
 			#pragma region Mandatory
-				env.addVariable("CONTENT_LENGTH", "14");
-				env.addVariable("CONTENT_TYPE", "application/octet-stream");
-				env.addVariable("CONTENT_LENGTH", headers.find("CONTENT_LENGTH")->second);
-				env.addVariable("CONTENT_TYPE", headers.find("CONTENT_TYPE")->second);
+				env.addVariable("CONTENT_LENGTH", req.headers.header("CONTENT_LENGTH"));
+				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT_TYPE"));
 				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
 				env.addVariable("PATH_INFO", _url.pathname());
 				env.addVariable("QUERY_STRING", _url.search());
-				env.addVariable("REMOTE_ADDR", "127.0.0.1"); // IP of the agent sending the request to the server, need change
+				env.addVariable("REMOTE_ADDR", req.client_ip);
 				env.addVariable("REQUEST_METHOD", convertMethod(req.method));
-				env.addVariable("REQUEST_METHOD", "GET");
 				env.addVariable("SCRIPT_NAME", _url.pathname());
 				env.addVariable("SERVER_NAME", _url.hostname());
 				env.addVariable("SERVER_PORT", _url.port());
@@ -231,6 +196,7 @@ class CGI : public cgiEnv
 				env.addVariable("SCRIPT_FILENAME", _split[_split.size() - 1]);
 			#pragma endregion May
 		}
+
 	public:
 		/**
 		 * Execute cgi
@@ -238,46 +204,44 @@ class CGI : public cgiEnv
 		 */
 		int	exec(Request &req, Response &res)
 		{
-			FILE		*tempIN = tmpfile(), *tempOUT = tmpfile();
-			int			fdIN = fileno(tempIN), fdOUT = fileno(tempOUT);
-			int			saveSTDIN = dup(STDIN_FILENO), saveSTDOUT = dup(STDOUT_FILENO);
-			std::string body;
-			pid_t		pid;
-			//char		buffer[BUFFER_SIZE];
-			
-			setHeader(req);
-			write(fdIN, body.c_str(), std::atoi(env.getVariable("CONTENT_LENGTH").value.c_str()));
-			lseek(fdIN, 0, SEEK_SET);
+			FILE	*OUT = tmpfile();
+			int		fdOUT = fileno(OUT);
+			int		saveSTDIN = dup(STDIN_FILENO), saveSTDOUT = dup(STDOUT_FILENO);
+			int		fd[2];
+			pid_t	pid;
+
+			res.code = C_OK;
+			if (pipe(fd))
+				return -1;
 			if ((pid = fork()) == -1)
 				return -1;
-			if (pid == 0)
+			else if (pid == 0)
 			{
-				dup2(fdIN, STDIN_FILENO); dup2(fdOUT, STDOUT_FILENO);
-				if (execve(getVariable("SCRIPT_FILENAME").value.c_str(), NULL, env.envForCGI()) == -1)
-					write(STDOUT_FILENO, "Status: 500\r\n", 15);
+				char* const* _null = NULL;
+
+				dup2(fd[0], STDIN_FILENO);
+				dup2(fdOUT, STDOUT_FILENO);
+				close(fd[0]);
+				close(fd[1]);
+				if (execve(getVariable("SCRIPT_FILENAME").value.c_str(), _null, env.envForCGI()) == -1)
+				{
+					res.code = C_INTERNAL_SERVER_ERROR;
+					std::cout << "Status: 500\r\n";
+				}
 			}
 			else
 			{
+				write(fd[1], req.buff, std::strlen(req.buff));
+				dup2(fd[1], req.fd);
+				close(fd[0]);
+				close(fd[1]);
 				waitpid(pid, NULL, 0);
-				lseek(fdOUT, 0, SEEK_SET);
-				/*
-				memset(buffer, 0, sizeof(buffer));
-				for (int ret = 1; ret > 0;)
-				{
-					ret = read(fdOUT, buffer, BUFFER_SIZE);
-					buffer[ret] = 0;
-					body += buffer;
-					memset(buffer, 0, sizeof(buffer));
-				}
-				*/
 			}
 			dup2(saveSTDIN, STDIN_FILENO); dup2(saveSTDOUT, STDOUT_FILENO);
-			fclose(tempIN); fclose(tempOUT);
-			close(fdIN); close(fdOUT);
+			fclose(OUT);
 			close(saveSTDIN); close(saveSTDOUT);
-
 			if (pid == 0)
-				exit(EXIT_SUCCESS); // Child come if finished
+				exit(EXIT_SUCCESS);
 			return fdOUT;
 		}
 };
@@ -287,8 +251,19 @@ bool cgi(Request &req, Response &res)
 {
 	CGI	instance;
 
+	if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
+		return (true);
+	if (res.response_fd > 0 || res.body.length() > 0)
+		return (true);
+	if (req.finish())
+		return (true);
+	if (req.timeout())
+	{
+		res.code = C_REQUEST_TIMEOUT;
+		return (true);
+	}
 	res.response_fd = instance.exec(req, res);
-	return !!(res.response_fd != -1);
+	return true;
 }
 
 #endif

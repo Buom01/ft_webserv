@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/23 00:49:38 by badam             #+#    #+#             */
-/*   Updated: 2022/03/23 01:46:29 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/07 15:48:42 by bastien          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,8 +26,11 @@ class Eject: public IMiddleware
 	public:
 		size_t	max_payload_size;
 
-		Eject(size_t _max_payload_size = 2048 * 200) :
+		Eject(size_t _max_payload_size = 1024 * 200) :
 			max_payload_size(_max_payload_size)
+		{}
+
+		virtual ~Eject()
 		{}
 		
 	public:
@@ -50,7 +53,7 @@ class Eject: public IMiddleware
 				return (true);
 			}
 
-			header_values = res.headers.GetHeader("content-length");
+			header_values = res.headers.headerValues("content-length");
 			header_values_it = header_values.begin();
 			while (header_values_it != header_values.end())
 			{

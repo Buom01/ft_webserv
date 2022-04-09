@@ -12,8 +12,7 @@
 
 # include "Request.hpp"
 # include "Response.hpp"
-#include "Serve.hpp"
-
+# include "Serve.hpp"
 
 bool	test_middleware(Request &req, Response &res)
 {

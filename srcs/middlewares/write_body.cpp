@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 21:55:09 by badam             #+#    #+#             */
-/*   Updated: 2022/03/23 00:40:18 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/07 15:52:45 by bastien          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,9 @@ class SendBodyFromFD: public AEpoll
 
 	public:
 		SendBodyFromFD(Log &logger): _parent(logger)
+		{}
+
+		virtual ~SendBodyFromFD()
 		{}
 		
 	public:
