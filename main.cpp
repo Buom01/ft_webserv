@@ -14,6 +14,17 @@
 #include "forbidden.cpp"
 #include "mimetypes.cpp"
 
+std::vector<Serve *>	serversApp;
+
+void	stop_signal(int)
+{
+	for (std::vector<Serve *>::iterator it = serversApp.begin(); it != serversApp.end(); it++)
+	{
+		if ((*it)->alive() == true)
+			(*it)->stop();
+	}
+}
+
 method_t method(Parse::s_allow allow)
 {
 	method_t ret = M_UNKNOWN;
@@ -33,7 +44,6 @@ int main(int argc, char **argv)
 	Parse					config;
 	Parse::serversVector	servers;
 	Parse::locationsMap		locations;
-	std::vector<Serve *>	serves;
 
 	std::vector<Eject *>			ejectMiddlewares;
 	std::vector<Static *>			staticMiddlewares;
@@ -72,41 +82,58 @@ int main(int argc, char **argv)
 	#pragma endregion Initiale check & Parse configuration file
 	
 	#pragma region Start server
+
+	signal(SIGINT, stop_signal);
+
 	for (Parse::serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
 		Serve			*server			= new Serve();
-		Eject			*eject			= new Eject();
-		Static			*serveStatic	= new Static();
-		Error			*error			= new Error(server->logger);
+		Eject			*preEject		= new Eject(-1);
+		Error			*fallbackError	= new Error(server->logger);
 		Mimetypes		*mimetypes		= new Mimetypes();
 		SendBodyFromFD	*sendBodyFromFD	= new SendBodyFromFD(server->logger);
 
 		mimetypes->add("html", "text/html");
 	
 		Parse::s_listen bind 					= config.listen((*it).options);
-		// Parse::s_clientBodyBufferSize bodySize 	= config.clientBodyBufferSize((*it).options);
 		std::vector<std::string> server_name	= config.serverName((*it).options);
 		
 		server->bind(bind.ipSave, bind.portSave);
-		// if (bodySize.isDefined)  // Conditional jump or move depends on uninitialised value(s)
-		// 	eject->max_payload_size = bodySize.size;
 
 		server->use(parseStartLine, F_ALL);
 		server->use(parseRequestHeaders, F_ALL);
-		server->use(*eject, F_ALL);
+		server->use(*preEject, F_ALL);
 
-		if (!((*it).locations.empty()))
+		for (Parse::locationsMap::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
 		{
-			for (Parse::locationsMap::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
+			Parse::s_allow 					getAllow = config.allow((*itLoc).second);
+			Parse::s_clientBodyBufferSize	getBodyMaxSize = config.clientBodyBufferSize((*itLoc).second);
+			Parse::s_autoindex				getAutoindex = config.autoindex((*itLoc).second);
+			std::string 					getRoot = config.root((*itLoc).second, true);
+			std::string						getIndex = config.index((*itLoc).second);
+			Parse::mapErrors 				getErrors = config.errorPage((*itLoc).second);
+			Parse::s_cgi					getCgi = config.cgi((*itLoc).second);
+			method_t 						methods = method(getAllow);
+
+			std::string	location_name = (*itLoc).first;
+
+			if (getAllow.isDefined)
+				server->use(forbidden, F_ALL, static_cast<method_t>(~(methods)), location_name);  // Should only be used on the lattest location block middleware
+
+			if (getBodyMaxSize.isDefined)  // Conditional jump or move depends on uninitialised value(s)
 			{
-				Parse::s_allow 					getAllow = config.allow((*itLoc).second);
-				// Parse::s_clientBodyBufferSize	getBodySize = config.clientBodyBufferSize((*itLoc).second);
-				Parse::s_autoindex				getAutoindex = config.autoindex((*itLoc).second);
-				std::string 					getRoot = config.root((*itLoc).second, true);
-				std::string						getIndex = config.index((*itLoc).second);
-				Parse::mapErrors 				getErrors = config.errorPage((*itLoc).second);
-				Parse::s_cgi					getCgi = config.cgi((*itLoc).second);
-				method_t 						methods = method(getAllow);
+				Eject	*eject	= new Eject(getBodyMaxSize.size);
+
+				server->use(*eject, F_NORMAL, M_ALL, location_name);
+				ejectMiddlewares.push_back(eject);
+			}
+
+			if (getCgi.isDefined)
+				server->use(cgi, F_NORMAL, M_ALL, location_name);
+
+			if (getRoot.size())
+			{
+				Static	*serveStatic	= new Static();
 
 				serveStatic->options.directory_listing	= getAutoindex.active;
 				serveStatic->options.root				= getRoot;
@@ -117,19 +144,21 @@ int main(int argc, char **argv)
 					serveStatic->options.indexes.push_back(getIndex);
 				}
 
-				// if (getBodySize.isDefined) // Conditional jump or move depends on uninitialised value(s)
-				// 	eject->max_payload_size = getBodySize.size;
-				
-				for (Parse::mapErrors::const_iterator itErr = getErrors.begin(); itErr != getErrors.end(); itErr++)
-					error->add((*itErr).first, (*itErr).second);
+				server->use(*serveStatic, F_NORMAL, M_ALL, location_name);
+				staticMiddlewares.push_back(serveStatic);
+			}
 
-				server->use(forbidden, F_ALL, static_cast<method_t>(~(methods)), (*itLoc).first);  // SHould only be used on the lattest location block middleware
-				if (getCgi.isDefined)
-					server->use(cgi, F_ALL, M_ALL, (*itLoc).first);
-				server->use(*serveStatic, F_ALL, M_ALL, (*itLoc).first);
-				server->use(*error, F_ALL, M_ALL, (*itLoc).first);
+			if (getErrors.size())
+			{
+				Error			*error		= new Error(server->logger);
+
+				error->options.errorpages = getErrors;
+
+				server->use(*error, F_ALL, M_ALL, location_name);
+				errorMiddlewares.push_back(error);
 			}
 		}
+		server->use(*fallbackError, F_ALL, M_ALL);
 
 		server->use(*mimetypes, F_ALL);
 		server->use(addResponseHeaders, F_ALL);
@@ -138,26 +167,38 @@ int main(int argc, char **argv)
 		server->use(sendBodyFromBuffer, F_ALL);
 		server->use(*sendBodyFromFD, F_ALL);
 		server->begin();
-		serves.push_back(server);
-		ejectMiddlewares.push_back(eject);
-		staticMiddlewares.push_back(serveStatic);
-		errorMiddlewares.push_back(error);
+		serversApp.push_back(server);
+		ejectMiddlewares.push_back(preEject);
+		errorMiddlewares.push_back(fallbackError);
 		mimetypesMiddlewares.push_back(mimetypes);
 		sendBodyFDMiddlewares.push_back(sendBodyFromFD);
 	}
-
-	while (serves.size() > 0)
-	{
-		for (std::vector<Serve *>::iterator it = serves.begin(); it != serves.end(); it++)
-		{
-			if ((*it)->alive() == false)
-				serves.erase(it);
-			else
-				(*it)->accept();
-			usleep(10);
-		}
-	}
 	#pragma endregion Start server
+
+
+	#pragma region Run server
+	std::vector<Serve *>::iterator appIt;
+	while (serversApp.size() > 0)
+	{
+		appIt = serversApp.begin();
+		
+		while (appIt != serversApp.end())
+		{
+			if ((*appIt)->alive() == false)
+			{
+				delete (*appIt);
+				appIt = serversApp.erase(appIt);
+			}
+			else
+			{
+				(*appIt)->accept();
+				++appIt;
+			}
+		}
+
+		usleep(1);
+	}
+	#pragma endregion Run server
 
 	#pragma region Middlewares cleanup 
 	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
@@ -171,6 +212,11 @@ int main(int argc, char **argv)
 	}
 
 	for (std::vector<Error *>::iterator it = errorMiddlewares.begin(); it != errorMiddlewares.end(); it++)
+	{
+		delete (*it);
+	}
+
+	for (std::vector<Mimetypes *>::iterator it = mimetypesMiddlewares.begin(); it != mimetypesMiddlewares.end(); it++)
 	{
 		delete (*it);
 	}
