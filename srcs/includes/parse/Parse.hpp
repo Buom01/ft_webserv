@@ -18,6 +18,7 @@
 # include <arpa/inet.h>
 # include "Regex.hpp"
 # include "nullptr_t.hpp"
+# include "File.hpp"
 
 struct s_defineRegex
 {
@@ -36,7 +37,7 @@ struct s_defineRegex
 	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);[ \t]*$", true },
 	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\/.*);[ \t]*$", false },
 	{ "index", "^[ \t]*index[ \t]+(.*);[ \t]*$", true },
-	{ "root", "^[ \t]*root[ \t]+(\\/.*);[ \t]*$", true },
+	{ "root", "^[ \t]*root[ \t]+(\\.?\\/.*);[ \t]*$", true },
 	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);[ \t]*$", true },
 	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", true }
 };
@@ -136,6 +137,7 @@ class Parse : public ParseTypedef
 		Regex			Regex, expand;
 		serversVector	servers;
 		std::string		configPath;
+		std::string		configDirectory;
 		std::ifstream	stream;
 	private:
 		Parse(const Parse *);
@@ -167,6 +169,7 @@ class Parse : public ParseTypedef
 
 			isDefaultLocation = setDefaultLocation;
 			configPath = configFilePath;
+			configDirectory = relativeToAbsoluteDir(configPath);
 			serverTemp.id = 0;
 			stream.open(configPath.c_str());
 			stream.exceptions(std::ifstream::badbit);
@@ -619,10 +622,10 @@ class Parse : public ParseTypedef
 				else
 					return "";
 			}
-			Regex.exec(get[0], "([-a-zA-Z0-9_./\\]+)", GLOBAL_FLAG);
+			Regex.exec(get[0], "([-a-zA-Z0-9_\\./\\]+)", GLOBAL_FLAG);
 			if (Regex.size() > 1)
 				throw IncorrectConfig("rule 'root': only one directory definition is allowed");
-			return Regex.match()[0].occurence;
+			return concatPath(configDirectory, Regex.match()[0].occurence);
 		}
 
 		std::vector<std::string> serverName(optionsMap vec)

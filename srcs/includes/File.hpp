@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   File.hpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/17 12:59:44 by badam             #+#    #+#             */
-/*   Updated: 2022/03/20 19:57:17 by cbertran         ###   ########.fr       */
+/*   Updated: 2022/04/09 22:58:10 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -66,6 +66,36 @@ std::string sanitizeRelativePath(std::string path)
 	return (path);
 }
 
+std::string	relativeToAbsoluteDir(const std::string &path)
+{
+	char		absPath[PATH_MAX];
+	std::string	dirPath;
+	size_t		lastSlash = path.find_last_of('/');
+
+	if (lastSlash == std::string::npos)
+		dirPath = path;
+	else
+		dirPath = path.substr(0, lastSlash);
+
+	if (realpath(dirPath.c_str(), absPath))
+		return (absPath);
+	else
+		return (dirPath);
+}
+
+std::string	concatPath(const std::string &root, const std::string &path)
+{
+	if (path.at(0) == '/')
+		return (path);
+	else
+	{
+		if (root.at(root.size() - 1) == '/')
+			return (root + path);
+		else
+			return (root + '/' + path);
+	}
+}
+
 bool	hasPermissions(const std::string &path)
 {
 	return (access(path.c_str(), F_OK) == 0);
@@ -109,7 +139,7 @@ std::string	getExtension(std::string path)
 /*
 ** It also allow us to know if the FD belongs to a file
 */
-intmax_t	fdFileSize(int fd)
+off_t	fdFileSize(int fd)
 {
 	struct stat	sb;
 

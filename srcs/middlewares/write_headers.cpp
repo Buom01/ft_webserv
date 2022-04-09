@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/03 21:40:15 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/09 22:58:08 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,8 +20,8 @@
 
 bool	addResponseHeaders(Request &, Response &res)
 {
-	Header				&h		= res.headers;
-	intmax_t			length	= -1;
+	Header		&h		= res.headers;
+	off_t		length	= -1;
 
 	h.set("Server: FT_WebServ");
 
