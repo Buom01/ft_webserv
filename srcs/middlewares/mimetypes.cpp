@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/18 08:00:23 by badam             #+#    #+#             */
-/*   Updated: 2022/03/19 06:20:20 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/09 22:00:40 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,6 +42,9 @@ class Mimetypes: public IMiddleware
 		{
 			options = opts;
 		}
+
+		virtual ~Mimetypes()
+		{}
 
 		void	add(std::string ext, std::string mimetype)
 		{
