@@ -11,6 +11,8 @@
 #include "Response.hpp"
 #include "write_headers.cpp"
 #include "write_body.cpp"
+#include "forbidden.cpp"
+#include "mimetypes.cpp"
 
 method_t method(Parse::s_allow allow)
 {
@@ -54,6 +56,7 @@ int main(int argc, char **argv)
 		config.init(argv[1]);
 		config.check();
 		servers = config.getServers();
+		config.print();
 	}
 	catch (std::ifstream::failure &e)
 	{
@@ -75,6 +78,9 @@ int main(int argc, char **argv)
 		Static			*serveStatic	= new Static();
 		Error			*error			= new Error(server->logger);
 		SendBodyFromFD	*sendBodyFromFD	= new SendBodyFromFD(server->logger);
+
+		Mimetypes		mimetypes;
+		mimetypes.add("html", "text/html");
 	
 		Parse::s_listen bind 					= config.listen((*it).options);
 		Parse::s_clientBodyBufferSize bodySize 	= config.clientBodyBufferSize((*it).options);
@@ -84,73 +90,57 @@ int main(int argc, char **argv)
 		if (bodySize.isDefined)
 			eject->max_payload_size = bodySize.size;
 
+		server->use(parseStartLine, F_ALL);
+		server->use(parseRequestHeaders, F_ALL);
+		server->use(*eject, F_ALL);
+
 		if (!((*it).locations.empty()))
 		{
 			for (Parse::locationsMap::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
 			{
-				/*
-				Serve			*_server			= new Serve();
-				Eject			*_eject				= new Eject();
-				Static			*_serveStatic		= new Static();
-				Error			*_error				= new Error(_server->logger);
-				SendBodyFromFD	*_sendBodyFromFD	= new SendBodyFromFD(_server->logger);
-				*/
-
 				Parse::s_allow 					getAllow = config.allow((*itLoc).second);
-				Parse::s_clientBodyBufferSize	getBodySize = config.clientBodyBufferSize((*itLoc).second);
+				//Parse::s_clientBodyBufferSize	getBodySize = config.clientBodyBufferSize((*itLoc).second);
 				Parse::s_autoindex				getAutoindex = config.autoindex((*itLoc).second);
 				std::string 					getRoot = config.root((*itLoc).second, true);
 				std::string						getIndex = config.index((*itLoc).second);
-				Parse::mapErrors 				getErrors = config.errorPage((*itLoc).second);
+				//Parse::mapErrors 				getErrors = config.errorPage((*itLoc).second);
 				Parse::s_cgi					getCgi = config.cgi((*itLoc).second);
 				method_t 						methods = method(getAllow);
 
 				serveStatic->options.directory_listing	= getAutoindex.active;
-				serveStatic->options.root				= (!getRoot.empty()) ? getRoot : "";
+				serveStatic->options.root				= getRoot;
+
 				if (!getIndex.empty())
 					serveStatic->options.indexes.push_back(getIndex);
+				else
+					serveStatic->options.indexes.push_back("index.html");
+
+				//if (getBodySize.isDefined)
+				//	eject->max_payload_size = getBodySize.size;
 				
-				if (getBodySize.isDefined)
-					eject->max_payload_size = getBodySize.size;
-				
-				for (Parse::mapErrors::const_iterator itErr = getErrors.begin(); itErr != getErrors.end(); itErr++)
-					error->add((*itErr).first, (*itErr).second);
-				
-				server->use(parseStartLine, F_ALL, methods, (*itLoc).first);
-				server->use(parseRequestHeaders, F_ALL, methods, (*itLoc).first);
-				server->use(*eject, F_ALL, methods, (*itLoc).first);
+				/*for (Parse::mapErrors::const_iterator itErr = getErrors.begin(); itErr != getErrors.end(); itErr++)
+					error->add((*itErr).first, (*itErr).second);*/
+
+				server->use(forbidden, F_ALL, static_cast<method_t>(~(methods)), (*itLoc).first);
 				if (getCgi.isDefined)
-					server->use(cgi, F_ALL, methods, (*itLoc).first);
-				server->use(*serveStatic, F_ALL, methods, (*itLoc).first);
-				server->use(*error, F_ALL, methods, (*itLoc).first);
-				server->use(addResponseHeaders, F_ALL, methods, (*itLoc).first);
-				server->use(serializeHeaders, F_ALL, methods, (*itLoc).first);
-				server->use(sendHeader, F_ALL, methods, (*itLoc).first);
-				server->use(sendBodyFromBuffer, F_ALL, methods, (*itLoc).first);
-				server->use(*sendBodyFromFD, F_ALL, methods, (*itLoc).first);
+					server->use(cgi, F_ALL, M_ALL, (*itLoc).first);
+				server->use(*serveStatic, F_ALL, M_ALL, (*itLoc).first);
+				server->use(*error, F_ALL, M_ALL, (*itLoc).first);
 			}
 		}
-		/*
-			#pragma region Add middleware here
-			server->use(parseStartLine, F_ALL);
-			server->use(parseRequestHeaders, F_ALL);
-			server->use(*eject);
-			server->use(cgi);
-			server->use(*serveStatic);
-			server->use(*error, F_ALL);
-			server->use(addResponseHeaders, F_ALL);
-			server->use(serializeHeaders, F_ALL);
-			server->use(sendHeader, F_ALL);
-			server->use(sendBodyFromBuffer, F_ALL);
-			server->use(*sendBodyFromFD, F_ALL);
-			#pragma endregion Add middleware here
-		*/
-			server->begin();
-			serves.push_back(server);
-			ejectMiddlewares.push_back(eject);
-			staticMiddlewares.push_back(serveStatic);
-			errorMiddlewares.push_back(error);
-			sendBodyFDMiddlewares.push_back(sendBodyFromFD);
+
+		server->use(mimetypes, F_ALL);
+		server->use(addResponseHeaders, F_ALL);
+		server->use(serializeHeaders, F_ALL);
+		server->use(sendHeader, F_ALL);
+		server->use(sendBodyFromBuffer, F_ALL);
+		server->use(*sendBodyFromFD, F_ALL);
+		server->begin();
+		serves.push_back(server);
+		ejectMiddlewares.push_back(eject);
+		staticMiddlewares.push_back(serveStatic);
+		errorMiddlewares.push_back(error);
+		sendBodyFDMiddlewares.push_back(sendBodyFromFD);
 	}
 
 	while (serves.size() > 0)
