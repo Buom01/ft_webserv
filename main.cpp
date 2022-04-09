@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 		server->use(parseRequestHeaders, F_ALL);
 		server->use(*preEject, F_ALL);
 
-		for (Parse::locationsMap::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
+		for (Parse::locationsMap::const_reverse_iterator itLoc = (*it).locations.rbegin(); itLoc != (*it).locations.rend(); itLoc++)
 		{
 			Parse::s_allow 					getAllow = config.allow((*itLoc).second);
 			Parse::s_clientBodyBufferSize	getBodyMaxSize = config.clientBodyBufferSize((*itLoc).second);
@@ -118,7 +118,7 @@ int main(int argc, char **argv)
 			std::string	location_name = (*itLoc).first;
 
 			if (getAllow.isDefined)
-				server->use(forbidden, F_ALL, static_cast<method_t>(~(methods)), location_name);  // Should only be used on the lattest location block middleware
+				server->use(forbidden, F_ALL, static_cast<method_t>(~(methods)), location_name);
 
 			if (getBodyMaxSize.isDefined)  // Conditional jump or move depends on uninitialised value(s)
 			{
@@ -129,13 +129,20 @@ int main(int argc, char **argv)
 			}
 
 			if (getCgi.isDefined)
-				server->use(cgi, F_NORMAL, M_ALL, location_name);
+			{
+				// define options like getCgi.path and extensions
+
+				server->use(cgi, F_NORMAL, method(getCgi.allow), location_name);
+			}
 
 			if (getRoot.size())
 			{
 				Static	*serveStatic	= new Static();
 
-				serveStatic->options.directory_listing	= getAutoindex.active;
+				// std::cout << "(getAutoindex.isDefined)" << (getAutoindex.isDefined) << std::endl;
+				// std::cout << "(getAutoindex.active)" << (getAutoindex.active) << std::endl;
+				if (getAutoindex.isDefined)
+					serveStatic->options.directory_listing	= getAutoindex.active;
 				serveStatic->options.root				= getRoot;
 
 				if (!getIndex.empty())

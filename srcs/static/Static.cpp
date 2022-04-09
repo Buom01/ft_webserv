@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/04/09 20:59:09 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/09 23:31:05 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,7 @@ class Static: public IMiddleware
 		Static()
 		{
 			options.root = "./";
-			options.directory_listing = false;
+			options.directory_listing = true;
 			options.indexes.push_back("index.html");
 			options.indexes.push_back("index.htm");
 			options.indexes.push_back("index.php");
