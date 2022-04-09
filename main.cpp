@@ -38,6 +38,7 @@ int main(int argc, char **argv)
 	std::vector<Eject *>			ejectMiddlewares;
 	std::vector<Static *>			staticMiddlewares;
 	std::vector<Error *>			errorMiddlewares;
+	std::vector<Mimetypes *>		mimetypesMiddlewares;
 	std::vector<SendBodyFromFD *>	sendBodyFDMiddlewares;
 
 	#pragma region Initiale check & Parse configuration file
@@ -77,18 +78,18 @@ int main(int argc, char **argv)
 		Eject			*eject			= new Eject();
 		Static			*serveStatic	= new Static();
 		Error			*error			= new Error(server->logger);
+		Mimetypes		*mimetypes		= new Mimetypes();
 		SendBodyFromFD	*sendBodyFromFD	= new SendBodyFromFD(server->logger);
 
-		Mimetypes		mimetypes;
-		mimetypes.add("html", "text/html");
+		mimetypes->add("html", "text/html");
 	
 		Parse::s_listen bind 					= config.listen((*it).options);
-		Parse::s_clientBodyBufferSize bodySize 	= config.clientBodyBufferSize((*it).options);
+		// Parse::s_clientBodyBufferSize bodySize 	= config.clientBodyBufferSize((*it).options);
 		std::vector<std::string> server_name	= config.serverName((*it).options);
 		
 		server->bind(bind.ipSave, bind.portSave);
-		if (bodySize.isDefined)
-			eject->max_payload_size = bodySize.size;
+		// if (bodySize.isDefined)  // Conditional jump or move depends on uninitialised value(s)
+		// 	eject->max_payload_size = bodySize.size;
 
 		server->use(parseStartLine, F_ALL);
 		server->use(parseRequestHeaders, F_ALL);
@@ -99,11 +100,11 @@ int main(int argc, char **argv)
 			for (Parse::locationsMap::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
 			{
 				Parse::s_allow 					getAllow = config.allow((*itLoc).second);
-				//Parse::s_clientBodyBufferSize	getBodySize = config.clientBodyBufferSize((*itLoc).second);
+				// Parse::s_clientBodyBufferSize	getBodySize = config.clientBodyBufferSize((*itLoc).second);
 				Parse::s_autoindex				getAutoindex = config.autoindex((*itLoc).second);
 				std::string 					getRoot = config.root((*itLoc).second, true);
 				std::string						getIndex = config.index((*itLoc).second);
-				//Parse::mapErrors 				getErrors = config.errorPage((*itLoc).second);
+				Parse::mapErrors 				getErrors = config.errorPage((*itLoc).second);
 				Parse::s_cgi					getCgi = config.cgi((*itLoc).second);
 				method_t 						methods = method(getAllow);
 
@@ -111,17 +112,18 @@ int main(int argc, char **argv)
 				serveStatic->options.root				= getRoot;
 
 				if (!getIndex.empty())
+				{
+					serveStatic->options.indexes.clear();
 					serveStatic->options.indexes.push_back(getIndex);
-				else
-					serveStatic->options.indexes.push_back("index.html");
+				}
 
-				//if (getBodySize.isDefined)
-				//	eject->max_payload_size = getBodySize.size;
+				// if (getBodySize.isDefined) // Conditional jump or move depends on uninitialised value(s)
+				// 	eject->max_payload_size = getBodySize.size;
 				
-				/*for (Parse::mapErrors::const_iterator itErr = getErrors.begin(); itErr != getErrors.end(); itErr++)
-					error->add((*itErr).first, (*itErr).second);*/
+				for (Parse::mapErrors::const_iterator itErr = getErrors.begin(); itErr != getErrors.end(); itErr++)
+					error->add((*itErr).first, (*itErr).second);
 
-				server->use(forbidden, F_ALL, static_cast<method_t>(~(methods)), (*itLoc).first);
+				server->use(forbidden, F_ALL, static_cast<method_t>(~(methods)), (*itLoc).first);  // SHould only be used on the lattest location block middleware
 				if (getCgi.isDefined)
 					server->use(cgi, F_ALL, M_ALL, (*itLoc).first);
 				server->use(*serveStatic, F_ALL, M_ALL, (*itLoc).first);
@@ -129,7 +131,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		server->use(mimetypes, F_ALL);
+		server->use(*mimetypes, F_ALL);
 		server->use(addResponseHeaders, F_ALL);
 		server->use(serializeHeaders, F_ALL);
 		server->use(sendHeader, F_ALL);
@@ -140,6 +142,7 @@ int main(int argc, char **argv)
 		ejectMiddlewares.push_back(eject);
 		staticMiddlewares.push_back(serveStatic);
 		errorMiddlewares.push_back(error);
+		mimetypesMiddlewares.push_back(mimetypes);
 		sendBodyFDMiddlewares.push_back(sendBodyFromFD);
 	}
 
