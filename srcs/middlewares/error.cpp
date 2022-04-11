@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/21 01:02:06 by badam             #+#    #+#             */
-/*   Updated: 2022/04/09 20:57:19 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/11 22:08:58 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -239,7 +239,7 @@ class Error: public AEpoll
 				return (-1);
 			else
 			{
-				open_ret = open(it->second.c_str(), O_NOATIME | O_NOFOLLOW | O_NONBLOCK, O_RDONLY);
+				open_ret = open(it->second.c_str(), O_NONBLOCK | O_RDONLY);
 				if (open_ret == -1)
 					_logger.warn("Failed to open error page: " + it->second);
 				return open_ret;
