@@ -13,6 +13,7 @@
 # include <sys/types.h>
 # include <sys/wait.h>
 # include <unistd.h>
+# include "Parse.hpp"
 # include "Split.hpp"
 # include "MimeType.hpp"
 # include "Header.hpp"
@@ -123,12 +124,13 @@ class cgiEnv
 		}
 };
 
-class CGI : public cgiEnv
+class CGI : public cgiEnv, public IMiddleware
 {
 	private:
 		cgiEnv	env;
+		Parse::s_cgi _config;
 	public:
-		CGI() {};
+		CGI(Parse::s_cgi config): _config(config) {};
 		virtual ~CGI() {};
 	#pragma endregion two
 	private:
@@ -157,20 +159,19 @@ class CGI : public cgiEnv
 
 		void	setHeader(Request &req)
 		{
-			URL _url(req.pathname);
-
+			URL _url(req.raw_pathname);
 			#pragma region Mandatory
 				env.addVariable("CONTENT_LENGTH", req.headers.header("CONTENT_LENGTH"));
 				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT_TYPE"));
 				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
-				env.addVariable("PATH_INFO", _url.pathname());
-				env.addVariable("QUERY_STRING", _url.search());
+				env.addVariable("PATH_INFO", req.pathname);
+				env.addVariable("QUERY_STRING", req.querystring);
 				env.addVariable("REMOTE_ADDR", req.client_ip);
 				env.addVariable("REQUEST_METHOD", convertMethod(req.method));
-				env.addVariable("SCRIPT_NAME", _url.pathname());
-				env.addVariable("SERVER_NAME", _url.hostname());
-				env.addVariable("SERVER_PORT", _url.port());
-				env.addVariable("SERVER_PROTOCOL", _url.protocol());
+				env.addVariable("SCRIPT_NAME", req.pathname);
+				env.addVariable("SERVER_NAME", req.hostname);
+				env.addVariable("SERVER_PORT", req.port);
+				env.addVariable("SERVER_PROTOCOL", req.protocol);
 				env.addVariable("SERVER_SOFTWARE", SERVER_SOFTWARE);
 			#pragma endregion Mandatory
 			#pragma region Should
@@ -196,7 +197,6 @@ class CGI : public cgiEnv
 				env.addVariable("SCRIPT_FILENAME", _split[_split.size() - 1]);
 			#pragma endregion May
 		}
-
 	public:
 		/**
 		 * Execute cgi
@@ -244,27 +244,51 @@ class CGI : public cgiEnv
 				exit(EXIT_SUCCESS);
 			return fdOUT;
 		}
+	private:
+		std::string 	fileExtension(Request &req)
+		{
+			std::string extension = req.pathname;
+			extension = extension.substr(extension.find_last_of("."));
+			return extension;
+		}
+
+		bool			isMethod(Request &req)
+		{
+			std::string method = convertMethod(req.method);
+			if ((method == "GET" && _config.allow.GET == true) ||
+				(method == "HEAD" && _config.allow.HEAD == true) ||
+				(method == "POST" && _config.allow.POST == true) ||
+				(method == "PUT" && _config.allow.PUT == true) ||
+				(method == "DELETE" && _config.allow.DELETE == true) ||
+				(method == "CONNECT" && _config.allow.CONNECT == true) ||
+				(method == "OPTIONS" && _config.allow.OPTIONS == true) ||
+				(method == "TRACE" && _config.allow.TRACE == true) ||
+				(method == "ALL" && _config.allow.ALL == true))
+				return true;
+			return false;
+		}
+	public:
+		bool operator()(Request &req, Response &res)
+		{
+			if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
+				return (true);
+			if (res.response_fd > 0 || res.body.length() > 0)
+				return (true);
+			if (req.finish())
+				return (true);
+			if (req.timeout())
+			{
+				res.code = C_REQUEST_TIMEOUT;
+				return (true);
+			}
+
+			std::string extension = fileExtension(req);
+			std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), extension);
+			if (it == _config.extensions.end() || !isMethod(req))
+				return true;
+			res.response_fd = exec(req, res);
+			return true;
+		}
 };
-
-
-bool cgi(Request &req, Response &res)
-{
-	CGI	instance;
-
-	if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
-		return (true);
-	if (res.response_fd > 0 || res.body.length() > 0)
-		return (true);
-	if (req.finish())
-		return (true);
-	if (req.timeout())
-	{
-		res.code = C_REQUEST_TIMEOUT;
-		return (true);
-	}
-	std::cout << req.pathname << std::endl;
-	res.response_fd = instance.exec(req, res);
-	return true;
-}
 
 #endif

@@ -19,12 +19,22 @@ method_t method(Parse::s_allow allow)
 	method_t ret = M_UNKNOWN;
 	if (allow.GET)
 		ret = static_cast<method_t>(ret | M_GET);
+	if (allow.HEAD)
+		ret = static_cast<method_t>(ret | M_HEAD);
 	if (allow.POST)
 		ret = static_cast<method_t>(ret | M_POST);
 	if (allow.PUT)
 		ret = static_cast<method_t>(ret | M_PUT);
 	if (allow.DELETE)
 		ret = static_cast<method_t>(ret | M_DELETE);
+	if (allow.CONNECT)
+		ret = static_cast<method_t>(ret | M_CONNECT);
+	if (allow.OPTIONS)
+		ret = static_cast<method_t>(ret | M_OPTIONS);
+	if (allow.TRACE)
+		ret = static_cast<method_t>(ret | M_TRACE);
+	if (allow.ALL)
+		ret = static_cast<method_t>(ret | M_ALL);
 	return ret;
 }
 
@@ -35,6 +45,7 @@ int main(int argc, char **argv)
 	Parse::locationsMap		locations;
 	std::vector<Serve *>	serves;
 
+	std::vector<CGI *>				cgiMiddlewares;
 	std::vector<Eject *>			ejectMiddlewares;
 	std::vector<Static *>			staticMiddlewares;
 	std::vector<Error *>			errorMiddlewares;
@@ -78,10 +89,10 @@ int main(int argc, char **argv)
 		Static			*serveStatic	= new Static();
 		Error			*error			= new Error(server->logger);
 		SendBodyFromFD	*sendBodyFromFD	= new SendBodyFromFD(server->logger);
-
-		Mimetypes		mimetypes;
-		mimetypes.add("html", "text/html");
+		Mimetypes		*mimetypes		= new Mimetypes();
 	
+		mimetypes->add("html", "text/html");
+
 		Parse::s_listen bind 					= config.listen((*it).options);
 		Parse::s_clientBodyBufferSize bodySize 	= config.clientBodyBufferSize((*it).options);
 		std::vector<std::string> server_name	= config.serverName((*it).options);
@@ -99,11 +110,9 @@ int main(int argc, char **argv)
 			for (Parse::locationsMap::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
 			{
 				Parse::s_allow 					getAllow = config.allow((*itLoc).second);
-				//Parse::s_clientBodyBufferSize	getBodySize = config.clientBodyBufferSize((*itLoc).second);
 				Parse::s_autoindex				getAutoindex = config.autoindex((*itLoc).second);
 				std::string 					getRoot = config.root((*itLoc).second, true);
 				std::string						getIndex = config.index((*itLoc).second);
-				//Parse::mapErrors 				getErrors = config.errorPage((*itLoc).second);
 				Parse::s_cgi					getCgi = config.cgi((*itLoc).second);
 				method_t 						methods = method(getAllow);
 
@@ -115,24 +124,19 @@ int main(int argc, char **argv)
 				else
 					serveStatic->options.indexes.push_back("index.html");
 
-				//if (getBodySize.isDefined)
-				//	eject->max_payload_size = getBodySize.size;
-				
-				/*for (Parse::mapErrors::const_iterator itErr = getErrors.begin(); itErr != getErrors.end(); itErr++)
-					error->add((*itErr).first, (*itErr).second);*/
 				server->use(forbidden, F_ALL, static_cast<method_t>(~(methods)), (*itLoc).first);
-				
-				std::cout << getCgi.isDefined << std::endl;
-				std::cout << getCgi.path << std::endl;
-				
 				if (getCgi.isDefined)
-					server->use(cgi, F_ALL, M_ALL, (*itLoc).first);
+				{
+					CGI *_cgi = new CGI(getCgi);
+					server->use(*_cgi, F_ALL, method(getCgi.allow), (*itLoc).first);
+					cgiMiddlewares.push_back(_cgi);
+				}
 				server->use(*serveStatic, F_ALL, M_ALL, (*itLoc).first);
 				server->use(*error, F_ALL, M_ALL, (*itLoc).first);
 			}
 		}
 
-		server->use(mimetypes, F_ALL);
+		server->use(*mimetypes, F_ALL);
 		server->use(addResponseHeaders, F_ALL);
 		server->use(serializeHeaders, F_ALL);
 		server->use(sendHeader, F_ALL);
@@ -160,6 +164,11 @@ int main(int argc, char **argv)
 	#pragma endregion Start server
 
 	#pragma region Middlewares cleanup 
+	for (std::vector<CGI *>::iterator it = cgiMiddlewares.begin(); it != cgiMiddlewares.end(); it++)
+	{
+		delete (*it);
+	}
+
 	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
 	{
 		delete (*it);

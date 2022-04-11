@@ -16,14 +16,16 @@
 # include <vector>
 # include <utility>
 
+typedef std::vector<std::string>	s_split;
+
 /**
- * 	Split string to token with delimiter(s), return std::vector<std::string> of element(s)
+ * 	Split string to token with delimiter(s), return s_split of element(s)
  * 	@param str: string to split
  * 	@param delimiter: string of delimiter(s)
  */
-std::vector<std::string> split(std::string str, std::string delimiter)
+s_split split(std::string str, std::string delimiter)
 {
-	std::vector<std::string> data;
+	s_split data;
 	int start = 0;
 	int end = str.find(delimiter);
 	while (end != -1)
