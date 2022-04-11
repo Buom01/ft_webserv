@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:43:42 by badam             #+#    #+#             */
-/*   Updated: 2022/03/30 04:16:18 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/11 23:21:09 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,7 @@
 # include "mimetypes.cpp"
 # include "error.cpp"
 # include "Static.cpp"
+# include "upload.cpp"
 
 Serve 			app;
 
@@ -55,6 +56,7 @@ int	main(void)
 	SendBodyFromFD	sendBodyFromFD(app.logger);
 	Error			error(app.logger);
 	Mimetypes		mimetypes;
+	Upload			upload(app.logger, "/tmp", "/test");
 
 	serveStatic.options.root				= "./staticfiles";
 	serveStatic.options.directory_listing	= true;
@@ -74,6 +76,7 @@ int	main(void)
 	// app.use(throwErrorChain);
 	// app.use(hangForeverTest);
 	// app.use(cgi);
+	app.use(upload, F_NORMAL, M_PUT);
 	app.use(serveStatic);
 	app.use(error, F_ALL);
 	
@@ -90,6 +93,6 @@ int	main(void)
 	while (app.alive())
 	{
 		app.accept();
-		usleep(1);
+		usleep(10);
 	}
 }

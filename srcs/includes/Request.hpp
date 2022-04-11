@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/04/07 17:09:06 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/11 22:33:35 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,6 +49,13 @@ class Request
 		std::string			trusted_pathname;
 		std::string			http_version;
 		Header				headers;
+		size_t				upload_chunksize;
+		size_t				upload_remainingsize;
+		int					upload_fd;
+		std::string			upload_fd_buff;
+		std::string			upload_filename;
+		std::string			upload_filename_tmp;
+		
 
 		Request(int connection, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
 			start(get_time()),
@@ -69,7 +76,13 @@ class Request
 			querystring(""),
 			trusted_pathname(""),
 			http_version(""),
-			headers()
+			headers(),
+			upload_chunksize(1024),
+			upload_remainingsize(0),
+			upload_fd(0),
+			upload_fd_buff(""),
+			upload_filename(""),
+			upload_filename_tmp("")
 		{
 			bzero(&buff, sizeof(buff));
 		}
