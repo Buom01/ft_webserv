@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/03 21:40:42 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/11 23:33:09 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -80,7 +80,7 @@ bool	parseStartLine(Request &req, Response &res)
 		}
 		else
 			req.pathname = pathname;
-		req.trusted_pathname = sanitizeRelativePath(req.pathname);
+		req.trusted_complete_pathname = sanitizeRelativePath(req.pathname);
 	}
 	else
 	{
@@ -92,7 +92,7 @@ bool	parseStartLine(Request &req, Response &res)
 		req.port = uri.port();
 		req.pathname = uri.pathname();
 		req.querystring = uri.search();
-		req.trusted_pathname = sanitizeRelativePath(req.pathname);
+		req.trusted_complete_pathname = sanitizeRelativePath(req.pathname);
 	}
 
 	return (true);

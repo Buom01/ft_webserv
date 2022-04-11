@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/03/30 04:29:15 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/12 01:05:11 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -80,10 +80,25 @@ class   Chain
 		bool	_canUseLink(chain_link_t &link, Request &req, Response &res)
 		{
 			return (
-				( req.method == M_UNKNOWN  || (link.methods & req.method) )
+				( req.method == M_UNKNOWN || (link.methods & req.method) )
 				&& link.pathname.compare(req.pathname) <= 0
 				&& (!res.error || link.flag & F_ERROR)
 			);
+		}
+
+		void	_root_at_locationblock(chain_link_t &link, Request &req)
+		{
+			if (link.pathname.length() > 1 && link.pathname.compare(req.trusted_complete_pathname) <= 0)
+			{
+				size_t	start_at = link.pathname.length();
+
+				if (isDirectory(link.pathname) && start_at)
+					--start_at;
+
+				req.trusted_pathname = req.trusted_complete_pathname.substr(start_at, req.trusted_complete_pathname.length() - start_at);
+			}
+			else
+				req.trusted_pathname = req.trusted_complete_pathname;
 		}
 
 		bool	_run(RunningChain &instance)
@@ -96,6 +111,7 @@ class   Chain
 				link = *(instance.pos);
 				if (_canUseLink(link, instance.req, instance.res))
 				{
+					_root_at_locationblock(link, instance.req);
 					if (link.middleware.obj)
 						ret = (*link.middleware.obj)(instance.req, instance.res);
 					else

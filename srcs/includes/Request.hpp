@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/04/11 22:33:35 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/12 00:12:34 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,6 +46,7 @@ class Request
 		std::string			port;
 		std::string			pathname;
 		std::string			querystring;
+		std::string			trusted_complete_pathname;
 		std::string			trusted_pathname;
 		std::string			http_version;
 		Header				headers;
@@ -74,7 +75,8 @@ class Request
 			port(""),
 			pathname(""),
 			querystring(""),
-			trusted_pathname(""),
+			trusted_complete_pathname("/"),
+			trusted_pathname("/"),
 			http_version(""),
 			headers(),
 			upload_chunksize(1024),
