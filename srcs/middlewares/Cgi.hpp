@@ -159,7 +159,7 @@ class CGI : public cgiEnv, public IMiddleware
 
 		void	setHeader(Request &req)
 		{
-			URL _url(req.raw_pathname);
+			URL _url(req.trusted_pathname);
 			#pragma region Mandatory
 				env.addVariable("CONTENT_LENGTH", req.headers.header("CONTENT_LENGTH"));
 				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT_TYPE"));
