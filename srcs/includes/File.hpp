@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/17 12:59:44 by badam             #+#    #+#             */
-/*   Updated: 2022/04/09 22:58:10 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/12 01:11:47 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -113,7 +113,7 @@ bool	hasExecPermissions(const std::string &path)
 
 bool	isDirectory(const std::string &path)
 {
-	return (path[path.length() - 1] == '/');
+	return (!path.length() || (path[path.length() - 1] == '/'));
 }
 
 bool	directoryExists(const std::string &path)
@@ -133,7 +133,12 @@ bool	fileExists(const std::string &path)
 
 std::string	getExtension(std::string path)
 {
-	return (path.substr(path.find_last_of(".") + 1));
+	size_t		lastDot = path.find_last_of(".");
+
+	if (lastDot == std::string::npos)
+		return "";
+	else
+		return (path.substr(lastDot + 1));
 }
 
 /*

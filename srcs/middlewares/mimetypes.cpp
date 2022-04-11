@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/18 08:00:23 by badam             #+#    #+#             */
-/*   Updated: 2022/04/11 23:19:45 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/11 23:32:04 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,6 +27,7 @@ class Mimetypes: public IMiddleware
 		typedef struct	options_s
 		{
 			std::string	fallback;
+			std::string	directory_default;
 			mimetypes_t	mimetypes;
 		}				options_t;
 		
@@ -36,6 +37,7 @@ class Mimetypes: public IMiddleware
 		Mimetypes()
 		{
 			options.fallback = "application/octet-stream";
+			options.directory_default = "text/html";
 		}
 
 		Mimetypes(options_t opts)
@@ -56,7 +58,7 @@ class Mimetypes: public IMiddleware
 			mimetypes_t::const_iterator	it;
 
 			if (isDirectory(path))
-				return (options.fallback);
+				return (options.directory_default);
 			
 			it = options.mimetypes.find(getExtension(path));
 
