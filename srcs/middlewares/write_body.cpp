@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 21:55:09 by badam             #+#    #+#             */
-/*   Updated: 2022/04/07 15:52:45 by bastien          ###   ########.fr       */
+/*   Updated: 2022/04/11 23:10:19 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,18 +56,15 @@ class SendBodyFromFD: public AEpoll
 			if (!_parent::await(res.response_fd, EPOLLIN))
 				return (false);
 			
-			while (read_ret != 0 && send_ret != 0)
+			while (read_ret != 0 || send_ret != 0)
 			{
+				send_ret = send(res.fd, res.response_fd_buff.c_str(), res.response_fd_buff.length(), MSG_NOSIGNAL | MSG_DONTWAIT);
+				if (send_ret > 0)
+					res.response_fd_buff.erase(0, send_ret);
 				if (res.response_fd_buff.length())
 				{
-					send_ret = send(res.fd, res.response_fd_buff.c_str(), res.response_fd_buff.length(), MSG_NOSIGNAL | MSG_DONTWAIT);
-					if (send_ret > 0)
-						res.response_fd_buff.erase(0, send_ret);
-					if (res.response_fd_buff.length())
-					{
-						req.unfire(EPOLLOUT);
-						return (false);
-					}
+					req.unfire(EPOLLOUT);
+					return (false);
 				}
 
 				read_ret = read(res.response_fd, read_buffer, res.send_chunksize);

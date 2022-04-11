@@ -6,7 +6,7 @@
 /*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/21 01:02:06 by badam             #+#    #+#             */
-/*   Updated: 2022/04/09 19:25:55 by cbertran         ###   ########.fr       */
+/*   Updated: 2022/04/11 22:08:58 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -140,7 +140,7 @@ static std::string	getErrorMessage(Response &res)
 		case C_FORBIDDEN:
 			return ("You does not have access rights to the content.");
 		case C_NOT_FOUND:
-			return ("The requested resource can not be found.");
+			return ("The requested resource cannot be found.");
 		case C_METHOD_NOT_ALLOWED:
 			return ("The request method cannot be used on that resource.");
 		case C_NOT_ACCEPTABLE:
@@ -239,7 +239,7 @@ class Error: public AEpoll
 				return (-1);
 			else
 			{
-				open_ret = open(it->second.c_str(), O_NOATIME | O_NOFOLLOW | O_NONBLOCK, O_RDONLY);
+				open_ret = open(it->second.c_str(), O_NONBLOCK | O_RDONLY);
 				if (open_ret == -1)
 					_logger.warn("Failed to open error page: " + it->second);
 				return open_ret;

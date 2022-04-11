@@ -18,6 +18,9 @@
 
 bool	forbidden(Request &, Response &res)
 {
+	if (res.response_fd > 0 || res.body.length() > 0)
+		return (true);
+
 	res.code = C_FORBIDDEN;
 
 	return (true);

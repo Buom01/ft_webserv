@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/04/07 15:51:27 by bastien          ###   ########.fr       */
+/*   Updated: 2022/04/11 22:09:06 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,7 @@ class Static: public IMiddleware
 		Static()
 		{
 			options.root = "./";
-			options.directory_listing = false;
+			options.directory_listing = true;
 			options.indexes.push_back("index.html");
 			options.indexes.push_back("index.htm");
 			options.indexes.push_back("index.php");
@@ -78,7 +78,7 @@ class Static: public IMiddleware
 
 		void	serveFile(Response &res, const std::string &path)
 		{
-			int	fd = open(path.c_str(), O_NOATIME | O_NOFOLLOW | O_NONBLOCK, O_RDONLY);
+			int	fd = open(path.c_str(), O_NONBLOCK | O_RDONLY);
 
 			if (fd > 0)
 			{

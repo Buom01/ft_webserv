@@ -19,6 +19,7 @@
 # include "Regex.hpp"
 # include "nullptr_t.hpp"
 # include "Split.hpp"
+# include "File.hpp"
 
 struct s_defineRegex
 {
@@ -33,12 +34,12 @@ struct s_defineRegex
 	/* Rules regex */
 	{ "allow", "^[ \t]*allow[ \t]+(.*);[ \t]*$", true },
 	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);[ \t]*$", true },
-	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)(\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);[ \t]*$", true },
+	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)[ \t](\\.?\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);[ \t]*$", true },
 	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);[ \t]*$", true },
 	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\/.*);[ \t]*$", false },
 	{ "index", "^[ \t]*index[ \t]+(.*);[ \t]*$", true },
 	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", true },
-	{ "root", "^[ \t]*root[ \t]+(\\/.*);[ \t]*$", true },
+	{ "root", "^[ \t]*root[ \t]+(\\.?\\/.*);[ \t]*$", true },
 	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);[ \t]*$", true },
 	{ "upload", "^[ \t]*upload[ \t]+([\\/.][-a-zA-Z0-9_\\/._]+);[ \t]*$", true}
 };
@@ -138,6 +139,7 @@ class Parse : public ParseTypedef
 		Regex			Regex, expand;
 		serversVector	servers;
 		std::string		configPath;
+		std::string		configDirectory;
 		std::ifstream	stream;
 	private:
 		Parse(const Parse *);
@@ -169,6 +171,7 @@ class Parse : public ParseTypedef
 
 			isDefaultLocation = setDefaultLocation;
 			configPath = configFilePath;
+			configDirectory = relativeToAbsoluteDir(configPath);
 			serverTemp.id = 0;
 			stream.open(configPath.c_str());
 			stream.exceptions(std::ifstream::badbit);
@@ -525,7 +528,7 @@ class Parse : public ParseTypedef
 					err += Regex.match()[0].occurence;
 					throw IncorrectConfig(err);
 				}
-				autoindex.active = (Regex.match()[0].occurence == "off") ? true : false;
+				autoindex.active = (Regex.match()[0].occurence == "off") ? false : true;
 			}
 			return autoindex;
 		}
@@ -551,12 +554,14 @@ class Parse : public ParseTypedef
 			for (size_t x = 0; x < Regex.size(); x++)
 				cgi.extensions.push_back(Regex.match()[x].occurence);
 
-			if (!exist(get[1]))
+			cgi.path = concatPath(configDirectory, get[1]);
+			if (!exist(cgi.path))
 			{
 				err += "the executable does not exist";
 				throw IncorrectConfig(err);
 			}
-			cgi.path = get[1];
+
+			cgi.allow.DELETE = false;
 			cgi.allow.GET = false;
 			cgi.allow.HEAD = false;
 			cgi.allow.POST = false;
@@ -586,8 +591,10 @@ class Parse : public ParseTypedef
 
 			client.bits = 16000;
 			client.size = 2000;
+			client.isDefined = false;
 			if (!get.empty() && get[0] != NO_KEY)
 			{
+				client.isDefined = true;
 				long int temp = atol(get[0].c_str());
 				if (temp < 8)
 				{
@@ -737,10 +744,10 @@ class Parse : public ParseTypedef
 				else
 					return "";
 			}
-			Regex.exec(get[0], "([-a-zA-Z0-9_./\\]+)", GLOBAL_FLAG);
+			Regex.exec(get[0], "([-a-zA-Z0-9_\\./\\]+)", GLOBAL_FLAG);
 			if (Regex.size() > 1)
 				throw IncorrectConfig("rule 'root': only one directory definition is allowed");
-			return Regex.match()[0].occurence;
+			return concatPath(configDirectory, Regex.match()[0].occurence);
 		}
 
 		std::vector<std::string> serverName(optionsMap vec)

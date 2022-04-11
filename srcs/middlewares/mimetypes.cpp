@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/18 08:00:23 by badam             #+#    #+#             */
-/*   Updated: 2022/03/19 06:20:20 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/11 23:19:45 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,6 +43,9 @@ class Mimetypes: public IMiddleware
 			options = opts;
 		}
 
+		virtual ~Mimetypes()
+		{}
+
 		void	add(std::string ext, std::string mimetype)
 		{
 			options.mimetypes.insert(std::pair<std::string, std::string>(ext, mimetype));
@@ -68,7 +71,8 @@ class Mimetypes: public IMiddleware
 		{
 			std::string	&path	= res.used_file.length() ? res.used_file : req.trusted_pathname;
 
-			res.headers.add("Content-Type: " + getMimetype(path));
+			if (res.code != C_NO_CONTENT && res.code != C_CREATED)
+				res.headers.add("Content-Type: " + getMimetype(path));
 			
 			return (true);
 		}

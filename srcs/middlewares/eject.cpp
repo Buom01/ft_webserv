@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/23 00:49:38 by badam             #+#    #+#             */
-/*   Updated: 2022/04/07 15:48:42 by bastien          ###   ########.fr       */
+/*   Updated: 2022/04/09 21:54:13 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,22 +53,25 @@ class Eject: public IMiddleware
 				return (true);
 			}
 
-			header_values = res.headers.headerValues("content-length");
-			header_values_it = header_values.begin();
-			while (header_values_it != header_values.end())
+			if (max_payload_size > 0)
 			{
-				std::stringstream	sstream(*header_values_it);
-				size_t				contentlength;
-
-				sstream >> contentlength;
-
-				if (contentlength > max_payload_size)
+				header_values = res.headers.headerValues("content-length");
+				header_values_it = header_values.begin();
+				while (header_values_it != header_values.end())
 				{
-					res.code = C_REQUEST_ENTITY_TOO_LARGE;
-					return (true);
+					std::stringstream	sstream(*header_values_it);
+					size_t				contentlength;
+
+					sstream >> contentlength;
+
+					if (contentlength > max_payload_size)
+					{
+						res.code = C_REQUEST_ENTITY_TOO_LARGE;
+						return (true);
+					}
+					else
+						++header_values_it;
 				}
-				else
-					++header_values_it;
 			}
 
 			return (true);
