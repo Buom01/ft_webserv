@@ -176,15 +176,15 @@ class CGI : public cgiEnv, public IMiddleware
 			#pragma endregion Mandatory
 			#pragma region Should
 				env.addVariable("AUTH_TYPE", (!_url.username().empty()) ? "Basic" : ENV_NULL);
-				env.addVariable("HTTP_ACCEPT", "");
-				env.addVariable("HTTP_ACCEPT_CHARSET", "");
-				env.addVariable("HTTP_ACCEPT_ENCODING", "");
-				env.addVariable("HTTP_ACCEPT_LANGUAGE", "");
-				env.addVariable("HTTP_COOKIE", "");
-				env.addVariable("HTTP_FORWARDED", "");
-				env.addVariable("HTTP_HOST", "");
-				env.addVariable("HTTP_PROXY_AUTHORIZATION", "");
-				env.addVariable("HTTP_USER_AGENT", "");
+				env.addVariable("HTTP_ACCEPT", req.headers.header("HTTP_ACCEPT"));
+				env.addVariable("HTTP_ACCEPT_CHARSET", req.headers.header("HTTP_ACCEPT_CHARSET"));
+				env.addVariable("HTTP_ACCEPT_ENCODING", req.headers.header("HTTP_ACCEPT_ENCODING"));
+				env.addVariable("HTTP_ACCEPT_LANGUAGE", req.headers.header("HTTP_ACCEPT_LANGUAGE"));
+				env.addVariable("HTTP_COOKIE", req.headers.header("HTTP_COOKIE"));
+				env.addVariable("HTTP_FORWARDED", req.headers.header("HTTP_FORWARDED"));
+				env.addVariable("HTTP_HOST", req.headers.header("HTTP_HOST"));
+				env.addVariable("HTTP_PROXY_AUTHORIZATION", req.headers.header("HTTP_PROXY_AUTHORIZATION"));
+				env.addVariable("HTTP_USER_AGENT", req.headers.header("HTTP_USER_AGENT"));
 				env.addVariable("REMOTE_HOST", ENV_NULL);
 			#pragma endregion Should
 			#pragma region May
