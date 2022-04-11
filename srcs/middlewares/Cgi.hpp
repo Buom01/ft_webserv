@@ -262,6 +262,7 @@ bool cgi(Request &req, Response &res)
 		res.code = C_REQUEST_TIMEOUT;
 		return (true);
 	}
+	std::cout << req.pathname << std::endl;
 	res.response_fd = instance.exec(req, res);
 	return true;
 }

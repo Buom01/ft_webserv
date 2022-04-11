@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   error.cpp                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
+/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/21 01:02:06 by badam             #+#    #+#             */
-/*   Updated: 2022/04/07 15:52:16 by bastien          ###   ########.fr       */
+/*   Updated: 2022/04/09 19:25:55 by cbertran         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -138,7 +138,7 @@ static std::string	getErrorMessage(Response &res)
 		case C_PAYMENT_REQUIRED:
 			return ("A payment is required to fulfill this request.");
 		case C_FORBIDDEN:
-			return ("You does not have access rights to the conteent.");
+			return ("You does not have access rights to the content.");
 		case C_NOT_FOUND:
 			return ("The requested resource can not be found.");
 		case C_METHOD_NOT_ALLOWED:

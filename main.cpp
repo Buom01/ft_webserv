@@ -120,8 +120,11 @@ int main(int argc, char **argv)
 				
 				/*for (Parse::mapErrors::const_iterator itErr = getErrors.begin(); itErr != getErrors.end(); itErr++)
 					error->add((*itErr).first, (*itErr).second);*/
-
 				server->use(forbidden, F_ALL, static_cast<method_t>(~(methods)), (*itLoc).first);
+				
+				std::cout << getCgi.isDefined << std::endl;
+				std::cout << getCgi.path << std::endl;
+				
 				if (getCgi.isDefined)
 					server->use(cgi, F_ALL, M_ALL, (*itLoc).first);
 				server->use(*serveStatic, F_ALL, M_ALL, (*itLoc).first);

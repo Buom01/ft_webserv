@@ -1,6 +1,6 @@
 #ifndef __PARSE
 # define __PARSE
-# define REGEX_SIZE 12
+# define REGEX_SIZE 13
 # define NO_KEY "NO_KEY"
 # include <algorithm>
 # include <iostream>
@@ -29,16 +29,17 @@ struct s_defineRegex
 	{ "server", "^[ \t]*(server)[ \t]*\\{?[ \t]*$", false },
 	{ "location", "^[ \t]*location[ \t]+([a-zA-Z0-9_/.]*)[ \t]*\\{*$", false},
 	{ "endBlock", "^[ \t]*(});*$", false },
-
+	/* Rules regex */
 	{ "allow", "^[ \t]*allow[ \t]+(.*);[ \t]*$", true },
 	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);[ \t]*$", true },
 	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)(\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);[ \t]*$", true },
 	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);[ \t]*$", true },
 	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\/.*);[ \t]*$", false },
 	{ "index", "^[ \t]*index[ \t]+(.*);[ \t]*$", true },
+	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", true },
 	{ "root", "^[ \t]*root[ \t]+(\\/.*);[ \t]*$", true },
 	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);[ \t]*$", true },
-	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", true }
+	{ "upload", "^[ \t]*upload[ \t]+([\\/.][-a-zA-Z0-9_\\/._]+);[ \t]*$", true}
 };
 
 struct ParseTypedef
@@ -266,7 +267,7 @@ class Parse : public ParseTypedef
 				root.first = "/";
 				for (optionsMap::iterator itConf = (*it).options.begin(); itConf != (*it).options.end(); itConf++)
 				{
-					if ((*itConf).first == "listen" || (*itConf).first == "server_name" || (*itConf).first == "client_body_buffer_size")
+					if ((*itConf).first == "listen" || (*itConf).first == "server_name" || (*itConf).first == "client_body_buffer_size" || (*itConf).first == "upload")
 						continue;
 					root.second.insert((*itConf));
 					(*it).options.erase(itConf);
@@ -608,39 +609,6 @@ class Parse : public ParseTypedef
 			return Regex.match()[0].occurence;
 		}
 
-		std::string root(optionsMap vec, bool optional = false)
-		{
-			stringVector	get = findKey("root", vec);
-		
-			if (get[0] == NO_KEY)
-			{
-				if (!optional)
-					throw IncorrectConfig("rule 'root': no rule is defined, the server can't work");
-				else
-					return "";
-			}
-			Regex.exec(get[0], "([-a-zA-Z0-9_./\\]+)", GLOBAL_FLAG);
-			if (Regex.size() > 1)
-				throw IncorrectConfig("rule 'root': only one directory definition is allowed");
-			return Regex.match()[0].occurence;
-		}
-
-		std::vector<std::string> serverName(optionsMap vec)
-		{
-			stringVector				get = findKey("server_name", vec);
-			std::vector<std::string>	ret;
-
-			if (get[0] == NO_KEY)
-				ret.push_back("localhost");
-			else
-			{
-				Regex.exec(get[0], "([a-zA-Z0-9_.]+)", GLOBAL_FLAG);
-				for (size_t x = 0; x < Regex.size(); x++)
-					ret.push_back(Regex.match()[x].occurence);
-			}
-			return ret;
-		}
-
 		s_listen	listen(optionsMap vec)
 		{
 			stringVector				get = findKey("listen", vec);
@@ -689,6 +657,47 @@ class Parse : public ParseTypedef
 			ret.port = static_cast<size_t>(htons(port));
 			return ret;
 		}
+
+		std::string root(optionsMap vec, bool optional = false)
+		{
+			stringVector	get = findKey("root", vec);
+		
+			if (get[0] == NO_KEY)
+			{
+				if (!optional)
+					throw IncorrectConfig("rule 'root': no rule is defined, the server can't work");
+				else
+					return "";
+			}
+			Regex.exec(get[0], "([-a-zA-Z0-9_./\\]+)", GLOBAL_FLAG);
+			if (Regex.size() > 1)
+				throw IncorrectConfig("rule 'root': only one directory definition is allowed");
+			return Regex.match()[0].occurence;
+		}
+
+		std::vector<std::string> serverName(optionsMap vec)
+		{
+			stringVector				get = findKey("server_name", vec);
+			std::vector<std::string>	ret;
+
+			if (get[0] == NO_KEY)
+				ret.push_back("localhost");
+			else
+			{
+				Regex.exec(get[0], "([a-zA-Z0-9_.]+)", GLOBAL_FLAG);
+				for (size_t x = 0; x < Regex.size(); x++)
+					ret.push_back(Regex.match()[x].occurence);
+			}
+			return ret;
+		}
+
+		std::string upload(optionsMap vec)
+		{
+			stringVector	get = findKey("upload", vec);
+			if (get[0] == NO_KEY)
+				return(std::string("/var/tmp"));
+			return get[0];
+		}
 	#pragma endregion Getter
 	
 	#pragma region Check config
@@ -713,6 +722,7 @@ class Parse : public ParseTypedef
 					index((*it).options);
 					root((*it).options, false);
 				}
+				upload((*it).options);
 				clientBodyBufferSize((*it).options);
 				tempServer = serverName((*it).options);
 				for (std::vector<std::string>::const_iterator itC = tempServer.begin(); itC != tempServer.end(); itC++)
