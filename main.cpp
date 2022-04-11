@@ -30,12 +30,22 @@ method_t method(Parse::s_allow allow)
 	method_t ret = M_UNKNOWN;
 	if (allow.GET)
 		ret = static_cast<method_t>(ret | M_GET);
+	if (allow.HEAD)
+		ret = static_cast<method_t>(ret | M_HEAD);
 	if (allow.POST)
 		ret = static_cast<method_t>(ret | M_POST);
 	if (allow.PUT)
 		ret = static_cast<method_t>(ret | M_PUT);
 	if (allow.DELETE)
 		ret = static_cast<method_t>(ret | M_DELETE);
+	if (allow.CONNECT)
+		ret = static_cast<method_t>(ret | M_CONNECT);
+	if (allow.OPTIONS)
+		ret = static_cast<method_t>(ret | M_OPTIONS);
+	if (allow.TRACE)
+		ret = static_cast<method_t>(ret | M_TRACE);
+	if (allow.ALL)
+		ret = static_cast<method_t>(ret | M_ALL);
 	return ret;
 }
 
@@ -45,6 +55,7 @@ int main(int argc, char **argv)
 	Parse::serversVector	servers;
 	Parse::locationsMap		locations;
 
+	std::vector<CGI *>				cgiMiddlewares;
 	std::vector<Eject *>			ejectMiddlewares;
 	std::vector<Static *>			staticMiddlewares;
 	std::vector<Error *>			errorMiddlewares;
@@ -94,7 +105,7 @@ int main(int argc, char **argv)
 		SendBodyFromFD	*sendBodyFromFD	= new SendBodyFromFD(server->logger);
 
 		mimetypes->add("html", "text/html");
-	
+
 		Parse::s_listen bind 					= config.listen((*it).options);
 		std::vector<std::string> server_name	= config.serverName((*it).options);
 		
@@ -130,9 +141,9 @@ int main(int argc, char **argv)
 
 			if (getCgi.isDefined)
 			{
-				// define options like getCgi.path and extensions
-
-				server->use(cgi, F_NORMAL, method(getCgi.allow), location_name);
+				CGI *_cgi = new CGI(getCgi);
+				server->use(*_cgi, F_ALL, method(getCgi.allow), (*itLoc).first);
+				cgiMiddlewares.push_back(_cgi);
 			}
 
 			if (getRoot.size())
@@ -208,6 +219,11 @@ int main(int argc, char **argv)
 	#pragma endregion Run server
 
 	#pragma region Middlewares cleanup 
+	for (std::vector<CGI *>::iterator it = cgiMiddlewares.begin(); it != cgiMiddlewares.end(); it++)
+	{
+		delete (*it);
+	}
+
 	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
 	{
 		delete (*it);

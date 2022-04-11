@@ -1,6 +1,6 @@
 #ifndef __PARSE
 # define __PARSE
-# define REGEX_SIZE 12
+# define REGEX_SIZE 13
 # define NO_KEY "NO_KEY"
 # include <algorithm>
 # include <iostream>
@@ -18,6 +18,7 @@
 # include <arpa/inet.h>
 # include "Regex.hpp"
 # include "nullptr_t.hpp"
+# include "Split.hpp"
 # include "File.hpp"
 
 struct s_defineRegex
@@ -30,16 +31,17 @@ struct s_defineRegex
 	{ "server", "^[ \t]*(server)[ \t]*\\{?[ \t]*$", false },
 	{ "location", "^[ \t]*location[ \t]+([a-zA-Z0-9_/.]*)[ \t]*\\{*$", false},
 	{ "endBlock", "^[ \t]*(});*$", false },
-
+	/* Rules regex */
 	{ "allow", "^[ \t]*allow[ \t]+(.*);[ \t]*$", true },
 	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);[ \t]*$", true },
 	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)[ \t](\\.?\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);[ \t]*$", true },
 	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);[ \t]*$", true },
 	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\/.*);[ \t]*$", false },
 	{ "index", "^[ \t]*index[ \t]+(.*);[ \t]*$", true },
+	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", true },
 	{ "root", "^[ \t]*root[ \t]+(\\.?\\/.*);[ \t]*$", true },
 	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);[ \t]*$", true },
-	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", true }
+	{ "upload", "^[ \t]*upload[ \t]+([\\/.][-a-zA-Z0-9_\\/._]+);[ \t]*$", true}
 };
 
 struct ParseTypedef
@@ -69,7 +71,7 @@ struct ParseTypedef
 	struct s_allow
 	{
 		bool isDefined;
-		bool GET, PUT, POST, DELETE;
+		bool GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, ALL;
 	};
 
 	/**
@@ -181,9 +183,9 @@ class Parse : public ParseTypedef
 				size_t commentPos = line.find("#", 0);
 				if (commentPos != std::string::npos)
 					line = line.substr(0, commentPos);
+				line = trim(line);
 				if (isEmpty(line))
 					continue;
-				line = trim(line);
 				for (int i = 0; i < REGEX_SIZE; i++)
 				{
 					Regex.exec(line, REGEX[i].regex, GLOBAL_FLAG);
@@ -265,8 +267,9 @@ class Parse : public ParseTypedef
 				return;
 			for (serversVector::iterator it = servers.begin(); it != servers.end(); it++)
 			{
-				pairLocations root;
+				pairLocations	root;
 				root.first = "/";
+
 				for (optionsMap::iterator itConf = (*it).options.begin(); itConf != (*it).options.end(); itConf++)
 				{
 					if ((*itConf).first == "listen" || (*itConf).first == "server_name" || (*itConf).first == "client_body_buffer_size")
@@ -380,16 +383,7 @@ class Parse : public ParseTypedef
 			for (size_t x = 0; x < Regex.size(); x++)
 			{
 				std::string occ = Regex.match()[x].occurence;
-				if (occ == "DELETE")
-				{
-					if (allow->DELETE)
-					{
-						err += "DELETE is already defined";
-						throw IncorrectConfig(err);
-					}
-					allow->DELETE = true;
-				}
-				else if (occ == "GET")
+				if (occ == "GET")
 				{
 					if (allow->GET)
 					{
@@ -397,6 +391,15 @@ class Parse : public ParseTypedef
 						throw IncorrectConfig(err);
 					}
 					allow->GET = true;
+				}
+				else if (occ == "HEAD")
+				{
+					if (allow->HEAD)
+					{
+						err += "HEAD is already defined";
+						throw IncorrectConfig(err);
+					}
+					allow->HEAD = true;
 				}
 				else if (occ == "POST")
 				{
@@ -416,6 +419,51 @@ class Parse : public ParseTypedef
 					}
 					allow->PUT = true;
 				}
+				else if (occ == "DELETE")
+				{
+					if (allow->DELETE)
+					{
+						err += "DELETE is already defined";
+						throw IncorrectConfig(err);
+					}
+					allow->DELETE = true;
+				}
+				else if (occ == "CONNECT")
+				{
+					if (allow->CONNECT)
+					{
+						err += "CONNECT is already defined";
+						throw IncorrectConfig(err);
+					}
+					allow->CONNECT = true;
+				}
+				else if (occ == "OPTIONS")
+				{
+					if (allow->OPTIONS)
+					{
+						err += "OPTIONS is already defined";
+						throw IncorrectConfig(err);
+					}
+					allow->OPTIONS = true;
+				}
+				else if (occ == "TRACE")
+				{
+					if (allow->TRACE)
+					{
+						err += "TRACE is already defined";
+						throw IncorrectConfig(err);
+					}
+					allow->TRACE = true;
+				}
+				else if (occ == "ALL")
+				{
+					if (allow->ALL)
+					{
+						err += "ALL is already defined";
+						throw IncorrectConfig(err);
+					}
+					allow->ALL = true;
+				}
 				else
 				{
 					err += occ;
@@ -432,10 +480,15 @@ class Parse : public ParseTypedef
 			s_allow			allow;
 			
 			allow.isDefined = true;
-			allow.DELETE = false;
 			allow.GET = false;
+			allow.HEAD = false;
 			allow.POST = false;
 			allow.PUT = false;
+			allow.DELETE = false;
+			allow.CONNECT = false;
+			allow.OPTIONS = false;
+			allow.TRACE = false;
+			allow.ALL = false;
 			if (get[0] == NO_KEY)
 			{
 				allow.isDefined = false;
@@ -510,8 +563,14 @@ class Parse : public ParseTypedef
 
 			cgi.allow.DELETE = false;
 			cgi.allow.GET = false;
+			cgi.allow.HEAD = false;
 			cgi.allow.POST = false;
 			cgi.allow.PUT = false;
+			cgi.allow.DELETE = false;
+			cgi.allow.CONNECT = false;
+			cgi.allow.OPTIONS = false;
+			cgi.allow.TRACE = false;
+			cgi.allow.ALL = false;
 			_allow(get[2], "rule 'cgi': flag ", &cgi.allow);
 			return cgi;
 		}
@@ -613,6 +672,67 @@ class Parse : public ParseTypedef
 			return Regex.match()[0].occurence;
 		}
 
+	private:
+		bool		ipIsValid(std::string ip)
+		{
+			if (ip == "localhost")
+				return true;
+			s_split	_split = split(ip, ".");
+			long 	temp;
+
+			if (_split.size() != 4)
+				return false;
+			for (s_split::const_iterator it = _split.begin(); it != _split.end(); it++)
+			{
+				temp = std::atol((*it).c_str());
+				if (!isNumber((*it)) || temp < 0 || temp > 255)
+					return false;
+			}
+			return true;
+		}
+	public:
+		s_listen	listen(optionsMap vec)
+		{
+			stringVector				get = findKey("listen", vec);
+			std::string					ip = "127.0.0.1";
+			int							port = 80;
+			s_listen					ret;
+
+			if (get[0] != NO_KEY)
+			{
+				Regex.exec(get[0], "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?(-?[0-9]+)?", GLOBAL_FLAG);
+				for (size_t x = 0; x < Regex.size(); x++)
+				{
+					if (x == 0)
+						ip = Regex.match()[x].occurence;
+					else if (x == 1)
+						port = std::atol(Regex.match()[x].occurence.c_str());
+				}
+			}
+			ret.ipSave = ip;
+			ret.portSave = port;
+			ret.ip = static_cast<size_t>(inet_addr(ip.c_str()));
+			if (!ipIsValid(ip))
+			{
+				std::string c = "rule 'listen': ip address ";
+				c += ip.c_str();
+				c += " is outside the range [0.0.0.0] <> [255.255.255.255]";
+				throw IncorrectConfig(c.c_str());
+			}
+			if (port < 0 || port > 65535)
+			{
+			
+				std::string c = "rule 'listen': port ";
+				std::stringstream strstream;
+				strstream << port;
+				c += strstream.str();
+				c += " is outside the range [0] <> [65535]";
+				throw IncorrectConfig(c.c_str());
+			}
+			ret.port = static_cast<size_t>(htons(port));
+			return ret;
+		}
+
 		std::string root(optionsMap vec, bool optional = false)
 		{
 			stringVector	get = findKey("root", vec);
@@ -646,53 +766,12 @@ class Parse : public ParseTypedef
 			return ret;
 		}
 
-		s_listen	listen(optionsMap vec)
+		std::string upload(optionsMap vec)
 		{
-			stringVector				get = findKey("listen", vec);
-			std::vector<std::string>	temp;
-			std::string					ip = "127.0.0.1";
-			int							port = 80;
-			s_listen					ret;
-
-			if (get[0] != NO_KEY)
-			{
-				Regex.exec(get[0], "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?([0-9]+)?", GLOBAL_FLAG);
-				for (size_t x = 0; x < Regex.size(); x++)
-				{
-					if (Regex.match()[x].occurence.size() == 0)
-						continue;
-					temp.push_back(Regex.match()[x].occurence);
-				}
-				for (std::vector<std::string>::iterator it = temp.begin(); it != temp.end(); it++)
-				{
-					Regex.exec(*it, "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+)");
-					if (Regex.size() == 1)
-						ip = *it;
-					else
-						port = atoi((*it).c_str());
-				}
-			}
-			ret.ipSave = ip;
-			ret.portSave = port;
-			ret.ip = static_cast<size_t>(inet_addr(ip.c_str()));
-			if (ret.ip < 0 || ret.ip > 4294967295)
-			{
-				std::string c = "rule 'listen': ip address ";
-				c += ip.c_str();
-				c += " is outside the range [0.0.0.0] <> [255.255.255.255]";
-				throw IncorrectConfig(c.c_str());
-			}
-			if (port < 0 || port > 65535)
-			{
-				std::string c = "rule 'listen': port ";
-				std::stringstream strstream;
-				strstream << port;
-				c += strstream.str();
-				c += " is outside the range [0] <> [65535]";
-				throw IncorrectConfig(c.c_str());
-			}
-			ret.port = static_cast<size_t>(htons(port));
-			return ret;
+			stringVector	get = findKey("upload", vec);
+			if (get[0] == NO_KEY)
+				return("/var/tmp");
+			return get[0];
 		}
 	#pragma endregion Getter
 	
@@ -717,6 +796,7 @@ class Parse : public ParseTypedef
 					errorPage((*it).options);
 					index((*it).options);
 					root((*it).options, false);
+					upload((*it).options);
 				}
 				clientBodyBufferSize((*it).options);
 				tempServer = serverName((*it).options);
@@ -734,6 +814,7 @@ class Parse : public ParseTypedef
 						errorPage((*itLoc).second);
 						index((*itLoc).second);
 						root((*itLoc).second, !(defaultLocation && (*itLoc).first == "/"));
+						upload((*it).options);
 					}
 				}
 			}
