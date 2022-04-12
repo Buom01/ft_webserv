@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   error.cpp                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/21 01:02:06 by badam             #+#    #+#             */
-/*   Updated: 2022/04/11 22:08:58 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/12 03:06:18 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -262,6 +262,9 @@ class Error: public AEpoll
 	public:
 		bool	operator()(Request &req, Response &res)
 		{
+			if (res.response_fd > 0 || res.body.length() > 0)
+				return (true);
+				
 			if (res.errorpage_fd <= 0)
 			{
 				if (
