@@ -8,6 +8,7 @@
 #include "read.cpp"
 #include "eject.cpp"
 #include "upload.cpp"
+#include "remover.cpp"
 #include "Cgi.hpp"
 #include "Response.hpp"
 #include "write_headers.cpp"
@@ -58,6 +59,7 @@ int main(int argc, char **argv)
 
 	std::vector<Eject *>			ejectMiddlewares;
 	std::vector<Upload *>			uploadMiddlewares;
+	std::vector<Remover *>			removerMiddlewares;
 	std::vector<CGI *>				cgiMiddlewares;
 	std::vector<Static *>			staticMiddlewares;
 	std::vector<Error *>			errorMiddlewares;
@@ -144,10 +146,13 @@ int main(int argc, char **argv)
 
 			if (getUpload.first.length() && (methods & M_PUT))
 			{
-				Upload *upload	= new Upload(server->logger, getUpload.first, getUpload.second);
+				Upload	*upload		= new Upload(server->logger, getUpload.first, getUpload.second);
+				Remover	*remover	= new Remover(getUpload.first, getUpload.second);
 
 				server->use(*upload, F_NORMAL, M_PUT, location_name);
+				server->use(*remover, F_NORMAL, M_DELETE, location_name);
 				uploadMiddlewares.push_back(upload);
+				removerMiddlewares.push_back(remover);
 			}
 
 			if (getCgi.isDefined)
@@ -237,6 +242,11 @@ int main(int argc, char **argv)
 	}
 
 	for (std::vector<Upload *>::iterator it = uploadMiddlewares.begin(); it != uploadMiddlewares.end(); it++)
+	{
+		delete (*it);
+	}
+
+	for (std::vector<Remover *>::iterator it = removerMiddlewares.begin(); it != removerMiddlewares.end(); it++)
 	{
 		delete (*it);
 	}
