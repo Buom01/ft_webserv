@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/12 03:10:39 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/12 23:02:35 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ bool	addResponseHeaders(Request &, Response &res)
 	off_t		length	= -1;
 
 	h.set("Server: FT_WebServ");
+	h.add("Connection: close");
 
 	if (res.body.length() > 0)
 		length = static_cast<intmax_t>(res.body.length());

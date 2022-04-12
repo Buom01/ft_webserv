@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/11 23:33:09 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/12 22:11:05 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,7 +37,10 @@ bool	parseStartLine(Request &req, Response &res)
 		return (false);
 
 	if (get_next_line_string(req.fd, line, req.buff, SERVER_BUFFER_SIZE) < 0)
+	{
+		req.unfire(EPOLLIN);
 		return (false);
+	}
 
 	regex.exec(line, "^([A-Z]+)\\ ([^\\ ]+)\\ HTTP\\/([0-9\\.]+)$", GLOBAL_FLAG);
 	if (regex.size() != 3)
@@ -147,6 +150,8 @@ bool	parseRequestHeaders(Request &req, Response &res)
 		else
 			req.headers.set(line);
 	}
+
+	req.unfire(EPOLLIN);
 
 	return (false);
 }
