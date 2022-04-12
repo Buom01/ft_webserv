@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 21:55:09 by badam             #+#    #+#             */
-/*   Updated: 2022/04/12 03:04:43 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/12 03:24:08 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -98,7 +98,7 @@ class Upload: public AEpoll
 			if (res.response_fd > 0 || res.body.length() > 0)
 				return (true);
 
-			if (req.finish() || req.closed())
+			if (req.finish())
 			{
 				if (req.upload_fd)
 				{
