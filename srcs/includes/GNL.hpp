@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/12/04 17:06:14 by badam             #+#    #+#             */
-/*   Updated: 2022/04/12 22:10:42 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/13 00:39:57 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,33 +16,28 @@
 # include <stdlib.h>
 # include <unistd.h>
 
-static int		buff_strip_used(size_t len, char *buffer, size_t buffer_size)
+static int		buff_strip_used(ssize_t len, char *buffer, ssize_t buffer_size)
 {
-	size_t	i;
-	int		same_line;
+	int		same_line	= 1;
 
-	same_line = 1;
-	i = 0;
-	if (len < buffer_size && (buffer[len] == '\n' || buffer[len] == '\r'))
+	if (len + 1 < buffer_size && (buffer[len] == '\n' || buffer[len] == '\r'))
 	{
 		++len;
 		if ((buffer[len] == '\n' || buffer[len] == '\r') && buffer[len - 1] != buffer[len])
 			++len;
 		same_line = 0;
 	}
-	while (i + len < buffer_size)
+	if (len)
 	{
-		buffer[i] = buffer[i + len];
-		i++;
+		memmove(buffer, buffer + len, buffer_size - len);
+		buffer[buffer_size - len] = '\0';
 	}
-	while (i < buffer_size)
-		buffer[i++] = '\0';
 	return (same_line);
 }
 
-static size_t	buff_curnt_line_len(char *buffer, size_t buffer_size)
+static ssize_t	buff_curnt_line_len(char *buffer, ssize_t buffer_size)
 {
-	size_t	len;
+	ssize_t	len;
 
 	len = 0;
 	while (len < buffer_size && *buffer && *buffer != '\r' && *buffer != '\n')
@@ -89,9 +84,9 @@ static int		line_joinbuff(char **line, char *buffer, size_t len)
 	return (1);
 }
 
-static int		joinline(char **line, char *buffer, size_t buffer_size)
+static int		joinline(char **line, char *buffer, ssize_t buffer_size)
 {
-	size_t	bufflen;
+	ssize_t	bufflen;
 
 	bufflen = buff_curnt_line_len(buffer, buffer_size);
 	if (bufflen)
@@ -100,7 +95,7 @@ static int		joinline(char **line, char *buffer, size_t buffer_size)
 	return (buff_strip_used(bufflen, buffer, buffer_size));
 }
 
-int		get_next_line(int fd, char **line, char *buffer, size_t buffer_size)
+int		get_next_line(int fd, char **line, char *buffer, ssize_t buffer_size)
 {
 	int			prefill;
 	int			eof;
@@ -127,7 +122,7 @@ int		get_next_line(int fd, char **line, char *buffer, size_t buffer_size)
 	return (eof > 0 ? 1 : eof);
 }
 
-int		get_next_line_string(int fd, std::string &line, char *buff, size_t size)
+int		get_next_line_string(int fd, std::string &line, char *buff, ssize_t size)
 {
 	int		ret;
 	char	*c_line;
