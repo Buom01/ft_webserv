@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/18 08:00:23 by badam             #+#    #+#             */
-/*   Updated: 2022/04/11 23:32:04 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/12 03:13:58 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,7 +36,7 @@ class Mimetypes: public IMiddleware
 
 		Mimetypes()
 		{
-			options.fallback = "application/octet-stream";
+			options.fallback = "";
 			options.directory_default = "text/html";
 		}
 
@@ -74,7 +74,12 @@ class Mimetypes: public IMiddleware
 			std::string	&path	= res.used_file.length() ? res.used_file : req.trusted_pathname;
 
 			if (res.code != C_NO_CONTENT && res.code != C_CREATED)
-				res.headers.add("Content-Type: " + getMimetype(path));
+			{
+				std::string	mimetype	= getMimetype(path);
+
+				if (mimetype.length())
+					res.headers.add("Content-Type: " + mimetype);
+			}
 			
 			return (true);
 		}
