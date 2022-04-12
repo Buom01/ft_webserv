@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   forbidden.cpp                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/18 07:54:52 by badam             #+#    #+#             */
-/*   Updated: 2022/04/09 20:12:00 by cbertran         ###   ########.fr       */
+/*   Updated: 2022/04/12 03:02:43 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,10 +18,24 @@
 
 bool	forbidden(Request &, Response &res)
 {
+	if (res.code != C_NOT_IMPLEMENTED)
+		return (true);
 	if (res.response_fd > 0 || res.body.length() > 0)
 		return (true);
 
 	res.code = C_FORBIDDEN;
+
+	return (true);
+}
+
+bool	forbidden_method(Request &, Response &res)
+{
+	if (res.code != C_NOT_IMPLEMENTED)
+		return (true);
+	if (res.response_fd > 0 || res.body.length() > 0)
+		return (true);
+
+	res.code = C_METHOD_NOT_ALLOWED;
 
 	return (true);
 }

@@ -7,6 +7,7 @@
 #include "error.cpp"
 #include "read.cpp"
 #include "eject.cpp"
+#include "upload.cpp"
 #include "Cgi.hpp"
 #include "Response.hpp"
 #include "write_headers.cpp"
@@ -55,8 +56,9 @@ int main(int argc, char **argv)
 	Parse::serversVector	servers;
 	Parse::locationsMap		locations;
 
-	std::vector<CGI *>				cgiMiddlewares;
 	std::vector<Eject *>			ejectMiddlewares;
+	std::vector<Upload *>			uploadMiddlewares;
+	std::vector<CGI *>				cgiMiddlewares;
 	std::vector<Static *>			staticMiddlewares;
 	std::vector<Error *>			errorMiddlewares;
 	std::vector<Mimetypes *>		mimetypesMiddlewares;
@@ -117,21 +119,22 @@ int main(int argc, char **argv)
 
 		for (Parse::locationsMap::const_reverse_iterator itLoc = (*it).locations.rbegin(); itLoc != (*it).locations.rend(); itLoc++)
 		{
-			Parse::s_allow 					getAllow = config.allow((*itLoc).second);
-			Parse::s_clientBodyBufferSize	getBodyMaxSize = config.clientBodyBufferSize((*itLoc).second);
-			Parse::s_autoindex				getAutoindex = config.autoindex((*itLoc).second);
-			std::string 					getRoot = config.root((*itLoc).second, true);
-			std::string						getIndex = config.index((*itLoc).second);
-			Parse::mapErrors 				getErrors = config.errorPage((*itLoc).second);
-			Parse::s_cgi					getCgi = config.cgi((*itLoc).second);
-			method_t 						methods = method(getAllow);
+			Parse::s_allow 						getAllow = config.allow((*itLoc).second);
+			Parse::s_clientBodyBufferSize		getBodyMaxSize = config.clientBodyBufferSize((*itLoc).second);
+			Parse::s_autoindex					getAutoindex = config.autoindex((*itLoc).second);
+			std::string 						getRoot = config.root((*itLoc).second, true);
+			std::string							getIndex = config.index((*itLoc).second);
+			Parse::mapErrors 					getErrors = config.errorPage((*itLoc).second);
+			Parse::s_cgi						getCgi = config.cgi((*itLoc).second);
+			std::pair<std::string, std::string>	getUpload = config.upload((*itLoc).second);
+			method_t 							methods = method(getAllow);
 
 			std::string	location_name = (*itLoc).first;
 
 			if (getAllow.isDefined)
-				server->use(forbidden, F_ALL, static_cast<method_t>(~(methods)), location_name);
+				server->use(forbidden_method, F_ALL, static_cast<method_t>(~(methods)), location_name);
 
-			if (getBodyMaxSize.isDefined)  // Conditional jump or move depends on uninitialised value(s)
+			if (getBodyMaxSize.isDefined)
 			{
 				Eject	*eject	= new Eject(getBodyMaxSize.size);
 
@@ -139,10 +142,18 @@ int main(int argc, char **argv)
 				ejectMiddlewares.push_back(eject);
 			}
 
+			if (getUpload.first.length() && (methods & M_PUT))
+			{
+				Upload *upload	= new Upload(server->logger, getUpload.first, getUpload.second);
+
+				server->use(*upload, F_NORMAL, M_PUT, location_name);
+				uploadMiddlewares.push_back(upload);
+			}
+
 			if (getCgi.isDefined)
 			{
 				CGI *_cgi = new CGI(getCgi);
-				server->use(*_cgi, F_ALL, method(getCgi.allow), (*itLoc).first);
+				server->use(*_cgi, F_NORMAL, method(getCgi.allow), location_name);
 				cgiMiddlewares.push_back(_cgi);
 			}
 
@@ -219,12 +230,18 @@ int main(int argc, char **argv)
 	#pragma endregion Run server
 
 	#pragma region Middlewares cleanup 
-	for (std::vector<CGI *>::iterator it = cgiMiddlewares.begin(); it != cgiMiddlewares.end(); it++)
+
+	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
 	{
 		delete (*it);
 	}
 
-	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
+	for (std::vector<Upload *>::iterator it = uploadMiddlewares.begin(); it != uploadMiddlewares.end(); it++)
+	{
+		delete (*it);
+	}
+
+	for (std::vector<CGI *>::iterator it = cgiMiddlewares.begin(); it != cgiMiddlewares.end(); it++)
 	{
 		delete (*it);
 	}

@@ -41,7 +41,7 @@ struct s_defineRegex
 	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", true },
 	{ "root", "^[ \t]*root[ \t]+(\\.?\\/.*);[ \t]*$", true },
 	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);[ \t]*$", true },
-	{ "upload", "^[ \t]*upload[ \t]+([\\/.][-a-zA-Z0-9_\\/._]+);[ \t]*$", true}
+	{ "upload", "^[ \t]*upload[ \t]+(\\.?\\/[-a-zA-Z0-9_\\/._]+)([ \t]+([\\/.][-a-zA-Z0-9_\\/._]+))?;[ \t]*$", true}
 };
 
 struct ParseTypedef
@@ -766,12 +766,16 @@ class Parse : public ParseTypedef
 			return ret;
 		}
 
-		std::string upload(optionsMap vec)
+		std::pair<std::string, std::string> upload(optionsMap vec)
 		{
 			stringVector	get = findKey("upload", vec);
+
 			if (get[0] == NO_KEY)
-				return("/var/tmp");
-			return get[0];
+				return (std::make_pair("", ""));
+			else if (get[1] != NO_KEY && get[2] != NO_KEY)
+				return (std::make_pair(concatPath(configDirectory, get[0]), get[2]));
+			else
+				return (std::make_pair(concatPath(configDirectory, get[0]), ""));
 		}
 	#pragma endregion Getter
 	

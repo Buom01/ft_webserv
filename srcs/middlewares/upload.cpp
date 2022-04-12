@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 21:55:09 by badam             #+#    #+#             */
-/*   Updated: 2022/04/12 01:16:51 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/12 03:04:43 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -93,7 +93,9 @@ class Upload: public AEpoll
 			ssize_t	read_ret							= -1;
 			ssize_t	write_ret							= -1;
 			
-			if (res.sent)
+			if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
+				return (true);
+			if (res.response_fd > 0 || res.body.length() > 0)
 				return (true);
 
 			if (req.finish() || req.closed())
@@ -123,7 +125,11 @@ class Upload: public AEpoll
 					remove(req.upload_filename_tmp.c_str());
 				req.upload_fd = open(req.upload_filename_tmp.c_str(), O_NONBLOCK | O_WRONLY | O_CREAT);
 				if (req.upload_fd < 0)
-					_logger.warn("Failed to open temp upload file");
+				{
+					_logger.warn("Failed to open temp upload file " + req.upload_filename_tmp);
+					res.code = C_INTERNAL_SERVER_ERROR;
+					return (true);
+				}
 			}
 				
 			if (!req.await(EPOLLIN))
