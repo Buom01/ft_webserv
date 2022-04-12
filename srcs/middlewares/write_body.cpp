@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 21:55:09 by badam             #+#    #+#             */
-/*   Updated: 2022/04/11 23:10:19 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/12 03:39:52 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,6 +42,12 @@ class SendBodyFromFD: public AEpoll
 				return (true);
 			if (!res.response_fd)
 				return (true);
+			else if (req.method == M_HEAD)
+			{
+				nothrow_close(res.response_fd);
+				res.response_fd = 0;
+				return (true);
+			}
 			if (req.finish())
 			{
 				if (_parent::has(res.response_fd))
@@ -95,6 +101,11 @@ bool	sendBodyFromBuffer(Request &req, Response &res)
 		return (true);
 	if (!res.body.length())
 		return (true);
+	else if (req.method == M_HEAD)
+	{
+		res.sent = true;
+		return (true);
+	}
 	if (req.finish())
 		return (true);
 
