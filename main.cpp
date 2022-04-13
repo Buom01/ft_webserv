@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 	Mimetypes		*mimetypes		= new Mimetypes();
 	SendBodyFromFD	*sendBodyFromFD	= new SendBodyFromFD(server->logger);
 
-	mimetypes->add("html", "text/html");
+	mimetypes->useDefaults();
 
 	server->use(parseStartLine, F_ALL);
 	server->use(parseRequestHeaders, F_ALL);
@@ -94,17 +94,33 @@ int main(int argc, char **argv)
 		Parse::mapListens	listen 				= config.listen((*it).options);
 		Parse::stringVector	hostnames        	= config.serverName((*it).options);
 
-		if (!listen.size())
-			continue ;
-
 		serverBlockConfig.hostnames = hostnames;
 
-		for (Parse::mapListens::const_iterator it = listen.begin(); it != listen.end(); it++)
+		if (listen.size())
 		{
-			int	bound	= server->bind((*it).ipSave, (*it).portSave);
+			int	bound;
+			
+			for (Parse::mapListens::const_iterator it = listen.begin(); it != listen.end(); it++)
+			{
+				bound	= server->bind((*it).ipSave, (*it).portSave);
 
+				if (bound > 0)
+					serverBlockConfig.interfaces.push_back(bound);
+			}
+		}
+		else
+		{
+			int	bound;
+			
+			bound	= server->bind("0.0.0.0", 80);
 			if (bound > 0)
 				serverBlockConfig.interfaces.push_back(bound);
+			else
+			{
+				bound	= server->bind("0.0.0.0", 8000);
+				if (bound > 0)
+					serverBlockConfig.interfaces.push_back(bound);
+			}
 		}
 
 		for (Parse::locationsMap::const_reverse_iterator itLoc = (*it).locations.rbegin(); itLoc != (*it).locations.rend(); itLoc++)
