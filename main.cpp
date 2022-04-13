@@ -117,7 +117,8 @@ int main(int argc, char **argv)
 		Parse::mapListens	listen 				= config.listen((*it).options);
 		Parse::stringVector	hostnames			= config.serverName((*it).options);
 
-		// if no bound: continue
+		if (!listen.size())
+			continue ;
 
 		serverBlockConfig.hostnames = config.serverName((*it).options);
 

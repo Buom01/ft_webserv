@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/04/13 23:31:07 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/14 00:22:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -111,7 +111,6 @@ class   Chain
 		{
 			for (hostnames_t::const_iterator it = hostnames.begin(); it != hostnames.end(); ++it)
 			{
-				std::cout << "testing " << hostname << " against " << *it << std::endl;
 				if (*it == hostname)
 					return (true);
 			}
