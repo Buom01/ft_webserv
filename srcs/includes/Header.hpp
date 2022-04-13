@@ -172,7 +172,7 @@ class Header
 		 */
 		std::string	header(std::string key)
 		{
-			std::string temp;
+			std::string temp = "";
 			_headers_it it = find(key);
 
 			if (it != headersMap.end())

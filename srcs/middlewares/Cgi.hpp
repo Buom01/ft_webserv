@@ -13,6 +13,7 @@
 # include <sys/types.h>
 # include <sys/wait.h>
 # include <unistd.h>
+# include <stdlib.h>
 # include "Parse.hpp"
 # include "Split.hpp"
 # include "MimeType.hpp"
@@ -63,6 +64,12 @@ class cgiEnv
 					return (*it);
 			}
 			return s_environment();
+		}
+
+		void	printVariable()
+		{
+			for (std::vector<s_environment>::const_iterator it = ENV.begin(); it != ENV.end(); it++)
+				std::cout << (*it).key << "=" << (*it).value << std::endl;
 		}
 
 		/**
@@ -129,11 +136,30 @@ class CGI : public cgiEnv, public IMiddleware
 	private:
 		cgiEnv	env;
 		Parse::s_cgi _config;
+		std::string	_index;
 	public:
-		CGI(Parse::s_cgi config): _config(config) {};
+		CGI(Parse::s_cgi config, std::string index): _config(config), _index(index) {};
 		virtual ~CGI() {};
 	#pragma endregion two
 	private:
+		int stoi(std::string number)
+		{
+			std::stringstream ss;
+			int ret;
+
+			ss << number;
+			ss >> ret;
+			return ret;
+		}
+
+		std::string itos(int number)
+		{
+			std::stringstream ss;
+
+			ss << number;
+			return ss.str();
+		}
+
 		std::string convertMethod(method_t method)
 		{
 			if (method == 0)
@@ -157,11 +183,22 @@ class CGI : public cgiEnv, public IMiddleware
 			return "ALL";
 		}
 
+		std::string sval(std::string value, std::string _default)
+		{
+			std::cout << value.empty() << "---" << _default << std::endl;
+			if (value.empty())
+				return _default;
+			return value;
+		}
+
 		void	setHeader(Request &req)
 		{
 			URL _url(req.trusted_pathname);
 			#pragma region Mandatory
-				env.addVariable("CONTENT_LENGTH", req.headers.header("CONTENT_LENGTH"));
+				
+				std::cout << sval(req.headers.header("CONTENT_LENGTH"), "0") << std::endl;
+
+				env.addVariable("CONTENT_LENGTH", sval(req.headers.header("CONTENT_LENGTH"), "0"));
 				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT_TYPE"));
 				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
 				env.addVariable("PATH_INFO", req.pathname);
@@ -176,15 +213,15 @@ class CGI : public cgiEnv, public IMiddleware
 			#pragma endregion Mandatory
 			#pragma region Should
 				env.addVariable("AUTH_TYPE", (!_url.username().empty()) ? "Basic" : ENV_NULL);
-				env.addVariable("HTTP_ACCEPT", req.headers.header("HTTP_ACCEPT"));
-				env.addVariable("HTTP_ACCEPT_CHARSET", req.headers.header("HTTP_ACCEPT_CHARSET"));
-				env.addVariable("HTTP_ACCEPT_ENCODING", req.headers.header("HTTP_ACCEPT_ENCODING"));
-				env.addVariable("HTTP_ACCEPT_LANGUAGE", req.headers.header("HTTP_ACCEPT_LANGUAGE"));
-				env.addVariable("HTTP_COOKIE", req.headers.header("HTTP_COOKIE"));
-				env.addVariable("HTTP_FORWARDED", req.headers.header("HTTP_FORWARDED"));
-				env.addVariable("HTTP_HOST", req.headers.header("HTTP_HOST"));
-				env.addVariable("HTTP_PROXY_AUTHORIZATION", req.headers.header("HTTP_PROXY_AUTHORIZATION"));
-				env.addVariable("HTTP_USER_AGENT", req.headers.header("HTTP_USER_AGENT"));
+				env.addVariable("HTTP_ACCEPT", req.headers.header("ACCEPT"));
+				env.addVariable("HTTP_ACCEPT_CHARSET", req.headers.header("ACCEPT_CHARSET"));
+				env.addVariable("HTTP_ACCEPT_ENCODING", req.headers.header("ACCEPT_ENCODING"));
+				env.addVariable("HTTP_ACCEPT_LANGUAGE", req.headers.header("ACCEPT_LANGUAGE"));
+				env.addVariable("HTTP_COOKIE", req.headers.header("COOKIE"));
+				env.addVariable("HTTP_FORWARDED", req.headers.header("FORWARDED"));
+				env.addVariable("HTTP_HOST", req.headers.header("HOST"));
+				env.addVariable("HTTP_PROXY_AUTHORIZATION", req.headers.header("PROXY_AUTHORIZATION"));
+				env.addVariable("HTTP_USER_AGENT", req.headers.header("USER_AGENT"));
 				env.addVariable("REMOTE_HOST", ENV_NULL);
 			#pragma endregion Should
 			#pragma region May
@@ -204,11 +241,22 @@ class CGI : public cgiEnv, public IMiddleware
 		 */
 		int	exec(Request &req, Response &res)
 		{
+			setHeader(req);
+			printVariable();
+
+			std::cout << getVariable("CONTENT_LENGTH").value << std::endl;
+
 			FILE	*OUT = tmpfile();
+			pid_t	pid;
 			int		fdOUT = fileno(OUT);
 			int		saveSTDIN = dup(STDIN_FILENO), saveSTDOUT = dup(STDOUT_FILENO);
 			int		fd[2];
-			pid_t	pid;
+			int 	size = stoi(getVariable("CONTENT_LENGTH").value) - std::strlen(req.buff);
+
+			std::cout << "CGI - " << "One" << std::endl;
+			std::cout << "#" << getVariable("CONTENT_LENGTH").value << std::endl;
+			addVariable("CONTENT_LENGTH", itos(size));
+			std::cout << "##" << getVariable("CONTENT_LENGTH").value << std::endl;
 
 			res.code = C_OK;
 			if (pipe(fd))
@@ -219,24 +267,38 @@ class CGI : public cgiEnv, public IMiddleware
 			{
 				char* const* _null = NULL;
 
+				std::cout << "CGI - " << "Two < Start" << std::endl;
+
 				dup2(fd[0], STDIN_FILENO);
 				dup2(fdOUT, STDOUT_FILENO);
 				close(fd[0]);
 				close(fd[1]);
+
+				std::cout << "CGI - " << "Two < Middle" << std::endl;
+
 				if (execve(getVariable("SCRIPT_FILENAME").value.c_str(), _null, env.envForCGI()) == -1)
 				{
 					res.code = C_INTERNAL_SERVER_ERROR;
 					std::cout << "Status: 500\r\n";
 				}
+				std::cout << "CGI - " << "Two < End" << std::endl;
 			}
 			else
 			{
+				std::cout << "CGI - " << "Three < Start" << std::endl;
+
+				int size = stoi(getVariable("CONTENT_LENGTH").value);
+				size -= std::strlen(req.buff);
+
 				write(fd[1], req.buff, std::strlen(req.buff));
 				dup2(fd[1], req.fd);
 				close(fd[0]);
 				close(fd[1]);
 				waitpid(pid, NULL, 0);
+
+				std::cout << "CGI - " << "Three > End" << std::endl;
 			}
+			std::cout << "CGI - " << "Four" << std::endl;
 			dup2(saveSTDIN, STDIN_FILENO); dup2(saveSTDOUT, STDOUT_FILENO);
 			fclose(OUT);
 			close(saveSTDIN); close(saveSTDOUT);
@@ -247,7 +309,9 @@ class CGI : public cgiEnv, public IMiddleware
 	private:
 		std::string 	fileExtension(Request &req)
 		{
-			std::string extension = req.pathname;
+			std::string extension = req.trusted_pathname;
+			if (extension == "/")
+				extension += _index;
 			extension = extension.substr(extension.find_last_of("."));
 			return extension;
 		}
@@ -281,7 +345,6 @@ class CGI : public cgiEnv, public IMiddleware
 				res.code = C_REQUEST_TIMEOUT;
 				return (true);
 			}
-
 			std::string extension = fileExtension(req);
 			std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), extension);
 			if (it == _config.extensions.end() || !isMethod(req))
