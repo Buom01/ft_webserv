@@ -195,10 +195,7 @@ class CGI : public cgiEnv, public IMiddleware
 		{
 			URL _url(req.trusted_pathname);
 			#pragma region Mandatory
-				
-				std::cout << sval(req.headers.header("CONTENT_LENGTH"), "0") << std::endl;
-
-				env.addVariable("CONTENT_LENGTH", sval(req.headers.header("CONTENT_LENGTH"), "0"));
+				env.addVariable("CONTENT_LENGTH", sval(req.headers.header("CONTENT_LENGTH"), itos(std::strlen(req.body)))));
 				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT_TYPE"));
 				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
 				env.addVariable("PATH_INFO", req.pathname);
@@ -222,7 +219,7 @@ class CGI : public cgiEnv, public IMiddleware
 				env.addVariable("HTTP_HOST", req.headers.header("HOST"));
 				env.addVariable("HTTP_PROXY_AUTHORIZATION", req.headers.header("PROXY_AUTHORIZATION"));
 				env.addVariable("HTTP_USER_AGENT", req.headers.header("USER_AGENT"));
-				env.addVariable("REMOTE_HOST", ENV_NULL);
+				env.addVariable("REMOTE_HOST", sval(req.headers.header("REMOTE_HOST"), ENV_NULL));
 			#pragma endregion Should
 			#pragma region May
 				env.addVariable("PATH_TRANSLATED", "");
@@ -241,22 +238,14 @@ class CGI : public cgiEnv, public IMiddleware
 		 */
 		int	exec(Request &req, Response &res)
 		{
-			setHeader(req);
-			printVariable();
-
-			std::cout << getVariable("CONTENT_LENGTH").value << std::endl;
-
 			FILE	*OUT = tmpfile();
 			pid_t	pid;
 			int		fdOUT = fileno(OUT);
 			int		saveSTDIN = dup(STDIN_FILENO), saveSTDOUT = dup(STDOUT_FILENO);
 			int		fd[2];
-			int 	size = stoi(getVariable("CONTENT_LENGTH").value) - std::strlen(req.buff);
 
 			std::cout << "CGI - " << "One" << std::endl;
-			std::cout << "#" << getVariable("CONTENT_LENGTH").value << std::endl;
-			addVariable("CONTENT_LENGTH", itos(size));
-			std::cout << "##" << getVariable("CONTENT_LENGTH").value << std::endl;
+			setHeader(req); printVariable();
 
 			res.code = C_OK;
 			if (pipe(fd))
@@ -286,12 +275,7 @@ class CGI : public cgiEnv, public IMiddleware
 			else
 			{
 				std::cout << "CGI - " << "Three < Start" << std::endl;
-
-				int size = stoi(getVariable("CONTENT_LENGTH").value);
-				size -= std::strlen(req.buff);
-
-				write(fd[1], req.buff, std::strlen(req.buff));
-				dup2(fd[1], req.fd);
+				dup2(fd[1], req.body);
 				close(fd[0]);
 				close(fd[1]);
 				waitpid(pid, NULL, 0);
@@ -300,7 +284,6 @@ class CGI : public cgiEnv, public IMiddleware
 			}
 			std::cout << "CGI - " << "Four" << std::endl;
 			dup2(saveSTDIN, STDIN_FILENO); dup2(saveSTDOUT, STDOUT_FILENO);
-			fclose(OUT);
 			close(saveSTDIN); close(saveSTDOUT);
 			if (pid == 0)
 				exit(EXIT_SUCCESS);
