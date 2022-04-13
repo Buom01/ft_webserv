@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 16:28:32 by badam             #+#    #+#             */
-/*   Updated: 2022/04/07 15:13:41 by bastien          ###   ########.fr       */
+/*   Updated: 2022/04/13 22:56:49 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,11 +62,13 @@ class	Log
 			std::cout << "Server stopping..." << std::endl;
 		}
 
-		void	log(int code, std::string path, std::string infos = "")
+		void	log(int code, std::string &hostname, std::string &path, std::string infos = "")
 		{
 			std::cout
 				<< "[" << colorFromCode(code) << code << COLOR_RESET << "] "
-				<< "Got \"" << path << "\"";
+				<< "Got \"" <<
+				(hostname.length() ? (hostname + path) : path)
+				<< "\"";
 			if (infos.length())
 				std::cout << ": " << infos;
 			std::cout << std::endl;

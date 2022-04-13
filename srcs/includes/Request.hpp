@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/04/12 00:12:34 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/13 22:15:18 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,7 @@ class Request
 {
 	public:
 		struct timespec		start;
+		int					interface;
 		int					fd;
 		std::string			client_ip;
 		Log					&logger;
@@ -64,8 +65,9 @@ class Request
 		std::string 		body_boundary_end;
 		std::string 		body;
 
-		Request(int connection, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
+		Request(int connection, int _interface, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
 			start(get_time()),
+			interface(_interface),
 			fd(connection),
 			client_ip(_client_ip),
 			logger(_logger),

@@ -6,18 +6,36 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/04/12 01:05:11 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/13 23:31:07 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CHAIN_HPP
 # define CHAIN_HPP
 
+# include <string>
+# include <vector>
 # include "IMiddleware.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
 # include "Log.hpp"
 # include "File.hpp"
+
+
+typedef	std::vector<std::string>	hostnames_t;
+typedef	std::vector<int>			interfaces_t;
+
+class	ServerConfig
+{
+	public:
+		hostnames_t		hostnames;
+		interfaces_t	interfaces;
+	
+		ServerConfig() :
+			hostnames(),
+			interfaces()
+		{}
+};
 
 typedef struct	middleware_s
 {
@@ -30,6 +48,7 @@ typedef struct chain_link_s
 	chain_flag_t	flag;
 	method_t		methods;
 	std::string		pathname;
+	ServerConfig	serverConfig;
 	middleware_t	middleware;
 } chain_link_t;
 
@@ -44,8 +63,8 @@ class	RunningChain
 		chain_t::iterator	pos;
 		chain_state_t		state;
 
-		RunningChain(int connection, std::string &client_ip, uint32_t _events, bool &_alive, Log &logger, chain_t::iterator _pos):
-			req(connection, client_ip, _events, _alive, logger),
+		RunningChain(int connection, int interface, std::string &client_ip, uint32_t _events, bool &_alive, Log &logger, chain_t::iterator _pos):
+			req(connection, interface, client_ip, _events, _alive, logger),
 			res(connection, logger),
 			events(_events),
 			pos(_pos),
@@ -77,13 +96,46 @@ class   Chain
 			instance.res.logger.fail(e.what());
 		}
 
+		bool	_hasInterface(int interface, interfaces_t &interfaces)
+		{
+			for (interfaces_t::const_iterator it = interfaces.begin(); it != interfaces.end(); ++it)
+			{
+				if (*it == interface)
+					return (true);
+			}
+
+			return (false);
+		}
+
+		bool	_hasHostname(std::string &hostname, hostnames_t &hostnames)
+		{
+			for (hostnames_t::const_iterator it = hostnames.begin(); it != hostnames.end(); ++it)
+			{
+				std::cout << "testing " << hostname << " against " << *it << std::endl;
+				if (*it == hostname)
+					return (true);
+			}
+
+			return (false);
+		}
+
 		bool	_canUseLink(chain_link_t &link, Request &req, Response &res)
 		{
-			return (
-				( req.method == M_UNKNOWN || (link.methods & req.method) )
-				&& link.pathname.compare(req.pathname) <= 0
-				&& (!res.error || link.flag & F_ERROR)
-			);
+			if (link.serverConfig.interfaces.size() && !_hasInterface(req.interface, link.serverConfig.interfaces))
+				return (false);
+			if (req.hostname.length() && link.serverConfig.hostnames.size())
+			{
+				if (!_hasHostname(req.hostname, link.serverConfig.hostnames))
+					return (false);
+			}
+			if ( req.method != M_UNKNOWN && !(link.methods & req.method) )
+				return (false);
+			if ( req.pathname.length() && link.pathname.compare(req.pathname) > 0 )  // Need review
+				return (false);
+			if (res.error && !(link.flag & F_ERROR))  // Need review
+				return (false);
+
+			return (true);
 		}
 
 		void	_root_at_locationblock(chain_link_t &link, Request &req)
@@ -210,35 +262,37 @@ class   Chain
 			delete instance;
 		}
 
-		void	use(IMiddleware &middleware, chain_flag_t flag, method_t methods, std::string &pathname)
+		void	use(IMiddleware &middleware, chain_flag_t flag, method_t methods, std::string &pathname, ServerConfig &serverConfig)
 		{
 			chain_link_t	link;
 
 			link.flag = flag;
 			link.methods = methods;
 			link.pathname = pathname;
+			link.serverConfig = serverConfig;
 			link.middleware.obj = &middleware;
 			link.middleware.fct = NULL;
 
             _raw_chain.push_back(link);
 		}
 
-		void	use(bool (&middleware)(Request&, Response&), chain_flag_t flag, method_t methods, std::string &pathname)
+		void	use(bool (&middleware)(Request&, Response&), chain_flag_t flag, method_t methods, std::string &pathname, ServerConfig &serverConfig)
 		{
 			chain_link_t	link;
 
 			link.flag = flag;
 			link.methods = methods;
 			link.pathname = pathname;
+			link.serverConfig = serverConfig;
 			link.middleware.obj = NULL;
 			link.middleware.fct = &middleware;
 
             _raw_chain.push_back(link);
 		}
 		
-        RunningChain	*exec(int connection, std::string &client_ip, uint32_t events, Log &logger)
+        RunningChain	*exec(int connection, int interface, std::string &client_ip, uint32_t events, Log &logger)
         {
-            RunningChain	*instance	= new RunningChain(connection, client_ip, events, _alive, logger, _raw_chain.begin());
+            RunningChain	*instance	= new RunningChain(connection, interface, client_ip, events, _alive, logger, _raw_chain.begin());
 
 			if (!_exec_instance(*instance))
 				_running.push_back(instance);

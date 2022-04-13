@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/04/12 21:29:07 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/13 23:21:57 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,7 +56,8 @@ class	Serve
 		{
 			if (bind.fd)
 			{
-				_epoll.remove(bind.fd);
+				if (_epoll.has(bind.fd))
+					_epoll.remove(bind.fd);
 				nothrow_close(bind.fd);
 			}
 		}
@@ -97,16 +98,33 @@ class	Serve
 			return (ip);
 		}
 
+		int				_hasBind(std::string &host, uint16_t &port)
+		{
+			binds_t::iterator	it		= _binds.begin();
+
+			while (it != _binds.end())
+			{
+				if (it->port == port && it->host == host)
+					return (it->fd);
+				++it;
+			}
+
+			return (-1);
+		}
+
 	public:
-		void	bind(std::string host, uint16_t port)
+		int		bind(std::string host, uint16_t port)
 		{
 			in_addr_t			ip;
 			server_bind_t		bind;
 			int					opts	= 1;
 			std::stringstream	error;
 
+			if ((bind.fd = _hasBind(host, port)) > 0)
+				return (bind.fd);
+
 			if ((ip = _ipFromHost(host)) == INADDR_NONE)
-				return ;
+				return (-1);
 			if ((bind.fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
 				throw ServerSocketException("Socket creation failed");
 			if (setsockopt(bind.fd, SOL_SOCKET, SO_REUSEADDR, &opts, sizeof(opts)) == -1)
@@ -128,9 +146,12 @@ class	Serve
 				error << "Fail to bind " << host << " [" << bind.ip << "] to port " << port;
 				logger.fail(error.str(), errno);
 				_destroyBind(bind);
+				return (-1);
 			}
 			else
 				_binds.push_back(bind);
+			
+			return (bind.fd);
 		}
 
 		void	begin(void)
@@ -169,19 +190,19 @@ class	Serve
 			}
 		}
 
-		void	use(IMiddleware &middleware, chain_flag_t flag = F_NORMAL, method_t methods = M_ALL, std::string pathname = "")
+		void	use(IMiddleware &middleware, chain_flag_t flag = F_NORMAL, method_t methods = M_ALL, std::string pathname = "", ServerConfig serverConfig = ServerConfig())
 		{
-			_response_chain.use(middleware, flag, methods, pathname);
+			_response_chain.use(middleware, flag, methods, pathname, serverConfig);
 		}
 
-		void	use(bool (&middleware)(Request&, Response&), chain_flag_t flag = F_NORMAL, method_t methods = M_ALL, std::string pathname = "")
+		void	use(bool (&middleware)(Request&, Response&), chain_flag_t flag = F_NORMAL, method_t methods = M_ALL, std::string pathname = "", ServerConfig serverConfig = ServerConfig())
 		{
-			_response_chain.use(middleware, flag, methods, pathname);
+			_response_chain.use(middleware, flag, methods, pathname, serverConfig);
 		}
 
-		RunningChain	*exec(int connection, std::string client_ip, uint32_t events)
+		RunningChain	*exec(int connection, int interface, std::string client_ip, uint32_t events)
 		{
-			return (_response_chain.exec(connection, client_ip, events, logger));
+			return (_response_chain.exec(connection, interface, client_ip, events, logger));
 		}
 
 		bool	retake(RunningChain *instance, uint32_t events)
@@ -239,7 +260,7 @@ class	Serve
 						{
 							try
 							{
-								chainInstance = exec(connection, inet_ntoa(client_ip.sin_addr), 0);
+								chainInstance = exec(connection, data.fd, inet_ntoa(client_ip.sin_addr), 0);
 								
 								if (chainInstance)
 									_epoll.add(connection, ET_CONNECTION, chainInstance);
