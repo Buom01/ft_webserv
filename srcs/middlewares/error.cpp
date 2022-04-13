@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/21 01:02:06 by badam             #+#    #+#             */
-/*   Updated: 2022/04/12 03:06:18 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/13 22:43:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -270,8 +270,11 @@ class Error: public AEpoll
 				if (
 					(res.code >= 300 && (res.code != 304 && res.code != 305 && res.code != 306) && res.body.length() == 0 && res.response_fd <= 0)
 					|| (res.code >= 400)
+					|| res.code == C_UNKNOWN
 				)
 				{
+					if (res.code == C_UNKNOWN)
+						res.code = C_NOT_IMPLEMENTED;
 					if (res.response_fd > 0)
 					{
 						nothrow_close(res.response_fd);
