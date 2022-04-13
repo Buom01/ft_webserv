@@ -11,11 +11,12 @@
 #include "remover.cpp"
 #include "Cgi.hpp"
 #include "Response.hpp"
-#include "readToTrashbin.cpp"
+//#include "readToTrashbin.cpp"
 #include "write_headers.cpp"
 #include "write_body.cpp"
 #include "forbidden.cpp"
 #include "mimetypes.cpp"
+
 
 Serve	*server;
 
@@ -113,14 +114,17 @@ int main(int argc, char **argv)
 	for (Parse::serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
 		ServerConfig		serverBlockConfig;
-		Parse::s_listen		bind 				= config.listen((*it).options);
+		Parse::mapListens	listen 				= config.listen((*it).options);
 		Parse::stringVector	hostnames			= config.serverName((*it).options);
 
 		// if no bound: continue
 
 		serverBlockConfig.hostnames = config.serverName((*it).options);
+
+		for (Parse::mapListens::const_iterator it = listen.begin(); it != listen.end(); it++)
 		{
-			int bound = server->bind(bind.ipSave, bind.portSave);
+			int	bound	= server->bind((*it).ipSave, (*it).portSave);
+
 			if (bound > 0)
 				serverBlockConfig.interfaces.push_back(bound);
 		}
@@ -163,7 +167,7 @@ int main(int argc, char **argv)
 
 			if (getCgi.isDefined)
 			{
-				CGI *_cgi = new CGI(getCgi);
+				CGI *_cgi = new CGI(getCgi, getIndex);
 				server->use(*_cgi, F_NORMAL, method(getCgi.allow), location_name, serverBlockConfig);
 				cgiMiddlewares.push_back(_cgi);
 			}
@@ -203,7 +207,7 @@ int main(int argc, char **argv)
 	server->use(*mimetypes, F_ALL);
 	server->use(addResponseHeaders, F_ALL);
 	server->use(serializeHeaders, F_ALL);
-	server->use(readToTrashbin, F_ALL);
+	// server->use(readToTrashbin, F_ALL);
 	server->use(sendHeader, F_ALL);
 	server->use(sendBodyFromBuffer, F_ALL);
 	server->use(*sendBodyFromFD, F_ALL);
@@ -228,6 +232,11 @@ int main(int argc, char **argv)
 
 
 	#pragma region Middlewares cleanup 
+
+	/*for (std::vector<Body *>::iterator it = bodyMiddlewares.begin(); it != bodyMiddlewares.end(); it++)
+	{
+		delete (*it);
+	}*/
 
 	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
 		delete (*it);

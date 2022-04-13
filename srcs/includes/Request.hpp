@@ -57,7 +57,12 @@ class Request
 		std::string			upload_fd_buff;
 		std::string			upload_filename;
 		std::string			upload_filename_tmp;
-		
+
+		size_t				body_chunksize;
+		size_t				body_remainingsize;
+		ssize_t				body_length;
+		std::string 		body_boundary;
+		std::string 		body;
 
 		Request(int connection, int _interface, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
 			start(get_time()),
@@ -86,7 +91,12 @@ class Request
 			upload_fd(0),
 			upload_fd_buff(""),
 			upload_filename(""),
-			upload_filename_tmp("")
+			upload_filename_tmp(""),
+
+			body_chunksize(1024),
+			body_remainingsize(0),
+			body_length(0),
+			body("")
 		{
 			bzero(&buff, sizeof(buff));
 		}
