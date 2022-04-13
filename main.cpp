@@ -115,12 +115,12 @@ int main(int argc, char **argv)
 	{
 		ServerConfig		serverBlockConfig;
 		Parse::mapListens	listen 				= config.listen((*it).options);
-		Parse::stringVector	hostnames			= config.serverName((*it).options);
+		Parse::stringVector	hostnames        	= config.serverName((*it).options);
 
 		if (!listen.size())
 			continue ;
 
-		serverBlockConfig.hostnames = config.serverName((*it).options);
+		serverBlockConfig.hostnames = hostnames;
 
 		for (Parse::mapListens::const_iterator it = listen.begin(); it != listen.end(); it++)
 		{
