@@ -821,6 +821,7 @@ class Parse : public ParseTypedef
 
 			for (serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 			{
+				checkServer.clear();
 				if (!defaultLocation)
 				{
 					allow((*it).options);
@@ -836,6 +837,17 @@ class Parse : public ParseTypedef
 				tempServer = serverName((*it).options);
 				for (std::vector<std::string>::const_iterator itC = tempServer.begin(); itC != tempServer.end(); itC++)
 					checkServer.push_back(*itC);
+				for (std::vector<std::string>::const_iterator it = checkServer.begin(); it != checkServer.end(); it++)
+				{
+					count = std::count(checkServer.begin(), checkServer.end(), *it);
+					if (count > 1)
+					{
+						std::string c = "rule 'server_name': ";
+						c += *it;
+						c += " has several definitions and therefore cannot work properly";
+						throw IncorrectConfig(c.c_str());
+					}
+				}
 				checkListen.push_back(listen((*it).options));
 				if (!((*it).locations.empty()))
 				{
@@ -851,17 +863,6 @@ class Parse : public ParseTypedef
 						root((*itLoc).second, !(defaultLocation && (*itLoc).first == "/"));
 						upload((*it).options);
 					}
-				}
-			}
-			for (std::vector<std::string>::const_iterator it = checkServer.begin(); it != checkServer.end(); it++)
-			{
-				count = std::count(checkServer.begin(), checkServer.end(), *it);
-				if (count > 1)
-				{
-					std::string c = "rule 'server_name': ";
-					c += *it;
-					c += " has several definitions and therefore cannot work properly";
-					throw IncorrectConfig(c.c_str());
 				}
 			}
 			
