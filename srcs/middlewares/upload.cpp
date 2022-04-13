@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 21:55:09 by badam             #+#    #+#             */
-/*   Updated: 2022/04/12 03:24:08 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/12 22:57:34 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -138,6 +138,24 @@ class Upload: public AEpoll
 				_parent::setup(req.upload_fd, ET_BODY, NULL, EPOLLOUT);
 			if (!_parent::await(req.upload_fd, EPOLLOUT))
 				return (false);
+
+			if (write_ret != 0 && strlen(req.buff))
+			{
+				ssize_t	new_len;
+
+				write_ret	= write(req.upload_fd, req.buff, strlen(req.buff));
+				new_len		= static_cast<ssize_t>(strlen(req.buff)) - write_ret;
+				if (write_ret > 0)
+				{
+					memmove(req.buff, req.buff + write_ret, new_len);
+					req.buff[new_len + 1] = '\0';
+				}
+				if (new_len)
+				{
+					_parent::clear_events(req.upload_fd, EPOLLOUT);
+					return (false);	
+				}
+			}
 			
 			while (read_ret != 0 || write_ret != 0)
 			{

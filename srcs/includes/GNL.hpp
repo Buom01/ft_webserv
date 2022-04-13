@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/12/04 17:06:14 by badam             #+#    #+#             */
-/*   Updated: 2021/07/27 20:45:58 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/12 22:10:42 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -133,8 +133,11 @@ int		get_next_line_string(int fd, std::string &line, char *buff, size_t size)
 	char	*c_line;
 
 	ret = get_next_line(fd, &c_line, buff, size);
-	line = c_line;
-	free(c_line);
+	if (c_line)
+	{
+		line = std::string(c_line);
+		free(c_line);
+	}
 
 	return (ret);
 }

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/03/30 04:52:29 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/12 21:29:07 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -231,6 +231,7 @@ class	Serve
 					bzero(&client_ip, sizeof(client_ip));
 
 					connection		= ::accept(data.fd, (struct sockaddr *)(&client_ip), (socklen_t *)(&client_ip_len));
+					fcntl(connection, F_SETFL, O_NONBLOCK);
 
 					if (connection >= 0)
 					{
