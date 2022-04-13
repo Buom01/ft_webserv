@@ -17,6 +17,8 @@
 #include "forbidden.cpp"
 #include "mimetypes.cpp"
 
+#include "body.cpp"
+
 std::vector<Serve *>	serversApp;
 
 void	stop_signal(int)
@@ -57,6 +59,8 @@ int main(int argc, char **argv)
 	Parse					config;
 	Parse::serversVector	servers;
 	Parse::locationsMap		locations;
+
+	std::vector<Body *>				bodyMiddlewares;
 
 	std::vector<Eject *>			ejectMiddlewares;
 	std::vector<Upload *>			uploadMiddlewares;
@@ -108,6 +112,7 @@ int main(int argc, char **argv)
 		Error			*fallbackError	= new Error(server->logger);
 		Mimetypes		*mimetypes		= new Mimetypes();
 		SendBodyFromFD	*sendBodyFromFD	= new SendBodyFromFD(server->logger);
+		Body 			*readBody		= new Body(server->logger);
 
 		mimetypes->add("html", "text/html");
 
@@ -115,9 +120,11 @@ int main(int argc, char **argv)
 		std::vector<std::string> server_name	= config.serverName((*it).options);
 		
 		server->bind(bind.ipSave, bind.portSave);
-
 		server->use(parseStartLine, F_ALL);
 		server->use(parseRequestHeaders, F_ALL);
+		
+		server->use(*readBody, F_ALL);
+		
 		server->use(*preEject, F_ALL);
 
 		for (Parse::locationsMap::const_reverse_iterator itLoc = (*it).locations.rbegin(); itLoc != (*it).locations.rend(); itLoc++)
@@ -204,6 +211,9 @@ int main(int argc, char **argv)
 		server->use(*sendBodyFromFD, F_ALL);
 		server->begin();
 		serversApp.push_back(server);
+
+		bodyMiddlewares.push_back(readBody);
+		
 		ejectMiddlewares.push_back(preEject);
 		errorMiddlewares.push_back(fallbackError);
 		mimetypesMiddlewares.push_back(mimetypes);
@@ -237,6 +247,11 @@ int main(int argc, char **argv)
 	#pragma endregion Run server
 
 	#pragma region Middlewares cleanup 
+
+	for (std::vector<Body *>::iterator it = bodyMiddlewares.begin(); it != bodyMiddlewares.end(); it++)
+	{
+		delete (*it);
+	}
 
 	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
 	{

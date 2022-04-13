@@ -194,8 +194,14 @@ class CGI : public cgiEnv, public IMiddleware
 		void	setHeader(Request &req)
 		{
 			URL _url(req.trusted_pathname);
+			
+			fseek(req.body_file, 0, SEEK_END);
+			int lengthOfBody = ftell(req.body_file);
+			fseek(req.body_file, 0, SEEK_SET);
+			
 			#pragma region Mandatory
-				env.addVariable("CONTENT_LENGTH", sval(req.headers.header("CONTENT_LENGTH"), itos(std::strlen(req.body)))));
+				env.addVariable("CONTENT_LENGTH", sval(req.headers.header("CONTENT_LENGTH"), itos(lengthOfBody)));
+
 				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT_TYPE"));
 				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
 				env.addVariable("PATH_INFO", req.pathname);
@@ -275,7 +281,7 @@ class CGI : public cgiEnv, public IMiddleware
 			else
 			{
 				std::cout << "CGI - " << "Three < Start" << std::endl;
-				dup2(fd[1], req.body);
+				dup2(fd[1], req.body_fd);
 				close(fd[0]);
 				close(fd[1]);
 				waitpid(pid, NULL, 0);

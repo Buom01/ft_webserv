@@ -1,18 +1,5 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   upload.cpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/02/17 21:55:09 by badam             #+#    #+#             */
-/*   Updated: 2022/04/12 22:57:34 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#ifndef __UPLOAD_CPP
-# define __UPLOAD_CPP
-
+#ifndef __BODY_CPP
+# define __BODY_CPP
 # include "Request.hpp"
 # include "Response.hpp"
 # include "Serve.hpp"
@@ -27,7 +14,7 @@ class Body: public AEpoll
 	protected:
 		Log		&_logger;
 
-		typedef struct s_body {
+		struct s_body {
 			FILE	*file;
 			int		fd;
 		};
@@ -90,6 +77,9 @@ class Body: public AEpoll
 			ssize_t	read_ret							= -1;
 			ssize_t	write_ret							= -1;
 			
+			req.body_fd = body.fd;
+			req.body_file = body.file;
+
 			if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
 				return (true);
 			if (res.response_fd > 0 || res.body.length() > 0)
@@ -97,24 +87,18 @@ class Body: public AEpoll
 
 			if (req.finish())
 			{
-				if (req.body)
-				{
-					if (_parent::has(req.body))
-						_parent::cleanup(req.body);
-					nothrow_close(req.body);
-					req.body = 0;
-				}
+				fseek(req.body_file, 0, SEEK_SET);
 				return (true);
 			}
 
-			if (!req.body)
+			if (!req.body_fd)
 			{
 				if (!_get_contentlength(req, res))
 					return (true);
 				if (!_eject_contentrange(req, res))
 					return (true);
 				
-				if (req.body < 0)
+				if (req.body_fd < 0)
 				{
 					_logger.warn("Failed to open temp body file");
 					res.code = C_INTERNAL_SERVER_ERROR;
@@ -124,16 +108,16 @@ class Body: public AEpoll
 				
 			if (!req.await(EPOLLIN))
 				return (false);
-			if (!_parent::has(req.body))
-				_parent::setup(req.body, ET_BODY, NULL, EPOLLOUT);
-			if (!_parent::await(req.body, EPOLLOUT))
+			if (!_parent::has(req.body_fd))
+				_parent::setup(req.body_fd, ET_BODY, NULL, EPOLLOUT);
+			if (!_parent::await(req.body_fd, EPOLLOUT))
 				return (false);
 
 			if (write_ret != 0 && strlen(req.buff))
 			{
 				ssize_t	new_len;
 
-				write_ret	= write(req.body, req.buff, strlen(req.buff));
+				write_ret	= write(req.body_fd, req.buff, strlen(req.buff));
 				new_len		= static_cast<ssize_t>(strlen(req.buff)) - write_ret;
 				if (write_ret > 0)
 				{
@@ -142,19 +126,19 @@ class Body: public AEpoll
 				}
 				if (new_len)
 				{
-					_parent::clear_events(req.body, EPOLLOUT);
+					_parent::clear_events(req.body_fd, EPOLLOUT);
 					return (false);	
 				}
 			}
 			
 			while (read_ret != 0 || write_ret != 0)
 			{
-				write_ret = write(req.body, req.body_buff.c_str(), req.body_buff.length());
+				write_ret = write(req.body_fd, req.body_buff.c_str(), req.body_buff.length());
 				if (write_ret > 0)
 					req.body_buff.erase(0, write_ret);
 				if (req.body_buff.length())
 				{
-					_parent::clear_events(req.body, EPOLLOUT);
+					_parent::clear_events(req.body_fd, EPOLLOUT);
 					return (false);
 				}
 
@@ -169,15 +153,14 @@ class Body: public AEpoll
 				req.body_buff.append(read_buffer, read_ret);
 			}
 
-			_parent::cleanup(req.body);
-			/*nothrow_close(req.body);
-			req.body = 0;
+			_parent::cleanup(req.body_fd);
+			nothrow_close(req.body_fd);
+			req.body_fd = 0;
 			
-			if (req.body.st_nlink == 0)
+			if (req.body_fd == 0)
 				res.code = C_NO_CONTENT;
 			else
 				res.code = C_CREATED;
-			*/
 			return (true);
 		}
 

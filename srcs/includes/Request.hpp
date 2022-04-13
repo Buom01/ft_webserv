@@ -57,7 +57,8 @@ class Request
 		std::string			upload_filename;
 		std::string			upload_filename_tmp;
 
-		int					body;
+		FILE				*body_file;
+		int					body_fd;
 		size_t				body_chunksize;
 		size_t				body_remainingsize;
 		std::string			body_buff;
@@ -90,7 +91,8 @@ class Request
 			upload_filename(""),
 			upload_filename_tmp(""),
 
-			body(0),
+			body_file(),
+			body_fd(0),
 			body_chunksize(1024),
 			body_remainingsize(0),
 			body_buff("")
