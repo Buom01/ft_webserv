@@ -781,10 +781,10 @@ class Parse : public ParseTypedef
 			return concatPath(configDirectory, Regex.match()[0].occurence);
 		}
 
-		std::vector<std::string> serverName(optionsMap vec)
+		stringVector serverName(optionsMap vec)
 		{
-			stringVector				get = findKey("server_name", vec);
-			std::vector<std::string>	ret;
+			stringVector	get = findKey("server_name", vec);
+			stringVector	ret;
 
 			if (get[0] == NO_KEY)
 				ret.push_back("localhost");
