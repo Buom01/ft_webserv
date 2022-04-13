@@ -61,6 +61,7 @@ class Request
 		size_t				body_remainingsize;
 		ssize_t				body_length;
 		std::string 		body_boundary;
+		std::string 		body_boundary_end;
 		std::string 		body;
 
 		Request(int connection, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
@@ -94,6 +95,8 @@ class Request
 			body_chunksize(1024),
 			body_remainingsize(0),
 			body_length(0),
+			body_boundary(""),
+			body_boundary_end(""),
 			body("")
 		{
 			bzero(&buff, sizeof(buff));

@@ -108,6 +108,7 @@ int main(int argc, char **argv)
 	for (Parse::serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
 		Parse::mapListens	listen 			= config.listen((*it).options);
+		Parse::stringVector	server_name		= config.serverName((*it).options);
 		Serve				*server			= new Serve();
 		Eject				*preEject		= new Eject(-1);
 		Error				*fallbackError	= new Error(server->logger);
@@ -117,8 +118,9 @@ int main(int argc, char **argv)
 
 		mimetypes->add("html", "text/html");
 
-		std::vector<std::string> server_name	= config.serverName((*it).options);
-		
+		for (Parse::stringVector::const_iterator it = server_name.begin(); it != server_name.end(); it++)
+			std::cout << *it << std::endl;
+
 		for (Parse::mapListens::const_iterator it = listen.begin(); it != listen.end(); it++)
 			server->bind((*it).ipSave, (*it).portSave);
 
@@ -140,8 +142,7 @@ int main(int argc, char **argv)
 			Parse::s_cgi						getCgi = config.cgi((*itLoc).second);
 			std::pair<std::string, std::string>	getUpload = config.upload((*itLoc).second);
 			method_t 							methods = method(getAllow);
-
-			std::string	location_name = (*itLoc).first;
+			std::string							location_name = (*itLoc).first;
 
 			if (getAllow.isDefined)
 				server->use(forbidden_method, F_ALL, static_cast<method_t>(~(methods)), location_name);
