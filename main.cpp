@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include "Parse.hpp"
 #include "Serve.hpp"
+#include "utils.hpp"
 #include "Static.cpp"
 #include "error.cpp"
 #include "read.cpp"
@@ -24,30 +25,6 @@ void	stop_signal(int)
 {
 	if (server->alive())
 		server->stop();
-}
-
-method_t method(Parse::s_allow allow)
-{
-	method_t ret = M_UNKNOWN;
-	if (allow.GET)
-		ret = static_cast<method_t>(ret | M_GET);
-	if (allow.HEAD)
-		ret = static_cast<method_t>(ret | M_HEAD);
-	if (allow.POST)
-		ret = static_cast<method_t>(ret | M_POST);
-	if (allow.PUT)
-		ret = static_cast<method_t>(ret | M_PUT);
-	if (allow.DELETE)
-		ret = static_cast<method_t>(ret | M_DELETE);
-	if (allow.CONNECT)
-		ret = static_cast<method_t>(ret | M_CONNECT);
-	if (allow.OPTIONS)
-		ret = static_cast<method_t>(ret | M_OPTIONS);
-	if (allow.TRACE)
-		ret = static_cast<method_t>(ret | M_TRACE);
-	if (allow.ALL)
-		ret = static_cast<method_t>(ret | M_ALL);
-	return ret;
 }
 
 int main(int argc, char **argv)
