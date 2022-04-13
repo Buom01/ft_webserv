@@ -1,6 +1,6 @@
 #ifndef __PARSE
 # define __PARSE
-# define REGEX_SIZE 13
+# define REGEX_SIZE 14
 # define NO_KEY "NO_KEY"
 # include <algorithm>
 # include <iostream>
@@ -20,6 +20,7 @@
 # include "nullptr_t.hpp"
 # include "Split.hpp"
 # include "File.hpp"
+# include "http.hpp"
 
 struct s_defineRegex
 {
@@ -39,6 +40,7 @@ struct s_defineRegex
 	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\/.*);[ \t]*$", false },
 	{ "index", "^[ \t]*index[ \t]+(.*);[ \t]*$", true },
 	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", true },
+	{ "return", "^[ \t]*return[ \t]+([a-zA-Z0-9_.\\/]+)[ \t]+(.*);[ \t]*$", true },
 	{ "root", "^[ \t]*root[ \t]+(\\.?\\/.*);[ \t]*$", true },
 	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);[ \t]*$", true },
 	{ "upload", "^[ \t]*upload[ \t]+(\\.?\\/[-a-zA-Z0-9_\\/._]+)([ \t]+([\\/.][-a-zA-Z0-9_\\/._]+))?;[ \t]*$", true}
@@ -62,32 +64,18 @@ struct ParseTypedef
 	typedef std::map<int, std::string>				mapErrors;
 	bool											isDefaultLocation;
 
-	/**
-	 * @param GET (bool), false by default
-	 * @param PUT (bool), false by default
-	 * @param POST (bool), false by default
-	 * @param DELETE (bool), false by default
-	 */
 	struct s_allow
 	{
 		bool isDefined;
 		bool GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, ALL;
 	};
 
-	/**
-	 * @param active (bool), false by default
-	 */
 	struct s_autoindex
 	{
 		bool isDefined;
 		bool active;
 	};
 
-	/**
-	 * @param extensions (std::vector<<std::string>>), file extensions
-	 * @param path (std::string), path of executable
-	 * @param methods (s_allow), accepted HTTP request methods
-	 */
 	struct s_cgi
 	{
 		bool						isDefined;
@@ -96,27 +84,25 @@ struct ParseTypedef
 		s_allow						allow;
 	};
 
-	/**
-	 * @param (int) bit size
-	 * @param (int) size of buffer, converted from bit to char size (1 for 4)
-	 */
 	struct s_clientBodyBufferSize
 	{
 		bool	isDefined;
 		size_t	bits;
 		size_t	size;
 	};
-
-	/**
-	 * @param ip (uint32_t), INADDR_ANY by default
-	 * @param port (uint16_t), 80 by default
-	 */
+	
 	struct s_listen
 	{
 		uint32_t	ip;
 		uint16_t	port;
 		std::string ipSave;
 		int			portSave;
+	};
+
+	struct	s_return
+	{
+		http_code_t	code;
+		std::string	url;
 	};
 
 	class	IncorrectConfig : virtual public std::exception
@@ -733,6 +719,35 @@ class Parse : public ParseTypedef
 			return ret;
 		}
 
+		s_return	_return(optionsMap vec)
+		{
+			stringVector	get = findKey("return", vec);
+			s_return		ret;
+
+			ret.code = C_UNKNOWN;
+			ret.url = "";
+			if (get[0] != NO_KEY)
+			{
+				int number = std::atoi(get[0].c_str());
+				if (number == C_UNKNOWN ||
+				(number >= C_CONTINUE && number <= C_SWITCHING_PROTOCOLS) ||
+				(number >= C_OK && number <= C_PARTIAL_CONTENT) ||
+				(number >= C_MULTIPLE_CHOICE && number <= C_PERMANENT_REDIRECT && number != 306) ||
+				(number >= C_BAD_REQUEST && number <= C_IM_A_TEAPOT) ||
+				(number >= C_INTERNAL_SERVER_ERROR && number <= C_HTTP_VERSION_NOT_SUPPORTED))
+					ret.code = static_cast<http_code_t>(number);
+				else
+				{
+					std::string c = "rule 'return': http code ";
+					c += get[0].c_str();
+					c += " is incorrect";
+					throw IncorrectConfig(c.c_str());
+				}
+				ret.url = get[1];
+			}
+			return ret;
+		}
+
 		std::string root(optionsMap vec, bool optional = false)
 		{
 			stringVector	get = findKey("root", vec);
@@ -799,6 +814,7 @@ class Parse : public ParseTypedef
 					cgi((*it).options);
 					errorPage((*it).options);
 					index((*it).options);
+					_return((*it).options);
 					root((*it).options, false);
 					upload((*it).options);
 				}
@@ -817,6 +833,7 @@ class Parse : public ParseTypedef
 						clientBodyBufferSize((*itLoc).second);
 						errorPage((*itLoc).second);
 						index((*itLoc).second);
+						_return((*itLoc).second);
 						root((*itLoc).second, !(defaultLocation && (*itLoc).first == "/"));
 						upload((*it).options);
 					}

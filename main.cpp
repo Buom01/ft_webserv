@@ -11,7 +11,7 @@
 #include "remover.cpp"
 #include "Cgi.hpp"
 #include "Response.hpp"
-#include "readToTrashbin.cpp"
+//#include "readToTrashbin.cpp"
 #include "write_headers.cpp"
 #include "write_body.cpp"
 #include "forbidden.cpp"
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 		server->use(*mimetypes, F_ALL);
 		server->use(addResponseHeaders, F_ALL);
 		server->use(serializeHeaders, F_ALL);
-		server->use(readToTrashbin, F_ALL);
+		//server->use(readToTrashbin, F_ALL);
 		server->use(sendHeader, F_ALL);
 		server->use(sendBodyFromBuffer, F_ALL);
 		server->use(*sendBodyFromFD, F_ALL);
