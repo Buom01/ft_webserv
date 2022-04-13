@@ -57,11 +57,11 @@ class Request
 		std::string			upload_filename;
 		std::string			upload_filename_tmp;
 
-		FILE				*body_file;
-		int					body_fd;
 		size_t				body_chunksize;
 		size_t				body_remainingsize;
-		std::string			body_buff;
+		ssize_t				body_length;
+		std::string 		body_boundary;
+		std::string 		body;
 
 		Request(int connection, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
 			start(get_time()),
@@ -91,11 +91,10 @@ class Request
 			upload_filename(""),
 			upload_filename_tmp(""),
 
-			body_file(),
-			body_fd(0),
 			body_chunksize(1024),
 			body_remainingsize(0),
-			body_buff("")
+			body_length(0),
+			body("")
 		{
 			bzero(&buff, sizeof(buff));
 		}

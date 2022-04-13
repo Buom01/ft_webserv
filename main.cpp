@@ -17,7 +17,7 @@
 #include "forbidden.cpp"
 #include "mimetypes.cpp"
 
-#include "body.cpp"
+//#include "body.cpp"
 
 std::vector<Serve *>	serversApp;
 
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 	Parse::serversVector	servers;
 	Parse::locationsMap		locations;
 
-	std::vector<Body *>				bodyMiddlewares;
+	//std::vector<Body *>				bodyMiddlewares;
 
 	std::vector<Eject *>			ejectMiddlewares;
 	std::vector<Upload *>			uploadMiddlewares;
@@ -107,23 +107,25 @@ int main(int argc, char **argv)
 
 	for (Parse::serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
-		Serve			*server			= new Serve();
-		Eject			*preEject		= new Eject(-1);
-		Error			*fallbackError	= new Error(server->logger);
-		Mimetypes		*mimetypes		= new Mimetypes();
-		SendBodyFromFD	*sendBodyFromFD	= new SendBodyFromFD(server->logger);
-		Body 			*readBody		= new Body(server->logger);
+		Parse::mapListens	listen 			= config.listen((*it).options);
+		Serve				*server			= new Serve();
+		Eject				*preEject		= new Eject(-1);
+		Error				*fallbackError	= new Error(server->logger);
+		Mimetypes			*mimetypes		= new Mimetypes();
+		SendBodyFromFD		*sendBodyFromFD	= new SendBodyFromFD(server->logger);
+		//Body 				*readBody		= new Body(server->logger);
 
 		mimetypes->add("html", "text/html");
 
-		Parse::s_listen bind 					= config.listen((*it).options);
 		std::vector<std::string> server_name	= config.serverName((*it).options);
 		
-		server->bind(bind.ipSave, bind.portSave);
+		for (Parse::mapListens::const_iterator it = listen.begin(); it != listen.end(); it++)
+			server->bind((*it).ipSave, (*it).portSave);
+
 		server->use(parseStartLine, F_ALL);
 		server->use(parseRequestHeaders, F_ALL);
 		
-		server->use(*readBody, F_ALL);
+		//server->use(*readBody, F_ALL);
 		
 		server->use(*preEject, F_ALL);
 
@@ -212,7 +214,7 @@ int main(int argc, char **argv)
 		server->begin();
 		serversApp.push_back(server);
 
-		bodyMiddlewares.push_back(readBody);
+		//bodyMiddlewares.push_back(readBody);
 		
 		ejectMiddlewares.push_back(preEject);
 		errorMiddlewares.push_back(fallbackError);
@@ -248,10 +250,10 @@ int main(int argc, char **argv)
 
 	#pragma region Middlewares cleanup 
 
-	for (std::vector<Body *>::iterator it = bodyMiddlewares.begin(); it != bodyMiddlewares.end(); it++)
+	/*for (std::vector<Body *>::iterator it = bodyMiddlewares.begin(); it != bodyMiddlewares.end(); it++)
 	{
 		delete (*it);
-	}
+	}*/
 
 	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
 	{

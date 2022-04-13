@@ -195,12 +195,12 @@ class CGI : public cgiEnv, public IMiddleware
 		{
 			URL _url(req.trusted_pathname);
 			
-			fseek(req.body_file, 0, SEEK_END);
+			/*fseek(req.body_file, 0, SEEK_END);
 			int lengthOfBody = ftell(req.body_file);
-			fseek(req.body_file, 0, SEEK_SET);
+			fseek(req.body_file, 0, SEEK_SET);*/
 			
 			#pragma region Mandatory
-				env.addVariable("CONTENT_LENGTH", sval(req.headers.header("CONTENT_LENGTH"), itos(lengthOfBody)));
+				env.addVariable("CONTENT_LENGTH", sval(req.headers.header("CONTENT_LENGTH"), itos(0)));
 
 				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT_TYPE"));
 				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
@@ -244,7 +244,8 @@ class CGI : public cgiEnv, public IMiddleware
 		 */
 		int	exec(Request &req, Response &res)
 		{
-			FILE	*OUT = tmpfile();
+			(void)req; (void)res;
+			/*FILE	*OUT = tmpfile();
 			pid_t	pid;
 			int		fdOUT = fileno(OUT);
 			int		saveSTDIN = dup(STDIN_FILENO), saveSTDOUT = dup(STDOUT_FILENO);
@@ -293,7 +294,8 @@ class CGI : public cgiEnv, public IMiddleware
 			close(saveSTDIN); close(saveSTDOUT);
 			if (pid == 0)
 				exit(EXIT_SUCCESS);
-			return fdOUT;
+			return fdOUT;*/
+			return 1;
 		}
 	private:
 		std::string 	fileExtension(Request &req)

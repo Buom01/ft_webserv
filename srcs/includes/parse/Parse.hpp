@@ -39,7 +39,7 @@ struct s_defineRegex
 	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);[ \t]*$", true },
 	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\/.*);[ \t]*$", false },
 	{ "index", "^[ \t]*index[ \t]+(.*);[ \t]*$", true },
-	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", true },
+	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", false },
 	{ "return", "^[ \t]*return[ \t]+([a-zA-Z0-9_.\\/]+)[ \t]+(.*);[ \t]*$", true },
 	{ "root", "^[ \t]*root[ \t]+(\\.?\\/.*);[ \t]*$", true },
 	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);[ \t]*$", true },
@@ -48,22 +48,6 @@ struct s_defineRegex
 
 struct ParseTypedef
 {
-	typedef std::vector<std::string>				stringVector;
-	typedef std::pair<std::string, stringVector>	pairOptions;
-	typedef std::map<std::string, stringVector>		optionsMap;
-	typedef std::pair<std::string, optionsMap>		pairLocations;
-	typedef std::map<std::string, optionsMap>		locationsMap;
-	struct s_server
-	{
-		int				id;
-		optionsMap		options;
-		locationsMap	locations;
-		s_server() : id(-1) {};
-	};
-	typedef std::vector<s_server>					serversVector;
-	typedef std::map<int, std::string>				mapErrors;
-	bool											isDefaultLocation;
-
 	struct s_allow
 	{
 		bool isDefined;
@@ -104,6 +88,23 @@ struct ParseTypedef
 		http_code_t	code;
 		std::string	url;
 	};
+
+	typedef std::vector<std::string>				stringVector;
+	typedef std::pair<std::string, stringVector>	pairOptions;
+	typedef std::vector<pairOptions>				optionsMap;
+	typedef std::pair<std::string, optionsMap>		pairLocations;
+	typedef std::map<std::string, optionsMap>		locationsMap;
+	struct s_server
+	{
+		int				id;
+		optionsMap		options;
+		locationsMap	locations;
+		s_server() : id(-1) {};
+	};
+	typedef std::vector<s_server>					serversVector;
+	typedef std::map<int, std::string>				mapErrors;
+	typedef std::vector<s_listen>					mapListens;
+	bool											isDefaultLocation;
 
 	class	IncorrectConfig : virtual public std::exception
 	{
@@ -239,9 +240,9 @@ class Parse : public ParseTypedef
 							}
 						}
 						if (isLocationBlock)
-							locationTemp.second.insert(newPair);
+							locationTemp.second.push_back(newPair);
 						else
-							serverTemp.options.insert(newPair);
+							serverTemp.options.push_back(newPair);
 					}
 					break;
 				}
@@ -260,7 +261,7 @@ class Parse : public ParseTypedef
 				{
 					if ((*itConf).first == "listen" || (*itConf).first == "server_name" || (*itConf).first == "client_body_buffer_size")
 						continue;
-					root.second.insert((*itConf));
+					root.second.push_back((*itConf));
 					(*it).options.erase(itConf);
 					itConf = (*it).options.begin();
 				}
@@ -629,9 +630,9 @@ class Parse : public ParseTypedef
 					for (size_t x = 0; x < Regex.size(); x++)
 					{
 						expand.exec(Regex.match()[x].occurence, "^([0-9]|x)([0-9]|x)([0-9]|x)$", GLOBAL_FLAG);
-						hundred = (expand.match()[0].occurence != "x") ? std::atoi(expand.match()[0].occurence.c_str()) : -1;
-						ten =  (expand.match()[1].occurence != "x") ? std::atoi(expand.match()[1].occurence.c_str()) : -1;
-						unit =  (expand.match()[2].occurence != "x") ? std::atoi(expand.match()[2].occurence.c_str()) : -1;
+						hundred	= (expand.match()[0].occurence != "x") ? std::atoi(expand.match()[0].occurence.c_str()) : -1;
+						ten 	= (expand.match()[1].occurence != "x") ? std::atoi(expand.match()[1].occurence.c_str()) : -1;
+						unit 	= (expand.match()[2].occurence != "x") ? std::atoi(expand.match()[2].occurence.c_str()) : -1;
 						if (hundred != -1 && ten != -1 && unit != -1)
 							errors.insert(std::pair<int,std::string>(std::atoi(Regex.match()[x].occurence.c_str()), trim((*page)[1])));
 						else
@@ -677,46 +678,61 @@ class Parse : public ParseTypedef
 			return true;
 		}
 	public:
-		s_listen	listen(optionsMap vec)
+		mapListens	listen(optionsMap vec)
 		{
-			stringVector				get = findKey("listen", vec);
-			std::string					ip = "127.0.0.1";
-			int							port = 80;
-			s_listen					ret;
+			std::vector<stringVector>	listenList;
+			mapListens					listens;
 
-			if (get[0] != NO_KEY)
+			for (optionsMap::iterator it = vec.begin(); it != vec.end(); it++)
+				if (it->first == "listen")
+					listenList.push_back(it->second);
+			if (listenList.size() > 0)
 			{
-				Regex.exec(get[0], "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?(-?[0-9]+)?", GLOBAL_FLAG);
-				for (size_t x = 0; x < Regex.size(); x++)
+				for (std::vector<stringVector>::iterator listen = listenList.begin(); listen != listenList.end(); listen++)
 				{
-					if (x == 0)
-						ip = Regex.match()[x].occurence;
-					else if (x == 1)
-						port = std::atol(Regex.match()[x].occurence.c_str());
+					std::string	ip = "127.0.0.1";
+					int			port = 80;
+					s_listen	ret;
+
+					Regex.exec((*listen)[0], "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?(-?[0-9]+)?", GLOBAL_FLAG);
+					if (Regex.size() == 2)
+					{
+						ip = Regex.match()[0].occurence;
+						port = std::atol(Regex.match()[1].occurence.c_str());
+					}
+					else if (Regex.size() == 1)
+					{
+						std::string temp = Regex.match()[0].occurence;
+						Regex.exec(temp, "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+)", GLOBAL_FLAG);
+						if (Regex.size() > 0)
+							ip = temp;
+						else
+							port = std::atol(temp.c_str());
+					}
+					ret.ipSave = ip;
+					ret.portSave = port;
+					ret.ip = static_cast<size_t>(inet_addr(ip.c_str()));
+					if (!ipIsValid(ip))
+					{
+						std::string c = "rule 'listen': ip address ";
+						c += ip.c_str();
+						c += " is outside the range [0.0.0.0] <> [255.255.255.255]";
+						throw IncorrectConfig(c.c_str());
+					}
+					if (port < 0 || port > 65535)
+					{
+						std::string c = "rule 'listen': port ";
+						std::stringstream strstream;
+						strstream << port;
+						c += strstream.str();
+						c += " is outside the range [0] <> [65535]";
+						throw IncorrectConfig(c.c_str());
+					}
+					ret.port = static_cast<size_t>(htons(port));
+					listens.push_back(ret);
 				}
 			}
-			ret.ipSave = ip;
-			ret.portSave = port;
-			ret.ip = static_cast<size_t>(inet_addr(ip.c_str()));
-			if (!ipIsValid(ip))
-			{
-				std::string c = "rule 'listen': ip address ";
-				c += ip.c_str();
-				c += " is outside the range [0.0.0.0] <> [255.255.255.255]";
-				throw IncorrectConfig(c.c_str());
-			}
-			if (port < 0 || port > 65535)
-			{
-			
-				std::string c = "rule 'listen': port ";
-				std::stringstream strstream;
-				strstream << port;
-				c += strstream.str();
-				c += " is outside the range [0] <> [65535]";
-				throw IncorrectConfig(c.c_str());
-			}
-			ret.port = static_cast<size_t>(htons(port));
-			return ret;
+			return listens;
 		}
 
 		s_return	_return(optionsMap vec)
@@ -798,11 +814,9 @@ class Parse : public ParseTypedef
 	public:
 		inline void check(bool defaultLocation = true)
 		{
-			std::vector<s_listen>		checkListen;
+			std::vector<mapListens>		checkListen;
 			std::vector<std::string>	checkServer;
 			std::vector<std::string>	tempServer;
-			uint32_t					ipTemp;
-			uint16_t					portTemp;
 			int							count = 0;
 
 			for (serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
@@ -850,28 +864,28 @@ class Parse : public ParseTypedef
 					throw IncorrectConfig(c.c_str());
 				}
 			}
-			for (std::vector<s_listen>::const_iterator it = checkListen.begin(); it != checkListen.end(); it++)
-			{
-				ipTemp = (*it).ip;
-				portTemp = (*it).port;
-				count = 0;
-				for (std::vector<s_listen>::const_iterator it2 = checkListen.begin(); it2 != checkListen.end(); it2++)
+			
+			for (std::vector<mapListens>::const_iterator it = checkListen.begin(); it != checkListen.end(); it++)
+				for (mapListens::const_iterator listen = (*it).begin(); listen != (*it).end(); listen++)
 				{
-					if ((*it2).ip == ipTemp && (*it2).port == portTemp)
-						++count;
-					if (count > 1)
+					count = 0;
+					for (mapListens::const_iterator listen2 = (*it).begin(); listen2 != (*it).end(); listen2++)
 					{
-						std::string c = "rule 'listen': ";
-						c += (*it2).ipSave;
-						c += ":";
-						std::stringstream strstream;
-						strstream << (*it2).portSave;
-						c += strstream.str();
-						c += " is defined several times";
-						throw IncorrectConfig(c.c_str());
+						if ((*listen2).ipSave == (*listen).ipSave && (*listen2).portSave == (*listen).portSave)
+							++count;
+						if (count > 1)
+						{
+							std::string c = "rule 'listen': ";
+							c += (*listen2).ipSave;
+							c += ":";
+							std::stringstream strstream;
+							strstream << (*listen2).portSave;
+							c += strstream.str();
+							c += " is defined several times";
+							throw IncorrectConfig(c.c_str());
+						}
 					}
 				}
-			}
 		}
 	#pragma endregion Check config
 	
