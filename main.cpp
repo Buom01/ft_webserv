@@ -19,10 +19,6 @@
 #include "mimetypes.cpp"
 #include "body.cpp"
 
-<<<<<<< HEAD
-=======
-
->>>>>>> Static
 Serve	*server;
 
 void	stop_signal(int)
@@ -96,17 +92,6 @@ int main(int argc, char **argv)
 	for (Parse::serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
 		ServerConfig		serverBlockConfig;
-<<<<<<< HEAD
-		Parse::mapListens	bind 				= config.listen((*it).options);
-		Parse::stringVector	hostnames			= config.serverName((*it).options);
-
-		// if no bound: continue
-
-		serverBlockConfig.hostnames = hostnames;
-		int bound = server->bind(bind[0].ipSave, bind[0].portSave);
-		if (bound > 0)
-			serverBlockConfig.interfaces.push_back(bound);
-=======
 		Parse::mapListens	listen 				= config.listen((*it).options);
 		Parse::stringVector	hostnames        	= config.serverName((*it).options);
 
@@ -138,7 +123,6 @@ int main(int argc, char **argv)
 					serverBlockConfig.interfaces.push_back(bound);
 			}
 		}
->>>>>>> Static
 
 		for (Parse::locationsMap::const_reverse_iterator itLoc = (*it).locations.rbegin(); itLoc != (*it).locations.rend(); itLoc++)
 		{
@@ -221,11 +205,7 @@ int main(int argc, char **argv)
 	server->use(*mimetypes, F_ALL);
 	server->use(addResponseHeaders, F_ALL);
 	server->use(serializeHeaders, F_ALL);
-<<<<<<< HEAD
-	//server->use(readToTrashbin, F_ALL);
-=======
 	// server->use(readToTrashbin, F_ALL);
->>>>>>> Static
 	server->use(sendHeader, F_ALL);
 	server->use(sendBodyFromBuffer, F_ALL);
 	server->use(*sendBodyFromFD, F_ALL);

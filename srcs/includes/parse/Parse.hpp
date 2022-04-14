@@ -135,12 +135,16 @@ class Parse : public ParseTypedef
 	private:
 		void generateParseError(int lineNumber, std::string str)
 		{
-			std::string err = "line ";
+			std::string err("");
 			std::stringstream strstream;
 			strstream << lineNumber;
-			err += strstream.str();
-			err += " | ";
-			err += str;
+
+			err.append("[");
+			err.append(configPath);
+			err.append("] line ");
+			err.append(strstream.str());
+			err.append(" > ");
+			err.append(str);
 			throw IncorrectConfig(err);
 		}
 	public:
@@ -193,13 +197,14 @@ class Parse : public ParseTypedef
 							serverTemp.locations.clear();
 							serverTemp.options.clear();
 							++serverTemp.id;
+							isLocationBlock = false;
 							isServerBlock = false;
 						}
 					}
 					else if (REGEX[i].name == "location")
 					{
 						if (isLocationBlock)
-							generateParseError(lineNumber, "configuration: a location block cannot contain another one");
+							generateParseError(lineNumber, "a location block cannot contain another one");
 						isLocationBlock = true;
 						locationTemp.first.clear();
 						locationTemp.second.clear();
@@ -210,14 +215,14 @@ class Parse : public ParseTypedef
 					else if (REGEX[i].name == "server")
 					{
 						if (isServerBlock)
-							generateParseError(lineNumber, "configuration: a server block cannot contain another one");
+							generateParseError(lineNumber, "a server block cannot contain another one");
 						asServerBlock = true;
 						isServerBlock = true;
 					}
 					else
 					{
 						if (!isServerBlock)
-							generateParseError(lineNumber, "configuration: no server block is present. A configuration must be in at least one server block");
+							generateParseError(lineNumber, "no server block is present. A configuration must be in at least one server block");
 
 						stringVector ret;
 						for (size_t m = 0; m < Regex.size(); m++)
@@ -230,13 +235,23 @@ class Parse : public ParseTypedef
 							{
 								optionsMap::iterator it = find(locationTemp.second.begin(),  locationTemp.second.end(), newPair);
 								if (it != locationTemp.second.end())
-									locationTemp.second.erase(it);
+								{
+									std::string err("rule ");
+									err.append(REGEX[i].name);
+									err.append(" is not allowed to be written several times in the same location block or at the root of a server block");
+									generateParseError(lineNumber, err);
+								}
 							}
 							else
 							{
 								optionsMap::iterator it = find(serverTemp.options.begin(),  serverTemp.options.end(), newPair);
 								if (it != serverTemp.options.end())
-									serverTemp.options.erase(it);
+								{
+									std::string err("rule ");
+									err.append(REGEX[i].name);
+									err.append(" is not allowed to be written several times in the same location block or at the root of a server block");
+									generateParseError(lineNumber, err);
+								}
 							}
 						}
 						if (isLocationBlock)
@@ -249,7 +264,7 @@ class Parse : public ParseTypedef
 			}
 			stream.close();
 			if (!asServerBlock)
-				generateParseError(lineNumber, "configuration: no server block is present. A configuration must be in at least one server block");
+				generateParseError(lineNumber, "no server block is present. A configuration must be in at least one server block");
 			if (!setDefaultLocation)
 				return;
 			for (serversVector::iterator it = servers.begin(); it != servers.end(); it++)
@@ -753,9 +768,7 @@ class Parse : public ParseTypedef
 		{
 			stringVector	get = findKey("return", vec);
 			s_return		ret;
-
-			ret.code = C_UNKNOWN;
-			ret.url = "";
+			
 			if (get[0] != NO_KEY)
 			{
 				int number = std::atoi(get[0].c_str());
