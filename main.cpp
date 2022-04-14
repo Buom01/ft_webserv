@@ -18,7 +18,7 @@
 #include "write_body.cpp"
 #include "forbidden.cpp"
 #include "mimetypes.cpp"
-
+#include "body.cpp"
 
 Serve	*server;
 
@@ -37,6 +37,7 @@ int main(int argc, char **argv)
 	std::vector<Eject *>			ejectMiddlewares;
 	std::vector<Redirect *>			redirectMiddlewares;
 	std::vector<Upload *>			uploadMiddlewares;
+	std::vector<Body *>				bodyMiddlewares;
 	std::vector<Remover *>			removerMiddlewares;
 	std::vector<CGI *>				cgiMiddlewares;
 	std::vector<Static *>			staticMiddlewares;
@@ -131,14 +132,13 @@ int main(int argc, char **argv)
 			Parse::s_return						getReturn = config._return((*itLoc).second);
 			Parse::s_clientBodyBufferSize		getBodyMaxSize = config.clientBodyBufferSize((*itLoc).second);
 			Parse::s_autoindex					getAutoindex = config.autoindex((*itLoc).second);
-			std::string 						getRoot = config.root((*itLoc).second, true);
+			std::string 						getRoot = config.root((*itLoc).second);
 			std::string							getIndex = config.index((*itLoc).second);
 			Parse::mapErrors 					getErrors = config.errorPage((*itLoc).second);
 			Parse::s_cgi						getCgi = config.cgi((*itLoc).second);
 			std::pair<std::string, std::string>	getUpload = config.upload((*itLoc).second);
 			method_t 							methods = method(getAllow);
-
-			std::string	location_name = (*itLoc).first;
+			std::string							location_name = (*itLoc).first;
 
 			if (getAllow.isDefined)
 				server->use(forbidden_method, F_ALL, static_cast<method_t>(~(methods)), location_name, serverBlockConfig);
@@ -172,8 +172,12 @@ int main(int argc, char **argv)
 
 			if (getCgi.isDefined)
 			{
-				CGI *_cgi = new CGI(getCgi, getIndex);
+				Body *_body	= new Body(server->logger);
+				CGI *_cgi	= new CGI(server->logger, getCgi, location_name, getIndex);
+
+				server->use(*_body, F_NORMAL, method(getCgi.allow), location_name, serverBlockConfig);
 				server->use(*_cgi, F_NORMAL, method(getCgi.allow), location_name, serverBlockConfig);
+				bodyMiddlewares.push_back(_body);
 				cgiMiddlewares.push_back(_cgi);
 			}
 
@@ -238,10 +242,10 @@ int main(int argc, char **argv)
 
 	#pragma region Middlewares cleanup 
 
-	/*for (std::vector<Body *>::iterator it = bodyMiddlewares.begin(); it != bodyMiddlewares.end(); it++)
+	for (std::vector<Body *>::iterator it = bodyMiddlewares.begin(); it != bodyMiddlewares.end(); it++)
 	{
 		delete (*it);
-	}*/
+	}
 
 	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
 		delete (*it);

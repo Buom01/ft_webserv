@@ -135,12 +135,16 @@ class Parse : public ParseTypedef
 	private:
 		void generateParseError(int lineNumber, std::string str)
 		{
-			std::string err = "line ";
+			std::string err("");
 			std::stringstream strstream;
 			strstream << lineNumber;
-			err += strstream.str();
-			err += " | ";
-			err += str;
+
+			err.append("[");
+			err.append(configPath);
+			err.append("] line ");
+			err.append(strstream.str());
+			err.append(" > ");
+			err.append(str);
 			throw IncorrectConfig(err);
 		}
 	public:
@@ -193,13 +197,14 @@ class Parse : public ParseTypedef
 							serverTemp.locations.clear();
 							serverTemp.options.clear();
 							++serverTemp.id;
+							isLocationBlock = false;
 							isServerBlock = false;
 						}
 					}
 					else if (REGEX[i].name == "location")
 					{
 						if (isLocationBlock)
-							generateParseError(lineNumber, "configuration: a location block cannot contain another one");
+							generateParseError(lineNumber, "a location block cannot contain another one");
 						isLocationBlock = true;
 						locationTemp.first.clear();
 						locationTemp.second.clear();
@@ -210,14 +215,14 @@ class Parse : public ParseTypedef
 					else if (REGEX[i].name == "server")
 					{
 						if (isServerBlock)
-							generateParseError(lineNumber, "configuration: a server block cannot contain another one");
+							generateParseError(lineNumber, "a server block cannot contain another one");
 						asServerBlock = true;
 						isServerBlock = true;
 					}
 					else
 					{
 						if (!isServerBlock)
-							generateParseError(lineNumber, "configuration: no server block is present. A configuration must be in at least one server block");
+							generateParseError(lineNumber, "no server block is present. A configuration must be in at least one server block");
 
 						stringVector ret;
 						for (size_t m = 0; m < Regex.size(); m++)
@@ -230,13 +235,23 @@ class Parse : public ParseTypedef
 							{
 								optionsMap::iterator it = find(locationTemp.second.begin(),  locationTemp.second.end(), newPair);
 								if (it != locationTemp.second.end())
-									locationTemp.second.erase(it);
+								{
+									std::string err("rule ");
+									err.append(REGEX[i].name);
+									err.append(" is not allowed to be written several times in the same location block or at the root of a server block");
+									generateParseError(lineNumber, err);
+								}
 							}
 							else
 							{
 								optionsMap::iterator it = find(serverTemp.options.begin(),  serverTemp.options.end(), newPair);
 								if (it != serverTemp.options.end())
-									serverTemp.options.erase(it);
+								{
+									std::string err("rule ");
+									err.append(REGEX[i].name);
+									err.append(" is not allowed to be written several times in the same location block or at the root of a server block");
+									generateParseError(lineNumber, err);
+								}
 							}
 						}
 						if (isLocationBlock)
@@ -249,7 +264,7 @@ class Parse : public ParseTypedef
 			}
 			stream.close();
 			if (!asServerBlock)
-				generateParseError(lineNumber, "configuration: no server block is present. A configuration must be in at least one server block");
+				generateParseError(lineNumber, "no server block is present. A configuration must be in at least one server block");
 			if (!setDefaultLocation)
 				return;
 			for (serversVector::iterator it = servers.begin(); it != servers.end(); it++)
@@ -680,21 +695,31 @@ class Parse : public ParseTypedef
 	public:
 		mapListens	listen(optionsMap vec)
 		{
-			std::vector<stringVector>	listenList;
+			std::vector<std::string>	listenList;
 			mapListens					listens;
 
 			for (optionsMap::iterator it = vec.begin(); it != vec.end(); it++)
 				if (it->first == "listen")
-					listenList.push_back(it->second);
+				{
+					std::string temp = trim(it->second[0]);
+					if (std::find(listenList.begin(), listenList.end(), temp) == listenList.end())
+						listenList.push_back(trim(it->second[0]));
+					else
+					{
+						std::string c = "rule 'listen': ";
+						c += temp;
+						c += " is defined several times inside same server block";
+						throw IncorrectConfig(c.c_str());
+					}
+				}
 			if (listenList.size() > 0)
 			{
-				for (std::vector<stringVector>::iterator listen = listenList.begin(); listen != listenList.end(); listen++)
+				for (std::vector<std::string>::iterator listen = listenList.begin(); listen != listenList.end(); listen++)
 				{
-					std::string	ip = "127.0.0.1";
+					std::string	ip = "0.0.0.0";
 					int			port = 80;
 					s_listen	ret;
-
-					Regex.exec((*listen)[0], "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?(-?[0-9]+)?", GLOBAL_FLAG);
+					Regex.exec(*listen, "^([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?(-?[0-9]+)?$", GLOBAL_FLAG);
 					if (Regex.size() == 2)
 					{
 						ip = Regex.match()[0].occurence;
@@ -709,6 +734,8 @@ class Parse : public ParseTypedef
 						else
 							port = std::atol(temp.c_str());
 					}
+					else
+						throw IncorrectConfig("rule 'listen': there is a formatting error. If you want to define more than one ip or port, you must have as many listen rules");
 					ret.ipSave = ip;
 					ret.portSave = port;
 					ret.ip = static_cast<size_t>(inet_addr(ip.c_str()));
@@ -739,9 +766,7 @@ class Parse : public ParseTypedef
 		{
 			stringVector	get = findKey("return", vec);
 			s_return		ret;
-
-			ret.code = C_UNKNOWN;
-			ret.url = "";
+			
 			if (get[0] != NO_KEY)
 			{
 				int number = std::atoi(get[0].c_str());
@@ -764,17 +789,12 @@ class Parse : public ParseTypedef
 			return ret;
 		}
 
-		std::string root(optionsMap vec, bool optional = false)
+		std::string root(optionsMap vec)
 		{
 			stringVector	get = findKey("root", vec);
 		
 			if (get[0] == NO_KEY)
-			{
-				if (!optional)
-					throw IncorrectConfig("rule 'root': no rule is defined, the server can't work");
-				else
-					return "";
-			}
+				return "";
 			Regex.exec(get[0], "([-a-zA-Z0-9_\\./\\]+)", GLOBAL_FLAG);
 			if (Regex.size() > 1)
 				throw IncorrectConfig("rule 'root': only one directory definition is allowed");
@@ -786,9 +806,7 @@ class Parse : public ParseTypedef
 			stringVector	get = findKey("server_name", vec);
 			stringVector	ret;
 
-			if (get[0] == NO_KEY)
-				ret.push_back("localhost");
-			else
+			if (get[0] != NO_KEY)
 			{
 				Regex.exec(get[0], "([a-zA-Z0-9_.]+)", GLOBAL_FLAG);
 				for (size_t x = 0; x < Regex.size(); x++)
@@ -830,11 +848,13 @@ class Parse : public ParseTypedef
 					errorPage((*it).options);
 					index((*it).options);
 					_return((*it).options);
-					root((*it).options, false);
+					root((*it).options);
 					upload((*it).options);
 				}
 				clientBodyBufferSize((*it).options);
 				tempServer = serverName((*it).options);
+				listen((*it).options);
+				
 				for (std::vector<std::string>::const_iterator itC = tempServer.begin(); itC != tempServer.end(); itC++)
 					checkServer.push_back(*itC);
 				for (std::vector<std::string>::const_iterator it = checkServer.begin(); it != checkServer.end(); it++)
@@ -848,7 +868,7 @@ class Parse : public ParseTypedef
 						throw IncorrectConfig(c.c_str());
 					}
 				}
-				checkListen.push_back(listen((*it).options));
+				
 				if (!((*it).locations.empty()))
 				{
 					for (locationsMap::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
@@ -860,33 +880,11 @@ class Parse : public ParseTypedef
 						errorPage((*itLoc).second);
 						index((*itLoc).second);
 						_return((*itLoc).second);
-						root((*itLoc).second, !(defaultLocation && (*itLoc).first == "/"));
+						root((*itLoc).second);
 						upload((*it).options);
 					}
 				}
 			}
-			
-			for (std::vector<mapListens>::const_iterator it = checkListen.begin(); it != checkListen.end(); it++)
-				for (mapListens::const_iterator listen = (*it).begin(); listen != (*it).end(); listen++)
-				{
-					count = 0;
-					for (mapListens::const_iterator listen2 = (*it).begin(); listen2 != (*it).end(); listen2++)
-					{
-						if ((*listen2).ipSave == (*listen).ipSave && (*listen2).portSave == (*listen).portSave)
-							++count;
-						if (count > 1)
-						{
-							std::string c = "rule 'listen': ";
-							c += (*listen2).ipSave;
-							c += ":";
-							std::stringstream strstream;
-							strstream << (*listen2).portSave;
-							c += strstream.str();
-							c += " is defined several times";
-							throw IncorrectConfig(c.c_str());
-						}
-					}
-				}
 		}
 	#pragma endregion Check config
 	
