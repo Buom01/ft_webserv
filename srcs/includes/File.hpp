@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/17 12:59:44 by badam             #+#    #+#             */
-/*   Updated: 2022/04/12 01:11:47 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/14 22:53:27 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,7 +89,7 @@ std::string	concatPath(const std::string &root, const std::string &path)
 		return (path);
 	else
 	{
-		if (root.at(root.size() - 1) == '/')
+		if (root.size() && root.at(root.size() - 1) == '/')
 			return (root + path);
 		else
 			return (root + '/' + path);
