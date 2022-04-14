@@ -170,14 +170,15 @@ class Header
 		 *	@param key (std::string) of search header
 		 *	@return (std::string) header
 		 */
-		std::string	header(std::string key)
+		std::string	header(std::string key, bool getJustValue = false)
 		{
 			std::string temp = "";
 			_headers_it it = find(key);
 
 			if (it != headersMap.end())
 			{
-				temp = (*it).first + ": ";
+				if (!getJustValue)
+					temp = (*it).first + ": ";
 				for (_vectors::const_iterator it2 = (*it).second.begin(); it2 != (*it).second.end();)
 				{
 					temp += *it2;
