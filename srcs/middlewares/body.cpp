@@ -26,7 +26,7 @@ class Body: public AEpoll
 		{}
 	
 	protected:
-		bool	_get_contentlength(Request &req, Response &res)
+		bool	_get_contentlength(Request &req)
 		{
 			std::vector<std::string>					header_values;
 			std::vector<std::string>::const_iterator	header_values_it;
@@ -43,7 +43,7 @@ class Body: public AEpoll
 			return (true);
 		}
 
-		bool	_get_bondary(Request &req, Response &res)
+		bool	_get_bondary(Request &req)
 		{
 			size_t _pos(0);
 			std::vector<std::string>					header_values;
@@ -53,15 +53,15 @@ class Body: public AEpoll
 			header_values_it = header_values.begin();
 			if (header_values.begin() == header_values.end())
 				return (false);
-			for (header_values_it it = header_values.begin(); it != header_values.end(); it++)
+			for (std::vector<std::string>::const_iterator it = header_values.begin(); it != header_values.end(); it++)
 			{
 				_pos = (*it).find("boundary=");
-				if (_pos != std::string::n_pos)
+				if (_pos != std::string::npos)
 				{
 					req.body_boundary = (*it);
-					req.body_boundary.substring(0, _pos);
+					req.body_boundary.substr(0, _pos);
 					req.body_boundary_end.append(req.body_boundary);
-					req.body_boundary_end.append("--")
+					req.body_boundary_end.append("--");
 					break;
 				}		
 			}
@@ -93,8 +93,7 @@ class Body: public AEpoll
 		{
 			size_t	read_chunksize;
 			char	read_buffer[req.upload_chunksize];
-			ssize_t	read_ret							= -1;
-			ssize_t	write_ret							= -1;
+			ssize_t	read_ret(-1);
 			
 			if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
 				return (true);
@@ -102,7 +101,7 @@ class Body: public AEpoll
 				return (true);
 			if (req.finish())
 				return (true);
-			if (req.body.empty() && (!_get_contentlength(req, res) || !_get_bondary(req, res)))
+			if (req.body.empty() && (!_get_contentlength(req) || !_get_bondary(req)))
 				return (true);
 			if (!req.await(EPOLLIN))
 				return (false);
@@ -111,14 +110,13 @@ class Body: public AEpoll
 			size_t _size = std::strlen(req.buff);
 			if (_size)
 			{
-				body.append(req.buff, _size);
+				req.body.append(req.buff, _size);
 				req.buff[0] = '\0';
 			}
 			
 			if (req.body_length)
 			{
 				/* If Content-length is present */
-				bool firstPass = true
 				while (req.body_remainingsize)
 				{
 					read_chunksize = req.body_remainingsize < req.body_chunksize ? req.body_remainingsize : req.body_chunksize;
@@ -129,7 +127,7 @@ class Body: public AEpoll
 						return (false);
 					}
 					req.body_remainingsize -= read_ret;
-					body.append(read_buffer, read_ret);
+					req.body.append(read_buffer, read_ret);
 				}
 			}
 			else
@@ -139,11 +137,11 @@ class Body: public AEpoll
 				bool isFinish(false);
 				while (true)
 				{
-					read_ret = read(req.fd, read_buffer, read_chunksize);
+					read_ret = read(req.fd, read_buffer, req.body_chunksize);
 					tmp.append(read_buffer, read_ret);
 					while (getLine(tmp, line))
 					{
-						body.append(line);
+						req.body.append(line);
 						if (line == req.body_boundary_end)
 						{
 							isFinish = true;

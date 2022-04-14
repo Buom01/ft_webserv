@@ -14,6 +14,7 @@
 # include <sys/wait.h>
 # include <unistd.h>
 # include <stdlib.h>
+# include "Log.hpp"
 # include "Parse.hpp"
 # include "Split.hpp"
 # include "MimeType.hpp"
@@ -32,7 +33,11 @@ class cgiEnv
 			std::string key;
 			std::string value;
 		};
-	#pragma region one
+		struct s_file
+		{
+			std::string path;
+			std::string extension;
+		};
 		std::map<std::string, std::string>	env;
 	public:
 		std::vector<s_environment>			ENV;
@@ -133,15 +138,56 @@ class cgiEnv
 
 class CGI : public cgiEnv, public IMiddleware
 {
+	protected:
+		Log				&_logger;
 	private:
-		cgiEnv	env;
-		Parse::s_cgi _config;
-		std::string	_index;
+		cgiEnv			env;
+		s_file 			file;
+		Parse::s_cgi	_config;
+		std::string		_location;
+		std::string		_index;
 	public:
-		CGI(Parse::s_cgi config, std::string index): _config(config), _index(index) {};
+		CGI(Log &logger, Parse::s_cgi config, std::string location, std::string index):
+			_logger(logger),
+			_config(config),
+			_location(location),
+			_index(index)
+		{};
+
 		virtual ~CGI() {};
-	#pragma endregion two
 	private:
+		void	fileExtension(Request &req)
+		{
+			file.path.clear();
+			file.extension.clear();
+			file.path = req.pathname;
+			std::string::iterator end = --(file.path.end());
+			if (*end == '/')
+				file.path.erase(end);
+			if (file.path == _location)
+			{
+				file.path.append("/");
+				file.path.append(_index);
+			}
+			file.extension = file.path.substr(file.path.find_last_of("."));
+		}
+
+		bool			isMethod(Request &req)
+		{
+			std::string method = convertMethod(req.method);
+			if ((method == "GET" && _config.allow.GET == true) ||
+				(method == "HEAD" && _config.allow.HEAD == true) ||
+				(method == "POST" && _config.allow.POST == true) ||
+				(method == "PUT" && _config.allow.PUT == true) ||
+				(method == "DELETE" && _config.allow.DELETE == true) ||
+				(method == "CONNECT" && _config.allow.CONNECT == true) ||
+				(method == "OPTIONS" && _config.allow.OPTIONS == true) ||
+				(method == "TRACE" && _config.allow.TRACE == true) ||
+				(method == "ALL" && _config.allow.ALL == true))
+				return true;
+			return false;
+		}
+
 		int stoi(std::string number)
 		{
 			std::stringstream ss;
@@ -185,7 +231,6 @@ class CGI : public cgiEnv, public IMiddleware
 
 		std::string sval(std::string value, std::string _default)
 		{
-			std::cout << value.empty() << "---" << _default << std::endl;
 			if (value.empty())
 				return _default;
 			return value;
@@ -195,13 +240,8 @@ class CGI : public cgiEnv, public IMiddleware
 		{
 			URL _url(req.trusted_pathname);
 			
-			/*fseek(req.body_file, 0, SEEK_END);
-			int lengthOfBody = ftell(req.body_file);
-			fseek(req.body_file, 0, SEEK_SET);*/
-			
 			#pragma region Mandatory
-				env.addVariable("CONTENT_LENGTH", sval(req.headers.header("CONTENT_LENGTH"), itos(0)));
-
+				env.addVariable("CONTENT_LENGTH", sval(req.headers.header("CONTENT_LENGTH"), itos(req.body.size())));
 				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT_TYPE"));
 				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
 				env.addVariable("PATH_INFO", req.pathname);
@@ -236,6 +276,7 @@ class CGI : public cgiEnv, public IMiddleware
 				std::vector<std::string> _split = split(_url.pathname(), "/");
 				env.addVariable("SCRIPT_FILENAME", _split[_split.size() - 1]);
 			#pragma endregion May
+			env.printVariable();
 		}
 	public:
 		/**
@@ -244,87 +285,53 @@ class CGI : public cgiEnv, public IMiddleware
 		 */
 		int	exec(Request &req, Response &res)
 		{
-			(void)req; (void)res;
-			/*FILE	*OUT = tmpfile();
+			FILE 	*IN = tmpfile(), *OUT = tmpfile();
+			int 	fdIN = fileno(IN), fdOUT = fileno(OUT);
+			int 	saveFd[2]; saveFd[0] = dup(STDIN_FILENO); saveFd[1] = dup(STDOUT_FILENO);
 			pid_t	pid;
-			int		fdOUT = fileno(OUT);
-			int		saveSTDIN = dup(STDIN_FILENO), saveSTDOUT = dup(STDOUT_FILENO);
-			int		fd[2];
 
-			std::cout << "CGI - " << "One" << std::endl;
-			setHeader(req); printVariable();
-
+			setHeader(req);
 			res.code = C_OK;
-			if (pipe(fd))
-				return -1;
+			write(fdIN, req.body.c_str(), static_cast<int>(req.body.size()));
+			lseek(fdIN, 0, SEEK_SET);
+
 			if ((pid = fork()) == -1)
 				return -1;
 			else if (pid == 0)
 			{
-				char* const* _null = NULL;
+				char * const * _null = NULL;
 
-				std::cout << "CGI - " << "Two < Start" << std::endl;
-
-				dup2(fd[0], STDIN_FILENO);
+				dup2(fdIN, STDIN_FILENO);
 				dup2(fdOUT, STDOUT_FILENO);
-				close(fd[0]);
-				close(fd[1]);
-
-				std::cout << "CGI - " << "Two < Middle" << std::endl;
-
-				if (execve(getVariable("SCRIPT_FILENAME").value.c_str(), _null, env.envForCGI()) == -1)
+				if (execve(getVariable("SCRIPT_FILENAME").value.c_str(), _null, env.envForCGI()))
 				{
 					res.code = C_INTERNAL_SERVER_ERROR;
 					std::cout << "Status: 500\r\n";
 				}
-				std::cout << "CGI - " << "Two < End" << std::endl;
 			}
 			else
 			{
-				std::cout << "CGI - " << "Three < Start" << std::endl;
-				dup2(fd[1], req.body_fd);
-				close(fd[0]);
-				close(fd[1]);
 				waitpid(pid, NULL, 0);
-
-				std::cout << "CGI - " << "Three > End" << std::endl;
+				lseek(fdOUT, 0, SEEK_SET);
 			}
-			std::cout << "CGI - " << "Four" << std::endl;
-			dup2(saveSTDIN, STDIN_FILENO); dup2(saveSTDOUT, STDOUT_FILENO);
-			close(saveSTDIN); close(saveSTDOUT);
+			dup2(saveFd[0], STDIN_FILENO);
+			dup2(saveFd[1], STDOUT_FILENO);
+			
+			fclose(IN);
+			fclose(OUT); // Pas sûr de celui-là
+
+			close(fdIN);
+			close(saveFd[0]); close(saveFd[1]);
+
 			if (pid == 0)
 				exit(EXIT_SUCCESS);
-			return fdOUT;*/
-			return 1;
-		}
-	private:
-		std::string 	fileExtension(Request &req)
-		{
-			std::string extension = req.trusted_pathname;
-			if (extension == "/")
-				extension += _index;
-			extension = extension.substr(extension.find_last_of("."));
-			return extension;
+			return fdOUT;
 		}
 
-		bool			isMethod(Request &req)
-		{
-			std::string method = convertMethod(req.method);
-			if ((method == "GET" && _config.allow.GET == true) ||
-				(method == "HEAD" && _config.allow.HEAD == true) ||
-				(method == "POST" && _config.allow.POST == true) ||
-				(method == "PUT" && _config.allow.PUT == true) ||
-				(method == "DELETE" && _config.allow.DELETE == true) ||
-				(method == "CONNECT" && _config.allow.CONNECT == true) ||
-				(method == "OPTIONS" && _config.allow.OPTIONS == true) ||
-				(method == "TRACE" && _config.allow.TRACE == true) ||
-				(method == "ALL" && _config.allow.ALL == true))
-				return true;
-			return false;
-		}
-	public:
 		bool operator()(Request &req, Response &res)
 		{
+			std::string empty("");
+
 			if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
 				return (true);
 			if (res.response_fd > 0 || res.body.length() > 0)
@@ -336,11 +343,13 @@ class CGI : public cgiEnv, public IMiddleware
 				res.code = C_REQUEST_TIMEOUT;
 				return (true);
 			}
-			std::string extension = fileExtension(req);
-			std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), extension);
+			fileExtension(req);
+			std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), file.extension);
 			if (it == _config.extensions.end() || !isMethod(req))
 				return true;
+			_logger.log(202, empty, file.path, "CGI has started");
 			res.response_fd = exec(req, res);
+			_logger.log(201, empty, file.path, "CGI has ended");
 			return true;
 		}
 };

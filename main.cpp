@@ -16,6 +16,7 @@
 #include "write_body.cpp"
 #include "forbidden.cpp"
 #include "mimetypes.cpp"
+#include "body.cpp"
 
 Serve	*server;
 
@@ -55,10 +56,9 @@ int main(int argc, char **argv)
 	Parse::serversVector	servers;
 	Parse::locationsMap		locations;
 
-	//std::vector<Body *>				bodyMiddlewares;
-
 	std::vector<Eject *>			ejectMiddlewares;
 	std::vector<Upload *>			uploadMiddlewares;
+	std::vector<Body *>				bodyMiddlewares;
 	std::vector<Remover *>			removerMiddlewares;
 	std::vector<CGI *>				cgiMiddlewares;
 	std::vector<Static *>			staticMiddlewares;
@@ -115,17 +115,15 @@ int main(int argc, char **argv)
 	for (Parse::serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
 		ServerConfig		serverBlockConfig;
-		Parse::s_listen		bind 				= config.listen((*it).options);
+		Parse::mapListens	bind 				= config.listen((*it).options);
 		Parse::stringVector	hostnames			= config.serverName((*it).options);
 
 		// if no bound: continue
 
-		serverBlockConfig.hostnames = config.serverName((*it).options);
-		{
-			int bound = server->bind(bind.ipSave, bind.portSave);
-			if (bound > 0)
-				serverBlockConfig.interfaces.push_back(bound);
-		}
+		serverBlockConfig.hostnames = hostnames;
+		int bound = server->bind(bind[0].ipSave, bind[0].portSave);
+		if (bound > 0)
+			serverBlockConfig.interfaces.push_back(bound);
 
 		for (Parse::locationsMap::const_reverse_iterator itLoc = (*it).locations.rbegin(); itLoc != (*it).locations.rend(); itLoc++)
 		{
@@ -164,8 +162,12 @@ int main(int argc, char **argv)
 
 			if (getCgi.isDefined)
 			{
-				CGI *_cgi = new CGI(getCgi);
+				Body *_body	= new Body(server->logger);
+				CGI *_cgi	= new CGI(server->logger, getCgi, location_name, getIndex);
+
+				server->use(*_body, F_NORMAL, method(getCgi.allow), location_name, serverBlockConfig);
 				server->use(*_cgi, F_NORMAL, method(getCgi.allow), location_name, serverBlockConfig);
+				bodyMiddlewares.push_back(_body);
 				cgiMiddlewares.push_back(_cgi);
 			}
 
@@ -204,7 +206,7 @@ int main(int argc, char **argv)
 	server->use(*mimetypes, F_ALL);
 	server->use(addResponseHeaders, F_ALL);
 	server->use(serializeHeaders, F_ALL);
-	server->use(readToTrashbin, F_ALL);
+	//server->use(readToTrashbin, F_ALL);
 	server->use(sendHeader, F_ALL);
 	server->use(sendBodyFromBuffer, F_ALL);
 	server->use(*sendBodyFromFD, F_ALL);
@@ -230,10 +232,10 @@ int main(int argc, char **argv)
 
 	#pragma region Middlewares cleanup 
 
-	/*for (std::vector<Body *>::iterator it = bodyMiddlewares.begin(); it != bodyMiddlewares.end(); it++)
+	for (std::vector<Body *>::iterator it = bodyMiddlewares.begin(); it != bodyMiddlewares.end(); it++)
 	{
 		delete (*it);
-	}*/
+	}
 
 	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
 		delete (*it);

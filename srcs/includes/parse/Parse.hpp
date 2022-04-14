@@ -680,21 +680,31 @@ class Parse : public ParseTypedef
 	public:
 		mapListens	listen(optionsMap vec)
 		{
-			std::vector<stringVector>	listenList;
+			std::vector<std::string>	listenList;
 			mapListens					listens;
 
 			for (optionsMap::iterator it = vec.begin(); it != vec.end(); it++)
 				if (it->first == "listen")
-					listenList.push_back(it->second);
+				{
+					std::string temp = trim(it->second[0]);
+					if (std::find(listenList.begin(), listenList.end(), temp) == listenList.end())
+						listenList.push_back(trim(it->second[0]));
+					else
+					{
+						std::string c = "rule 'listen': ";
+						c += temp;
+						c += " is defined several times inside same server block";
+						throw IncorrectConfig(c.c_str());
+					}
+				}
 			if (listenList.size() > 0)
 			{
-				for (std::vector<stringVector>::iterator listen = listenList.begin(); listen != listenList.end(); listen++)
+				for (std::vector<std::string>::iterator listen = listenList.begin(); listen != listenList.end(); listen++)
 				{
 					std::string	ip = "127.0.0.1";
 					int			port = 80;
 					s_listen	ret;
-
-					Regex.exec((*listen)[0], "([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?(-?[0-9]+)?", GLOBAL_FLAG);
+					Regex.exec(*listen, "^([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?(-?[0-9]+)?$", GLOBAL_FLAG);
 					if (Regex.size() == 2)
 					{
 						ip = Regex.match()[0].occurence;
@@ -709,6 +719,8 @@ class Parse : public ParseTypedef
 						else
 							port = std::atol(temp.c_str());
 					}
+					else
+						throw IncorrectConfig("rule 'listen': there is a formatting error. If you want to define more than one ip or port, you must have as many listen rules");
 					ret.ipSave = ip;
 					ret.portSave = port;
 					ret.ip = static_cast<size_t>(inet_addr(ip.c_str()));
@@ -732,6 +744,8 @@ class Parse : public ParseTypedef
 					listens.push_back(ret);
 				}
 			}
+			else
+				throw IncorrectConfig("rule 'listen': no rule is defined, the server can't work");
 			return listens;
 		}
 
@@ -835,6 +849,8 @@ class Parse : public ParseTypedef
 				}
 				clientBodyBufferSize((*it).options);
 				tempServer = serverName((*it).options);
+				listen((*it).options);
+				
 				for (std::vector<std::string>::const_iterator itC = tempServer.begin(); itC != tempServer.end(); itC++)
 					checkServer.push_back(*itC);
 				for (std::vector<std::string>::const_iterator it = checkServer.begin(); it != checkServer.end(); it++)
@@ -848,7 +864,7 @@ class Parse : public ParseTypedef
 						throw IncorrectConfig(c.c_str());
 					}
 				}
-				checkListen.push_back(listen((*it).options));
+				
 				if (!((*it).locations.empty()))
 				{
 					for (locationsMap::const_iterator itLoc = (*it).locations.begin(); itLoc != (*it).locations.end(); itLoc++)
@@ -865,28 +881,6 @@ class Parse : public ParseTypedef
 					}
 				}
 			}
-			
-			for (std::vector<mapListens>::const_iterator it = checkListen.begin(); it != checkListen.end(); it++)
-				for (mapListens::const_iterator listen = (*it).begin(); listen != (*it).end(); listen++)
-				{
-					count = 0;
-					for (mapListens::const_iterator listen2 = (*it).begin(); listen2 != (*it).end(); listen2++)
-					{
-						if ((*listen2).ipSave == (*listen).ipSave && (*listen2).portSave == (*listen).portSave)
-							++count;
-						if (count > 1)
-						{
-							std::string c = "rule 'listen': ";
-							c += (*listen2).ipSave;
-							c += ":";
-							std::stringstream strstream;
-							strstream << (*listen2).portSave;
-							c += strstream.str();
-							c += " is defined several times";
-							throw IncorrectConfig(c.c_str());
-						}
-					}
-				}
 		}
 	#pragma endregion Check config
 	
