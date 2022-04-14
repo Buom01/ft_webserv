@@ -8,6 +8,7 @@
 #include "error.cpp"
 #include "read.cpp"
 #include "eject.cpp"
+#include "redirect.cpp"
 #include "upload.cpp"
 #include "remover.cpp"
 #include "Cgi.hpp"
@@ -34,6 +35,7 @@ int main(int argc, char **argv)
 	Parse::locationsMap		locations;
 
 	std::vector<Eject *>			ejectMiddlewares;
+	std::vector<Redirect *>			redirectMiddlewares;
 	std::vector<Upload *>			uploadMiddlewares;
 	std::vector<Remover *>			removerMiddlewares;
 	std::vector<CGI *>				cgiMiddlewares;
@@ -126,6 +128,7 @@ int main(int argc, char **argv)
 		for (Parse::locationsMap::const_reverse_iterator itLoc = (*it).locations.rbegin(); itLoc != (*it).locations.rend(); itLoc++)
 		{
 			Parse::s_allow 						getAllow = config.allow((*itLoc).second);
+			Parse::s_return						getReturn = config._return((*itLoc).second);
 			Parse::s_clientBodyBufferSize		getBodyMaxSize = config.clientBodyBufferSize((*itLoc).second);
 			Parse::s_autoindex					getAutoindex = config.autoindex((*itLoc).second);
 			std::string 						getRoot = config.root((*itLoc).second, true);
@@ -146,6 +149,14 @@ int main(int argc, char **argv)
 
 				server->use(*eject, F_NORMAL, M_ALL, location_name, serverBlockConfig);
 				ejectMiddlewares.push_back(eject);
+			}
+
+			if (getReturn.code != C_UNKNOWN)
+			{
+				Redirect	*redirect	= new Redirect(getReturn.code, getReturn.url);
+
+				server->use(*redirect, F_NORMAL, M_ALL, location_name, serverBlockConfig);
+				redirectMiddlewares.push_back(redirect);
 			}
 
 			if (getUpload.first.length() && (methods & M_PUT))
@@ -233,6 +244,9 @@ int main(int argc, char **argv)
 	}*/
 
 	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
+		delete (*it);
+
+	for (std::vector<Redirect *>::iterator it = redirectMiddlewares.begin(); it != redirectMiddlewares.end(); it++)
 		delete (*it);
 
 	for (std::vector<Upload *>::iterator it = uploadMiddlewares.begin(); it != uploadMiddlewares.end(); it++)

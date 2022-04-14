@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/18 08:00:23 by badam             #+#    #+#             */
-/*   Updated: 2022/03/18 08:10:57 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/14 22:53:38 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,11 +16,7 @@
 # include "IMiddleware.hpp"
 # include "Response.hpp"
 # include "Request.hpp"
-
-static std::string	dummy_redirect(std::string &from)
-{
-	return from;
-}
+# include "utils.hpp"
 
 class Redirect: public IMiddleware
 {
@@ -29,15 +25,17 @@ class Redirect: public IMiddleware
 	public:
 		typedef struct	options_s
 		{
-			std::string	(*convert)(std::string &from);
+			http_code_t	code;
+			std::string	location;
 		}				options_t;
 		
 		options_t		options;
 
 
-		Redirect()
+		Redirect(http_code_t code, std::string &location)
 		{
-			options.convert = dummy_redirect;
+			options.code = code;
+			options.location = location;
 		}
 
 		Redirect(options_t opts)
@@ -45,11 +43,19 @@ class Redirect: public IMiddleware
 			options = opts;
 		}
 
+		virtual ~Redirect()
+		{}
+
 	public:
 		bool	operator()(Request &req, Response &res)
 		{
-			res.headers.set("Location: " + options.convert(req.pathname));
-			res.code = C_MOVED_PERMANENTLY;
+			std::string	newLocation(options.location);
+
+			replace_all(&newLocation, "$request_uri", req.pathname);
+			res.headers.set("Location: " + newLocation);
+			res.code = options.code;
+
+			std::cout << "Done" << std::endl;
 			
 			return (true);
 		}
