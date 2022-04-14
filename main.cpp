@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include "Parse.hpp"
 #include "Serve.hpp"
+#include "utils.hpp"
 #include "Static.cpp"
 #include "error.cpp"
 #include "read.cpp"
@@ -18,36 +19,16 @@
 #include "mimetypes.cpp"
 #include "body.cpp"
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> Static
 Serve	*server;
 
 void	stop_signal(int)
 {
 	if (server->alive())
 		server->stop();
-}
-
-method_t method(Parse::s_allow allow)
-{
-	method_t ret = M_UNKNOWN;
-	if (allow.GET)
-		ret = static_cast<method_t>(ret | M_GET);
-	if (allow.HEAD)
-		ret = static_cast<method_t>(ret | M_HEAD);
-	if (allow.POST)
-		ret = static_cast<method_t>(ret | M_POST);
-	if (allow.PUT)
-		ret = static_cast<method_t>(ret | M_PUT);
-	if (allow.DELETE)
-		ret = static_cast<method_t>(ret | M_DELETE);
-	if (allow.CONNECT)
-		ret = static_cast<method_t>(ret | M_CONNECT);
-	if (allow.OPTIONS)
-		ret = static_cast<method_t>(ret | M_OPTIONS);
-	if (allow.TRACE)
-		ret = static_cast<method_t>(ret | M_TRACE);
-	if (allow.ALL)
-		ret = static_cast<method_t>(ret | M_ALL);
-	return ret;
 }
 
 int main(int argc, char **argv)
@@ -106,7 +87,7 @@ int main(int argc, char **argv)
 	Mimetypes		*mimetypes		= new Mimetypes();
 	SendBodyFromFD	*sendBodyFromFD	= new SendBodyFromFD(server->logger);
 
-	mimetypes->add("html", "text/html");
+	mimetypes->useDefaults();
 
 	server->use(parseStartLine, F_ALL);
 	server->use(parseRequestHeaders, F_ALL);
@@ -115,6 +96,7 @@ int main(int argc, char **argv)
 	for (Parse::serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
 		ServerConfig		serverBlockConfig;
+<<<<<<< HEAD
 		Parse::mapListens	bind 				= config.listen((*it).options);
 		Parse::stringVector	hostnames			= config.serverName((*it).options);
 
@@ -124,6 +106,39 @@ int main(int argc, char **argv)
 		int bound = server->bind(bind[0].ipSave, bind[0].portSave);
 		if (bound > 0)
 			serverBlockConfig.interfaces.push_back(bound);
+=======
+		Parse::mapListens	listen 				= config.listen((*it).options);
+		Parse::stringVector	hostnames        	= config.serverName((*it).options);
+
+		serverBlockConfig.hostnames = hostnames;
+
+		if (listen.size())
+		{
+			int	bound;
+			
+			for (Parse::mapListens::const_iterator it = listen.begin(); it != listen.end(); it++)
+			{
+				bound	= server->bind((*it).ipSave, (*it).portSave);
+
+				if (bound > 0)
+					serverBlockConfig.interfaces.push_back(bound);
+			}
+		}
+		else
+		{
+			int	bound;
+			
+			bound	= server->bind("0.0.0.0", 80);
+			if (bound > 0)
+				serverBlockConfig.interfaces.push_back(bound);
+			else
+			{
+				bound	= server->bind("0.0.0.0", 8000);
+				if (bound > 0)
+					serverBlockConfig.interfaces.push_back(bound);
+			}
+		}
+>>>>>>> Static
 
 		for (Parse::locationsMap::const_reverse_iterator itLoc = (*it).locations.rbegin(); itLoc != (*it).locations.rend(); itLoc++)
 		{
@@ -206,7 +221,11 @@ int main(int argc, char **argv)
 	server->use(*mimetypes, F_ALL);
 	server->use(addResponseHeaders, F_ALL);
 	server->use(serializeHeaders, F_ALL);
+<<<<<<< HEAD
 	//server->use(readToTrashbin, F_ALL);
+=======
+	// server->use(readToTrashbin, F_ALL);
+>>>>>>> Static
 	server->use(sendHeader, F_ALL);
 	server->use(sendBodyFromBuffer, F_ALL);
 	server->use(*sendBodyFromFD, F_ALL);

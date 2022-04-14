@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/04/13 23:31:07 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/14 01:07:27 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -111,12 +111,19 @@ class   Chain
 		{
 			for (hostnames_t::const_iterator it = hostnames.begin(); it != hostnames.end(); ++it)
 			{
-				std::cout << "testing " << hostname << " against " << *it << std::endl;
 				if (*it == hostname)
 					return (true);
 			}
 
 			return (false);
+		}
+
+		bool	_isSubpathOf(std::string &complete_path, std::string &base_path)
+		{
+			if (base_path.length() > complete_path.length())
+				return (false);
+			
+			return (complete_path.substr(0, base_path.length()) == base_path);
 		}
 
 		bool	_canUseLink(chain_link_t &link, Request &req, Response &res)
@@ -130,9 +137,9 @@ class   Chain
 			}
 			if ( req.method != M_UNKNOWN && !(link.methods & req.method) )
 				return (false);
-			if ( req.pathname.length() && link.pathname.compare(req.pathname) > 0 )  // Need review
+			if ( req.pathname.length() && !_isSubpathOf(req.trusted_complete_pathname, link.pathname) )
 				return (false);
-			if (res.error && !(link.flag & F_ERROR))  // Need review
+			if (res.error && !(link.flag & F_ERROR))
 				return (false);
 
 			return (true);
@@ -140,7 +147,7 @@ class   Chain
 
 		void	_root_at_locationblock(chain_link_t &link, Request &req)
 		{
-			if (link.pathname.length() > 1 && link.pathname.compare(req.trusted_complete_pathname) <= 0)
+			if (link.pathname.length() > 1 && _isSubpathOf(req.trusted_complete_pathname, link.pathname))
 			{
 				size_t	start_at = link.pathname.length();
 
