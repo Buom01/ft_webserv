@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/18 08:00:23 by badam             #+#    #+#             */
-/*   Updated: 2022/04/14 22:53:38 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/14 23:28:14 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,6 +49,11 @@ class Redirect: public IMiddleware
 	public:
 		bool	operator()(Request &req, Response &res)
 		{
+			if (res.code != C_NOT_IMPLEMENTED)
+				return (true);
+			if (res.response_fd > 0 || res.body.length() > 0)
+				return (true);
+			
 			std::string	newLocation(options.location);
 
 			replace_all(&newLocation, "$request_uri", req.pathname);
