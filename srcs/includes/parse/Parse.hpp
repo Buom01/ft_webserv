@@ -716,7 +716,7 @@ class Parse : public ParseTypedef
 			{
 				for (std::vector<std::string>::iterator listen = listenList.begin(); listen != listenList.end(); listen++)
 				{
-					std::string	ip = "127.0.0.1";
+					std::string	ip = "0.0.0.0";
 					int			port = 80;
 					s_listen	ret;
 					Regex.exec(*listen, "^([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}|[a-zA-Z_-]+|[0-9]+):?(-?[0-9]+)?$", GLOBAL_FLAG);
@@ -759,8 +759,6 @@ class Parse : public ParseTypedef
 					listens.push_back(ret);
 				}
 			}
-			else
-				throw IncorrectConfig("rule 'listen': no rule is defined, the server can't work");
 			return listens;
 		}
 
@@ -791,17 +789,12 @@ class Parse : public ParseTypedef
 			return ret;
 		}
 
-		std::string root(optionsMap vec, bool optional = false)
+		std::string root(optionsMap vec)
 		{
 			stringVector	get = findKey("root", vec);
 		
 			if (get[0] == NO_KEY)
-			{
-				/*if (!optional)
-					throw IncorrectConfig("rule 'root': no rule is defined, the server can't work");
-				else*/
-					return "";
-			}
+				return "";
 			Regex.exec(get[0], "([-a-zA-Z0-9_\\./\\]+)", GLOBAL_FLAG);
 			if (Regex.size() > 1)
 				throw IncorrectConfig("rule 'root': only one directory definition is allowed");
@@ -855,7 +848,7 @@ class Parse : public ParseTypedef
 					errorPage((*it).options);
 					index((*it).options);
 					_return((*it).options);
-					root((*it).options, false);
+					root((*it).options);
 					upload((*it).options);
 				}
 				clientBodyBufferSize((*it).options);
@@ -887,7 +880,7 @@ class Parse : public ParseTypedef
 						errorPage((*itLoc).second);
 						index((*itLoc).second);
 						_return((*itLoc).second);
-						root((*itLoc).second, !(defaultLocation && (*itLoc).first == "/"));
+						root((*itLoc).second);
 						upload((*it).options);
 					}
 				}

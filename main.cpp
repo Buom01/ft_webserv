@@ -129,7 +129,7 @@ int main(int argc, char **argv)
 			Parse::s_allow 						getAllow = config.allow((*itLoc).second);
 			Parse::s_clientBodyBufferSize		getBodyMaxSize = config.clientBodyBufferSize((*itLoc).second);
 			Parse::s_autoindex					getAutoindex = config.autoindex((*itLoc).second);
-			std::string 						getRoot = config.root((*itLoc).second, true);
+			std::string 						getRoot = config.root((*itLoc).second);
 			std::string							getIndex = config.index((*itLoc).second);
 			Parse::mapErrors 					getErrors = config.errorPage((*itLoc).second);
 			Parse::s_cgi						getCgi = config.cgi((*itLoc).second);
