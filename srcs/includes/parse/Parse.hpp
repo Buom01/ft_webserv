@@ -813,9 +813,7 @@ class Parse : public ParseTypedef
 			stringVector	get = findKey("server_name", vec);
 			stringVector	ret;
 
-			if (get[0] == NO_KEY)
-				ret.push_back("localhost");
-			else
+			if (get[0] != NO_KEY)
 			{
 				Regex.exec(get[0], "([a-zA-Z0-9_.]+)", GLOBAL_FLAG);
 				for (size_t x = 0; x < Regex.size(); x++)
