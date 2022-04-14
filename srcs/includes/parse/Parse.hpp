@@ -797,9 +797,9 @@ class Parse : public ParseTypedef
 		
 			if (get[0] == NO_KEY)
 			{
-				if (!optional)
+				/*if (!optional)
 					throw IncorrectConfig("rule 'root': no rule is defined, the server can't work");
-				else
+				else*/
 					return "";
 			}
 			Regex.exec(get[0], "([-a-zA-Z0-9_\\./\\]+)", GLOBAL_FLAG);
