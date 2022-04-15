@@ -223,7 +223,8 @@ class Parse : public ParseTypedef
 					{
 						if (!isServerBlock)
 							generateParseError(lineNumber, "no server block is present. A configuration must be in at least one server block");
-
+						if (isLocationBlock && REGEX[i].name == "error_page")
+							generateParseError(lineNumber, "rule error_page is forbidden inside a location block, it must only be located at the root of server block");
 						stringVector ret;
 						for (size_t m = 0; m < Regex.size(); m++)
 							if (!Regex.match()[m].occurence.empty())
@@ -274,7 +275,7 @@ class Parse : public ParseTypedef
 
 				for (optionsMap::iterator itConf = (*it).options.begin(); itConf != (*it).options.end(); itConf++)
 				{
-					if ((*itConf).first == "listen" || (*itConf).first == "server_name" || (*itConf).first == "client_body_buffer_size")
+					if ((*itConf).first == "listen" || (*itConf).first == "server_name" || (*itConf).first == "client_body_buffer_size" || (*itConf).first == "error_page")
 						continue;
 					root.second.push_back((*itConf));
 					(*it).options.erase(itConf);
