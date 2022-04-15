@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/04/14 01:07:27 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/15 15:11:36 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 # include <string>
 # include <vector>
+# include <time.h>
 # include "IMiddleware.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
@@ -62,21 +63,37 @@ class	RunningChain
 		uint32_t			events;
 		chain_t::iterator	pos;
 		chain_state_t		state;
+		struct timespec		wait_since;
+		bool				wait_timeout;
 
 		RunningChain(int connection, int interface, std::string &client_ip, uint32_t _events, bool &_alive, Log &logger, chain_t::iterator _pos):
 			req(connection, interface, client_ip, _events, _alive, logger),
 			res(connection, logger),
 			events(_events),
 			pos(_pos),
-			state(CS_OTHER)
+			state(CS_OTHER),
+			wait_timeout(false)
 		{
-			req.state = &state;
+			req.state			= &state;
+			req.wait_since		= &wait_since;
+			req.wait_timeout	= &wait_timeout;
 		}
 
 		virtual ~RunningChain()
 		{
 			if (res.response_fd > 0)
 				nothrow_close(res.response_fd);
+		}
+
+		bool	poll_timeout()
+		{
+			if (wait_timeout || get_elasped_ns(wait_since) >= (int64_t)30 * 1000000000)
+			{
+				wait_timeout = true;
+				return (true);
+			}
+			else
+				return (false);
 		}
 };
 
@@ -334,7 +351,7 @@ class   Chain
 
 			while (it != _running.end())
 			{
-				if ((*it)->state == CS_OTHER && _exec_instance(**it))
+				if (((*it)->state == CS_OTHER || (*it)->poll_timeout()) && _exec_instance(**it))
 					unsafe_remove_instance(*it);
 				else
 					++it;
