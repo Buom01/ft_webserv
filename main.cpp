@@ -96,32 +96,31 @@ int main(int argc, char **argv)
 		ServerConfig		serverBlockConfig;
 		Parse::mapListens	listen 				= config.listen((*it).options);
 		Parse::stringVector	hostnames        	= config.serverName((*it).options);
+		server_bind_t		*bound;
 
-		serverBlockConfig.hostnames = hostnames;
+		serverBlockConfig.hostnames.insert(hostnames.begin(), hostnames.end());
 
 		if (listen.size())
 		{
-			int	bound;
-			
 			for (Parse::mapListens::const_iterator it = listen.begin(); it != listen.end(); it++)
 			{
-				bound	= server->bind((*it).ipSave, (*it).portSave);
+				bound	= server->bind((*it).ipSave, (*it).portSave, hostnames);
 
-				if (bound > 0)
+				if (bound)
 					serverBlockConfig.interfaces.push_back(bound);
 			}
 		}
 		else
 		{
-			int	bound;
-			
-			bound	= server->bind("0.0.0.0", 80);
-			if (bound > 0)
+			bound	= server->bind("0.0.0.0", 80, hostnames);
+
+			if (bound != NULL)
 				serverBlockConfig.interfaces.push_back(bound);
 			else
 			{
-				bound	= server->bind("0.0.0.0", 8000);
-				if (bound > 0)
+				bound	= server->bind("0.0.0.0", 8000, hostnames);
+
+				if (bound != NULL)
 					serverBlockConfig.interfaces.push_back(bound);
 			}
 		}
