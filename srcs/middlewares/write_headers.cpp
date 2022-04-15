@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/13 23:08:39 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/16 01:25:47 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,6 +60,17 @@ bool	serializeHeaders(Request &req, Response &res)
 	}
 	res.headers_buff.push_back('\n');
 
+	std::stringstream	infos;
+	infos << get_elasped_ms(req.start);
+	infos << "ms";
+	res.logger.log(
+		res.code,
+		req.hostname.size() ? req.hostname : req.interface->ip,
+		req.interface->port,
+		req.trusted_complete_pathname,
+		infos.str()
+	);
+
 	return (true);
 }
 
@@ -88,11 +99,6 @@ bool	sendHeader(Request &req, Response &res)
 	}
 
 	res.headers_sent = true;
-	std::stringstream	infos;
-	infos << get_elasped_ms(req.start);
-	infos << "ms";
-	res.logger.log(res.code, req.hostname, req.trusted_complete_pathname, infos.str());
-	
 	return (true);
 }
 
