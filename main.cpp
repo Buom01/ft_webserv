@@ -20,16 +20,20 @@
 #include "mimetypes.cpp"
 #include "body.cpp"
 
-Serve	*server;
+static Serve	*server			= NULL;
+static bool	stop_requested	= false;
 
 void	stop_signal(int)
 {
-	if (server->alive())
+	if (server && server->alive())
 		server->stop();
+	stop_requested = true;
 }
 
 int main(int argc, char **argv)
 {
+	signal(SIGINT, stop_signal);
+
 	Parse					config;
 	Parse::serversVector	servers;
 	Parse::locationsMap		locations;
@@ -73,10 +77,11 @@ int main(int argc, char **argv)
 		return (EXIT_FAILURE);
 	}
 	#pragma endregion Initiale check & Parse configuration file
-	
-	#pragma region Start server
 
-	signal(SIGINT, stop_signal);
+	if (stop_requested)
+		return (EXIT_SUCCESS);
+
+	#pragma region Start server
 
 	server							= new Serve();
 
@@ -271,6 +276,8 @@ int main(int argc, char **argv)
 	delete sendBodyFromFD;
 
 	#pragma endregion Middlewares cleanup 
+
+	delete server;
 	
 	return (EXIT_SUCCESS);
 }
