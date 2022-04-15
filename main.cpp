@@ -58,7 +58,7 @@ int main(int argc, char **argv)
 		config.init(argv[1]);
 		config.check();
 		servers = config.getServers();
-		config.print();
+		//config.print();
 	}
 	catch (std::ifstream::failure &e)
 	{

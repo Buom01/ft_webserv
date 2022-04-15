@@ -325,6 +325,11 @@ class CGI : public cgiEnv, public IMiddleware
 			dup2(saveFd[1], STDOUT_FILENO);
 			fclose(IN);
 			close(fdIN);
+			if (pid == 0)
+			{
+				fclose(OUT);
+				close(fdOUT);
+			}
 			close(saveFd[0]); close(saveFd[1]);
 			if (pid == 0)
 				exit(EXIT_SUCCESS);
