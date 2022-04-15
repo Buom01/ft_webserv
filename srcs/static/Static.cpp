@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/01 03:43:21 by badam             #+#    #+#             */
-/*   Updated: 2022/04/11 22:09:06 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/15 03:06:51 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -150,7 +150,7 @@ class Static: public IMiddleware
 				else
 					res.code = C_NOT_FOUND;
 			}
-			else if (directoryExists(path + "/"))
+			else if (directoryExists(path + "/") && getIndex(path + "/", options).size())
 				redirect(res, req.pathname + "/");
 			else if (fileExists(path))
 				serveFile(res, path);
