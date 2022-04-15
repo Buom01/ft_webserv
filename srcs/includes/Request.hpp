@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/04/13 22:15:18 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/15 02:45:15 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,7 +36,7 @@ class Request
 		uint32_t			events;
 		bool				&alive;
 		chain_state_t		*state;
-		char				buff[SERVER_BUFFER_SIZE];
+		std::string			buff;
 		
 		std::string			method_str;
 		method_t			method;
@@ -76,6 +76,8 @@ class Request
 			events(_events),
 			alive(_alive),
 			state(NULL),
+			buff(""),
+			
 			method_str(""),
 			method(M_UNKNOWN),
 			raw_pathname(""),
@@ -105,7 +107,7 @@ class Request
 			body_boundary_end(""),
 			body("")
 		{
-			bzero(&buff, sizeof(buff));
+			buff.reserve(SERVER_BUFFER_SIZE);
 		}
 
 		virtual ~Request()
