@@ -107,12 +107,8 @@ class Body: public AEpoll
 				return (false);
 
 			req.body.clear();
-			size_t _size = std::strlen(req.buff);
-			if (_size)
-			{
-				req.body.append(req.buff, _size);
-				req.buff[0] = '\0';
-			}
+			req.body.append(req.buff);
+			req.buff.clear();
 			
 			if (req.body_length)
 			{
