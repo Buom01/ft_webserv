@@ -609,7 +609,7 @@ class Parse : public ParseTypedef
 				err += "a cgi cannot be defined without without at least one 94mroot rule in the block server";
 				throw IncorrectConfig(err.c_str());
 			}
-			cgi.path = concatPath(root(vec), removeRelativeStart(get[1]));
+			cgi.path = concatPath(configDirectory, removeRelativeStart(get[1]));
 			if (!exist(cgi.path))
 			{
 				err += "the executable does not exist";

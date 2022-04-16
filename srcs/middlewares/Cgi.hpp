@@ -139,8 +139,6 @@ class cgiEnv
 
 class CGI : public cgiEnv, public IMiddleware
 {
-	protected:
-		Log				&_logger;
 	private:
 		cgiEnv			env;
 		s_file 			file;
@@ -148,8 +146,7 @@ class CGI : public cgiEnv, public IMiddleware
 		std::string		_location;
 		std::string		_index;
 	public:
-		CGI(Log &logger, Parse::s_cgi config, std::string location, std::string index):
-			_logger(logger),
+		CGI(Parse::s_cgi config, std::string location, std::string index):
 			_config(config),
 			_location(location),
 			_index(index)
@@ -171,11 +168,6 @@ class CGI : public cgiEnv, public IMiddleware
 			file.file = file.path.substr(nposIndex + 1);
 			file.extension = file.path.substr(file.path.find_last_of("."));
 			file.path = concatPath(_config.root, file.path);
-
-			std::cout << file.file << std::endl;
-			std::cout << file.extension << std::endl;
-			std::cout << file.path << std::endl;
-			//std::cout << file.path.insert(0, ".") << std::endl;
 		}
 
 		bool		isMethod(Request &req)
@@ -293,7 +285,6 @@ class CGI : public cgiEnv, public IMiddleware
 
 			while (get_next_line_string(res.response_fd, line, buff))
 			{
-				std::cout << line << std::endl;
 				npos += line.size();
 				if (line.empty())
 					break;
@@ -373,12 +364,8 @@ class CGI : public cgiEnv, public IMiddleware
 			std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), file.extension);
 			if (it == _config.extensions.end() || !isMethod(req))
 				return true;
-			
-			_logger.log(202, empty, file.path, "CGI - start");
 			res.response_fd = exec(req, res);
 			setGenerateHeader(res);
-			_logger.log(201, empty, file.path, "CGI - end");
-			
 			return true;
 		}
 };

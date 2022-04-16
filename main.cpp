@@ -169,7 +169,7 @@ int main(int argc, char **argv)
 			if (getCgi.isDefined)
 			{
 				Body *_body	= new Body(server->logger);
-				CGI *_cgi	= new CGI(server->logger, getCgi, location_name, getIndex);
+				CGI *_cgi	= new CGI(getCgi, location_name, getIndex);
 
 				server->use(*_body, F_NORMAL, method(getCgi.allow), location_name, serverBlockConfig);
 				server->use(*_cgi, F_NORMAL, method(getCgi.allow), location_name, serverBlockConfig);
