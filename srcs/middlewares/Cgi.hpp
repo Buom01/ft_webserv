@@ -23,6 +23,7 @@
 # include "Url.hpp"
 # include "nullptr_t.hpp"
 # include "http.hpp"
+# include "File.hpp"
 
 class cgiEnv
 {
@@ -169,6 +170,12 @@ class CGI : public cgiEnv, public IMiddleware
 				return;
 			file.file = file.path.substr(nposIndex + 1);
 			file.extension = file.path.substr(file.path.find_last_of("."));
+			file.path = concatPath(_config.root, file.path);
+
+			std::cout << file.file << std::endl;
+			std::cout << file.extension << std::endl;
+			std::cout << file.path << std::endl;
+			//std::cout << file.path.insert(0, ".") << std::endl;
 		}
 
 		bool		isMethod(Request &req)
@@ -237,28 +244,17 @@ class CGI : public cgiEnv, public IMiddleware
 
 		void		setHeader(Request &req)
 		{
-			/*
-				GATEWAY_INTERFACE=CGI/1.1
-				PATH_INFO=/website/sendDatas/data.php
-				REQUEST_METHOD=POST
-				SCRIPT_FILENAME=./website/sendDatas/data.php
-				SERVER_PROTOCOL=HTTP/1.1
-				REDIRECT_STATUS=200
-				CONTENT_TYPE=application/x-www-form-urlencoded
-				CONTENT_LENGTH=11
-				/usr/bin/php-cgi
-			*/
 			#pragma region Mandatory
 				env.addVariable("CONTENT_LENGTH",
 					sval(req.headers.header("CONTENT-LENGTH", true), itos(req.body.size()))
 				);
 				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT-TYPE", true));
 				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
-				env.addVariable("PATH_INFO", "/demo_website/html/php/index.php"); //req.pathname
+				env.addVariable("PATH_INFO", file.path);
 				env.addVariable("QUERY_STRING", req.querystring);
 				env.addVariable("REMOTE_ADDR", req.client_ip);
 				env.addVariable("REQUEST_METHOD", convertMethod(req.method));
-				env.addVariable("SCRIPT_FILENAME", "./demo_website/html/php/index.php"); //file.path
+				env.addVariable("SCRIPT_FILENAME", file.path);
 				env.addVariable("SERVER_NAME", req.hostname);
 				env.addVariable("SERVER_PORT", req.port);
 				env.addVariable("SERVER_PROTOCOL", req.protocol);
@@ -278,13 +274,33 @@ class CGI : public cgiEnv, public IMiddleware
 				env.addVariable("REMOTE_HOST", sval(req.headers.header("REMOTE_HOST", true), ENV_NULL));
 			#pragma endregion Should
 			#pragma region May
-				env.addVariable("PATH_TRANSLATED", "");
+				std::string requestUri(file.file);
+				requestUri.append("?");
+				requestUri.append(req.querystring);
+				env.addVariable("PATH_TRANSLATED", file.path);
 				env.addVariable("REDIRECT_STATUS", "200");
 				env.addVariable("REMOTE_USER", req.username);
 				env.addVariable("REMOTE_PASS", req.password);
-				env.addVariable("REQUEST_URI", "");
+				env.addVariable("REQUEST_URI", requestUri);
 				env.addVariable("SCRIPT_NAME", file.file);
 			#pragma endregion May
+		}
+
+		bool		setGenerateHeader(Response &res)
+		{
+			size_t npos = 0;
+			std::string	line, buff;
+
+			while (get_next_line_string(res.response_fd, line, buff))
+			{
+				std::cout << line << std::endl;
+				npos += line.size();
+				if (line.empty())
+					break;
+				res.headers.set(line);
+			}
+			lseek(res.response_fd, npos, SEEK_SET);
+			return (true);
 		}
 	public:
 		/**
@@ -357,9 +373,12 @@ class CGI : public cgiEnv, public IMiddleware
 			std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), file.extension);
 			if (it == _config.extensions.end() || !isMethod(req))
 				return true;
-			_logger.log(202, empty, file.path, "CGI has started");
+			
+			_logger.log(202, empty, file.path, "CGI - start");
 			res.response_fd = exec(req, res);
-			_logger.log(201, empty, file.path, "CGI has ended");
+			setGenerateHeader(res);
+			_logger.log(201, empty, file.path, "CGI - end");
+			
 			return true;
 		}
 };

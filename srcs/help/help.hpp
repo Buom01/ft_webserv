@@ -1,10 +1,8 @@
 #ifndef __HELP
 # define __HELP
-# include <cstdio>
 # include <iostream>
 # include <fstream>
 # include <string>
-# include "File.hpp"
 # include "Regex.hpp"
 
 void help()

@@ -45,7 +45,7 @@
     ➤  \e[93m allow \e[0m
       Allow defines a set of request methods allowed to be launched in a given
       definition block (GET, POST, DELETE, ...).
-      If a request does not match, it will simply be ignored
+      If a request does not match, it will simply be ignored.
       ┌────────────────────────────────────────────────────────────────────────┐
       │ \e[93mallow\e[0m \e[32m[methods, ...]\e[0m;                                                       │
       └────────────────────────────────────────────────────────────────────────┘

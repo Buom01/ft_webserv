@@ -85,6 +85,8 @@ std::string	relativeToAbsoluteDir(const std::string &path)
 
 std::string	concatPath(const std::string &root, const std::string &path)
 {
+	if (!path.size())
+		return ("");
 	if (path.at(0) == '/')
 		return (path);
 	else

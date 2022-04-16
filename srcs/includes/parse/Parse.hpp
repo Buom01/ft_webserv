@@ -3,6 +3,7 @@
 # define REGEX_SIZE 14
 # define NO_KEY "NO_KEY"
 # include <algorithm>
+# include <iterator>
 # include <iostream>
 # include <sstream>
 # include <fstream>
@@ -37,7 +38,7 @@ struct s_defineRegex
 	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);[ \t]*$", true },
 	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)[ \t](\\.?\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);[ \t]*$", true },
 	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);[ \t]*$", true },
-	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\/.*);[ \t]*$", false },
+	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\.?\\/.*);[ \t]*$", false },
 	{ "index", "^[ \t]*index[ \t]+(.*);[ \t]*$", true },
 	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", false },
 	{ "return", "^[ \t]*return[ \t]+([a-zA-Z0-9_.\\/]+)[ \t]+(.*);[ \t]*$", true },
@@ -64,6 +65,7 @@ struct ParseTypedef
 	{
 		bool						isDefined;
 		std::vector<std::string>	extensions;
+		std::string 				root;
 		std::string					path;
 		s_allow						allow;
 	};
@@ -160,6 +162,13 @@ class Parse : public ParseTypedef
 		void generateParseError(int lineNumber = -1, std::string str = "")
 		{
 			throw IncorrectConfig(createString(lineNumber, str));
+		}
+
+		std::string removeRelativeStart(std::string str)
+		{
+			if (str.size() > 2 && str.at(0) == '.' && str.at(1) == '/')
+				str.erase(0, 2);
+			return str;
 		}
 	public:
 		Parse() {}
@@ -299,24 +308,32 @@ class Parse : public ParseTypedef
 				pairLocations	root;
 				locationsMap::iterator find = (*it).locations.find("/");
 
-				if (find != (*it).locations.end())
-					root = *find;
 				root.first = "/";
+				if (find != (*it).locations.end())
+				{
+					root.second = (*find).second;
+					(*it).locations.erase(find);
+				}
 				if ((*it).options.size() <= 0 && (*it).locations.size() <= 0)
 					generateParseError(-1, "no option(s) or location block(s) is present. A configuration must be in at least one option or one location block");
-				for (optionsMap::iterator itConf = (*it).options.begin(); itConf != (*it).options.end(); itConf++)
+				for (optionsMap::iterator itConf = (*it).options.begin(); itConf != (*it).options.end();)
 				{
-					if ((*itConf).first == "listen" || (*itConf).first == "server_name" || (*itConf).first == "client_body_buffer_size" || (*itConf).first == "error_page")
-						continue;
-					root.second.push_back((*itConf));
-					(*it).options.erase(itConf);
-					if ((*it).options.size() <= 0)
-						break;
-					itConf = (*it).options.begin();
+					if ((*itConf).first		!= "listen"	
+						&&	(*itConf).first	!= "server_name"
+						&&	(*itConf).first	!= "client_body_buffer_size"
+						&&	(*itConf).first	!= "error_page")
+					{
+						root.second.push_back((*itConf));
+						(*it).options.erase(itConf);
+						if ((*it).options.size() <= 0)
+							break;
+						itConf = (*it).options.begin();
+					}
+					else
+						++itConf;
 				}
-				if (find != (*it).locations.end())
-					(*it).locations.erase(find);
 				(*it).locations.insert((*it).locations.begin(), root);
+
 			}
 		}
 	private:
@@ -573,7 +590,7 @@ class Parse : public ParseTypedef
 			std::string err = "rule 'cgi': ";
 			
 			cgi.isDefined = true;
-			if (get.size() == 1 && get[0] == "NO_KEY")
+			if (get.size() == 1 && get[0] == NO_KEY)
 			{
 				cgi.isDefined = false;
 				return cgi;
@@ -586,8 +603,13 @@ class Parse : public ParseTypedef
 			Regex.exec(get[0], "(\\.[a-zA-Z0-9_]+)", GLOBAL_FLAG);
 			for (size_t x = 0; x < Regex.size(); x++)
 				cgi.extensions.push_back(Regex.match()[x].occurence);
-
-			cgi.path = concatPath(configDirectory, get[1]);
+			cgi.root = root(vec);
+			if (cgi.root.empty())
+			{
+				err += "a cgi cannot be defined without without at least one 94mroot rule in the block server";
+				throw IncorrectConfig(err.c_str());
+			}
+			cgi.path = concatPath(root(vec), removeRelativeStart(get[1]));
 			if (!exist(cgi.path))
 			{
 				err += "the executable does not exist";
@@ -826,10 +848,10 @@ class Parse : public ParseTypedef
 		
 			if (get[0] == NO_KEY)
 				return "";
-			Regex.exec(get[0], "([-a-zA-Z0-9_\\./\\]+)", GLOBAL_FLAG);
+			Regex.exec(get[0], "([a-zA-Z0-9_\\.\\/-]+)", GLOBAL_FLAG);
 			if (Regex.size() > 1)
 				throw IncorrectConfig("rule 'root': only one directory definition is allowed");
-			return concatPath(configDirectory, Regex.match()[0].occurence);
+			return concatPath(configDirectory, trim(get[0]));
 		}
 
 		stringVector serverName(optionsMap vec)

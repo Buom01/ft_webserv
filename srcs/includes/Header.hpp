@@ -18,6 +18,7 @@
 # include <algorithm>
 # include <vector>
 # include <map>
+# include <cctype>
 # include "Regex.hpp"
 
 class Header
@@ -48,6 +49,22 @@ class Header
 			return str;
 		}
 		
+		std::string correctHeaderTitleFormat(std::string name)
+		{
+			bool isFirstLetter(true);
+			for (std::string::iterator it = name.begin(); it != name.end(); it++)
+			{
+				if (isFirstLetter)
+				{
+					isFirstLetter = false;	
+					*it = std::toupper(*it);
+				}
+				if (std::isspace(*it) || (*it) == '-' || (*it) == '_')
+					isFirstLetter = true;
+			}
+			return name;
+		}
+
 		_headers_it	find(std::string key)
 		{
 			for (_headers_it check = headersMap.begin(); check != headersMap.end(); check++)
@@ -62,7 +79,7 @@ class Header
 			regex.exec(header, "^([^:]+):(.*)$", GLOBAL_FLAG);
 			if (regex.size() == 2)
 			{
-				vect.first = trim(regex.match()[0].occurence);
+				vect.first = toLowerCase(trim(regex.match()[0].occurence));
 				regex.exec(trim(regex.match()[1].occurence), "([^,]+)", GLOBAL_FLAG);
 				for (size_t x = 0; x < regex.size(); x++)
 					vect.second.push_back(trim(regex.match()[x].occurence));
@@ -78,9 +95,9 @@ class Header
 		 */
 		bool remove(std::string key)
 		{
-			_headers_it it = headersMap.find(toLowerCase(key));
+			_headers_it it = headersMap.find(toLowerCase(trim(key)));
 			if (it != headersMap.end())
-				headersMap.erase(toLowerCase(key));
+				headersMap.erase(toLowerCase(trim(key)));
 			else
 				return true;
 			return false;
@@ -139,7 +156,7 @@ class Header
 			for (_headers_it it = headersMap.begin(); it != headersMap.end(); it++)
 			{
 				temp.clear();
-				temp = (*it).first + ": ";
+				temp = correctHeaderTitleFormat((*it).first) + ": ";
 				for (_vectors::const_iterator it2 = (*it).second.begin(); it2 != (*it).second.end();)
 				{
 					temp += *it2;
