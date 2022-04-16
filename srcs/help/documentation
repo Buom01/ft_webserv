@@ -1,0 +1,109 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                  \e[95mFT_WEBSERV\e[0m                                  ║
+║                               badam - cbertran                               ║
+╚═════════════════════════════════════════════════════════════════════ © 2022 ═╝
+
+\e[94m〉 Command format\e[0m
+  - \e[92mwebserv \e[36m[configuration_file]\e[0m
+    Start software
+  - \e[92mwebserv \e[36m[--help|-h]\e[0m
+    Print help
+
+\e[94m〉 File configuration format\e[0m
+  The format of a configuration file is freely inspired by the NGINX format.
+  There are two types of rules, definition and configuration. Configurations are
+  necessarily inside a definition, the opposite is impossible.
+
+  In case of an unrecognized command in the configuration file, the system will
+  only send you information about the offending line, but will not consider it
+  as a critical error.
+  However, in case of a critical error (invalid ip, a incorrect http code, ...),
+  the software indicate the error and will stop before launching the server.
+    
+  - \e[31m\e[4mDefinition rules\e[0m
+
+    ➤  \e[93mserver\e[0m
+      To create a server, you just have to create a block server. You can
+      create as many servers as you need.
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ server {                                                               │
+      │   \e[3mcontent\e[0m                                                              │
+      │ }                                                                      │
+      └────────────────────────────────────────────────────────────────────────┘
+    ➤  \e[93mlocation\e[0m
+      Sets configuration depending on a request URI.
+      This block can only be defined within a server block, and cannot
+      contain another one.
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ location \e[32m[directory]\e[0m {                                                 │
+      │   \e[3mcontent\e[0m                                                              │
+      │ }                                                                      │
+      └────────────────────────────────────────────────────────────────────────┘
+  
+  - \e[31m\e[4mConfiguration rules\e[0m
+
+    ➤  \e[93m allow \e[0m
+      Allow defines a set of request methods allowed to be launched in a given
+      definition block (GET, POST, DELETE, ...).
+      If a request does not match, it will simply be ignored
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93mallow\e[0m \e[32m[methods, ...]\e[0m;                                                       │
+      └────────────────────────────────────────────────────────────────────────┘
+    ➤  \e[93m autoindex \e[0m
+      Enables or disables the directory listing output.
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93mautoindex\e[0m \e[32m(on|off)\e[0m;                                                    │
+      └────────────────────────────────────────────────────────────────────────┘
+    ➤  \e[93m cgi \e[0m
+      Redirects files with the corresponding extensions to an external program,
+      and returns the result in the response body.
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93mcgi\e[0m \e[34m[file_extension, ...]\e[0m \e[32mpath_to_executable\e[0m \e[96m[accepted_method, ...]\e[0m;   │
+      └────────────────────────────────────────────────────────────────────────┘
+    ➤  \e[93m client_body_buffer_size \e[0m
+      Sets buffer size for reading client request body. This can be very useful
+      on machines with very limited memory resources (in bit).
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93mclient_body_buffer_size\e[0m \e[96mnumber\e[0m \e[34m[(b)its, (k)ilo, (m)ega, (g)iga]\e[0m;       │
+      └────────────────────────────────────────────────────────────────────────┘
+    ➤  \e[93m error_page \e[0m
+      Allows you to define custom error pages. Accepts all http error
+      codes, as well as autocompletion. For example:
+      - all \e[95m400\e[0m codes = \e[96m\e[1m4xx\e[0m
+      - (\e[95m210\e[0m, \e[95m220\e[0m, \e[95m...\e[0m , \e[95m290\e[0m) codes = \e[96m\e[1m2x0\e[0m
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93merror_page\e[0m \e[34m[http_code, ...]\e[0m \e[32mpath_to_file\e[0m;                              │
+      └────────────────────────────────────────────────────────────────────────┘
+    ➤  \e[93m index \e[0m
+      Defines file that will be used as an index.
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93mindex\e[0m \e[32mpath_to_file\e[0m;                                                    │
+      └────────────────────────────────────────────────────────────────────────┘
+    ➤  \e[93m listen \e[0m
+      Set ip and port for definition block. You can define an ip and a port,
+      or only one or the other. Accept only IPv4 addresses.
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93mlisten\e[0m \e[32m(ip:port|ip|port)\e[0m;                                              │
+      └────────────────────────────────────────────────────────────────────────┘
+    ➤  \e[93m return \e[0m
+      Defines an automatic redirection to a new internet address.
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93mreturn\e[0m \e[96mhttp_code\e[0m \e[32murl\e[0m;                                                  │
+      └────────────────────────────────────────────────────────────────────────┘
+    ➤  \e[93m root \e[0m
+      Set the folder where your website is located, by default in the folder
+      where the configuration file is located
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93mroot\e[0m \e[32mpath_to_directory\e[0m;                                                │
+      └────────────────────────────────────────────────────────────────────────┘
+    ➤  \e[93m server_name \e[0m
+      Sets names of current server.
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93mserver_name\e[0m \e[34m[name, ...]\e[0m;                                               │
+      └────────────────────────────────────────────────────────────────────────┘
+    ➤  \e[93m upload \e[0m
+      Defines a folder in which the uploaded files will be placed.
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93mupload\e[0m \e[32mrelative_path\e[0m \e[34mabsolute_path\e[0m;                                    │
+      └────────────────────────────────────────────────────────────────────────┘
+

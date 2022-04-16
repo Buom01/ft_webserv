@@ -1,6 +1,7 @@
 #include <iostream>
 #include <exception>
 #include <unistd.h>
+#include "Log.hpp"
 #include "Parse.hpp"
 #include "Serve.hpp"
 #include "utils.hpp"
@@ -18,6 +19,7 @@
 #include "forbidden.cpp"
 #include "mimetypes.cpp"
 #include "body.cpp"
+#include "help.hpp"
 
 Serve	*server;
 
@@ -45,29 +47,34 @@ int main(int argc, char **argv)
 	#pragma region Initiale check & Parse configuration file
 	if (argc <= 1)
 	{
-		std::cerr << "WEBSERV - No configuration file has been passed" << std::endl;
+		std::cerr << COLOR_TITLE << "WEBSERV " << COLOR_RESET << " - " << COLOR_ERROR << "No configuration file has been passed" << std::endl;
 		return (EXIT_FAILURE);
 	}
 	else if (argc >= 3)
 	{
-		std::cerr << "WEBSERV - Only one argument is allowed" << std::endl;
+		std::cerr << COLOR_TITLE << "WEBSERV "<< COLOR_RESET << " - " << COLOR_ERROR << "Only one argument is allowed" << std::endl;
 		return (EXIT_FAILURE);
+	}
+	if (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")
+	{
+		help();
+		exit(EXIT_SUCCESS);
 	}
 	try
 	{
-		config.init(argv[1]);
+		config.init(argv[1], true, true);
 		config.check();
 		servers = config.getServers();
-		//config.print();
+		config.print();
 	}
 	catch (std::ifstream::failure &e)
 	{
-		std::cerr << "WEBSERV - " << e.what() << std::endl;
+		std::cerr << COLOR_TITLE << "WEBSERV" << COLOR_RESET << " - " << e.what() << std::endl;
 		return (EXIT_FAILURE);
 	}
 	catch (Parse::IncorrectConfig &e)
 	{
-		std::cerr << "WEBSERV - " << e.what() << std::endl;
+		std::cerr << COLOR_TITLE << "WEBSERV" << COLOR_RESET << " - " << e.what() << std::endl;
 		return (EXIT_FAILURE);
 	}
 	#pragma endregion Initiale check & Parse configuration file
