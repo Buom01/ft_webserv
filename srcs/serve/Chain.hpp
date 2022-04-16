@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/04/14 01:07:27 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/15 23:59:14 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,15 +15,17 @@
 
 # include <string>
 # include <vector>
+# include <time.h>
 # include "IMiddleware.hpp"
+# include "http.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
 # include "Log.hpp"
 # include "File.hpp"
 
 
-typedef	std::vector<std::string>	hostnames_t;
-typedef	std::vector<int>			interfaces_t;
+typedef	std::set<std::string>			hostnames_t;
+typedef	std::vector<server_bind_t *>	interfaces_t;
 
 class	ServerConfig
 {
@@ -62,21 +64,37 @@ class	RunningChain
 		uint32_t			events;
 		chain_t::iterator	pos;
 		chain_state_t		state;
+		struct timespec		wait_since;
+		bool				wait_timeout;
 
-		RunningChain(int connection, int interface, std::string &client_ip, uint32_t _events, bool &_alive, Log &logger, chain_t::iterator _pos):
+		RunningChain(int connection, server_bind_t *interface, std::string &client_ip, uint32_t _events, bool &_alive, Log &logger, chain_t::iterator _pos):
 			req(connection, interface, client_ip, _events, _alive, logger),
 			res(connection, logger),
 			events(_events),
 			pos(_pos),
-			state(CS_OTHER)
+			state(CS_OTHER),
+			wait_timeout(false)
 		{
-			req.state = &state;
+			req.state			= &state;
+			req.wait_since		= &wait_since;
+			req.wait_timeout	= &wait_timeout;
 		}
 
 		virtual ~RunningChain()
 		{
 			if (res.response_fd > 0)
 				nothrow_close(res.response_fd);
+		}
+
+		bool	poll_timeout()
+		{
+			if (wait_timeout || get_elasped_ns(wait_since) >= (int64_t)30 * 1000000000)
+			{
+				wait_timeout = true;
+				return (true);
+			}
+			else
+				return (false);
 		}
 };
 
@@ -96,7 +114,7 @@ class   Chain
 			instance.res.logger.fail(e.what());
 		}
 
-		bool	_hasInterface(int interface, interfaces_t &interfaces)
+		bool	_hasInterface(server_bind_t *interface, interfaces_t &interfaces)
 		{
 			for (interfaces_t::const_iterator it = interfaces.begin(); it != interfaces.end(); ++it)
 			{
@@ -107,8 +125,22 @@ class   Chain
 			return (false);
 		}
 
-		bool	_hasHostname(std::string &hostname, hostnames_t &hostnames)
+		bool	_hasHostname(std::string &hostname, hostnames_t &hostnames, hostnames_t &onlyApplyOn)
 		{
+			bool	isApplicable	= false;
+
+			for (hostnames_t::const_iterator it = onlyApplyOn.begin(); it != onlyApplyOn.end(); ++it)
+			{
+				if (*it == hostname)
+				{
+					isApplicable = true;
+					break ;
+				}
+			}
+
+			if (!isApplicable)
+				return (true);
+
 			for (hostnames_t::const_iterator it = hostnames.begin(); it != hostnames.end(); ++it)
 			{
 				if (*it == hostname)
@@ -132,7 +164,7 @@ class   Chain
 				return (false);
 			if (req.hostname.length() && link.serverConfig.hostnames.size())
 			{
-				if (!_hasHostname(req.hostname, link.serverConfig.hostnames))
+				if (!_hasHostname(req.hostname, link.serverConfig.hostnames, req.interface->hostnames))
 					return (false);
 			}
 			if ( req.method != M_UNKNOWN && !(link.methods & req.method) )
@@ -297,7 +329,7 @@ class   Chain
             _raw_chain.push_back(link);
 		}
 		
-        RunningChain	*exec(int connection, int interface, std::string &client_ip, uint32_t events, Log &logger)
+        RunningChain	*exec(int connection, server_bind_t *interface, std::string &client_ip, uint32_t events, Log &logger)
         {
             RunningChain	*instance	= new RunningChain(connection, interface, client_ip, events, _alive, logger, _raw_chain.begin());
 
@@ -334,7 +366,7 @@ class   Chain
 
 			while (it != _running.end())
 			{
-				if ((*it)->state == CS_OTHER && _exec_instance(**it))
+				if (((*it)->state == CS_OTHER || (*it)->poll_timeout()) && _exec_instance(**it))
 					unsafe_remove_instance(*it);
 				else
 					++it;

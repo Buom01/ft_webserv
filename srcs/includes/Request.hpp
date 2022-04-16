@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/04/15 02:45:15 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/15 23:08:13 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,13 +29,15 @@ class Request
 {
 	public:
 		struct timespec		start;
-		int					interface;
+		server_bind_t		*interface;
 		int					fd;
 		std::string			client_ip;
 		Log					&logger;
 		uint32_t			events;
 		bool				&alive;
 		chain_state_t		*state;
+		struct timespec		*wait_since;
+		bool				*wait_timeout;
 		std::string			buff;
 		
 		std::string			method_str;
@@ -67,7 +69,7 @@ class Request
 		std::string 		body_boundary_end;
 		std::string 		body;
 
-		Request(int connection, int _interface, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
+		Request(int connection, server_bind_t *_interface, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
 			start(get_time()),
 			interface(_interface),
 			fd(connection),
@@ -76,6 +78,8 @@ class Request
 			events(_events),
 			alive(_alive),
 			state(NULL),
+			wait_since(NULL),
+			wait_timeout(NULL),
 			buff(""),
 			
 			method_str(""),
@@ -122,7 +126,8 @@ class Request
 			}
 			else
 			{
-				*state = CS_AWAIT_EVENT;
+				*state		= CS_AWAIT_EVENT;
+				*wait_since	= get_time();
 				return (false);
 			}
 		}
@@ -147,7 +152,10 @@ class Request
 
 		bool	timeout()
 		{
-			return (get_elasped_ns(start) >= (int64_t)30 * 1000000000);
+			return (
+				get_elasped_ns(start) >= (int64_t)30 * 1000000000
+				|| *wait_timeout
+			);
 		}
 
 		bool	closed()

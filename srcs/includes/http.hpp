@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   http.hpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
+/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/10 18:19:19 by badam             #+#    #+#             */
-/*   Updated: 2022/04/07 15:15:17 by bastien          ###   ########.fr       */
+/*   Updated: 2022/04/15 22:20:30 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,8 @@
 # include <errno.h>
 # include <unistd.h>
 # include <vector>
+# include <set>
+# include <string>
 
 typedef	struct sockaddr		sockaddr_t;
 typedef	struct sockaddr_in	sockaddr_in_t;
@@ -30,13 +32,14 @@ typedef	struct epoll_event	epoll_event_t;
 
 typedef struct server_bind_s
 {
-	int				fd;
-	std::string		host;
-	std::string		ip;
-	uint16_t		port;
-	sockaddr_in_t	sockaddr_in;
-	sockaddr_t		*sockaddr;
-	socklen_t		len;
+	int						fd;
+	std::string				host;
+	std::string				ip;
+	uint16_t				port;
+	std::set<std::string>	hostnames;
+	sockaddr_in_t			sockaddr_in;
+	sockaddr_t				*sockaddr;
+	socklen_t				len;
 } server_bind_t;
 
 typedef	std::vector<server_bind_t>	binds_t;

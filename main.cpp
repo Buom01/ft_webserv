@@ -9,6 +9,7 @@
 #include "error.cpp"
 #include "read.cpp"
 #include "eject.cpp"
+#include "redirect.cpp"
 #include "upload.cpp"
 #include "remover.cpp"
 #include "Cgi.hpp"
@@ -21,21 +22,26 @@
 #include "body.cpp"
 #include "help.hpp"
 
-Serve	*server;
+static Serve	*server			= NULL;
+static bool	stop_requested	= false;
 
 void	stop_signal(int)
 {
-	if (server->alive())
+	if (server && server->alive())
 		server->stop();
+	stop_requested = true;
 }
 
 int main(int argc, char **argv)
 {
+	signal(SIGINT, stop_signal);
+
 	Parse					config;
 	Parse::serversVector	servers;
 	Parse::locationsMap		locations;
 
 	std::vector<Eject *>			ejectMiddlewares;
+	std::vector<Redirect *>			redirectMiddlewares;
 	std::vector<Upload *>			uploadMiddlewares;
 	std::vector<Body *>				bodyMiddlewares;
 	std::vector<Remover *>			removerMiddlewares;
@@ -78,10 +84,11 @@ int main(int argc, char **argv)
 		return (EXIT_FAILURE);
 	}
 	#pragma endregion Initiale check & Parse configuration file
-	
-	#pragma region Start server
 
-	signal(SIGINT, stop_signal);
+	if (stop_requested)
+		return (EXIT_SUCCESS);
+
+	#pragma region Start server
 
 	server							= new Serve();
 
@@ -101,32 +108,31 @@ int main(int argc, char **argv)
 		ServerConfig		serverBlockConfig;
 		Parse::mapListens	listen 				= config.listen((*it).options);
 		Parse::stringVector	hostnames        	= config.serverName((*it).options);
+		server_bind_t		*bound;
 
-		serverBlockConfig.hostnames = hostnames;
+		serverBlockConfig.hostnames.insert(hostnames.begin(), hostnames.end());
 
 		if (listen.size())
 		{
-			int	bound;
-			
 			for (Parse::mapListens::const_iterator it = listen.begin(); it != listen.end(); it++)
 			{
-				bound	= server->bind((*it).ipSave, (*it).portSave);
+				bound	= server->bind((*it).ipSave, (*it).portSave, hostnames);
 
-				if (bound > 0)
+				if (bound)
 					serverBlockConfig.interfaces.push_back(bound);
 			}
 		}
 		else
 		{
-			int	bound;
-			
-			bound	= server->bind("0.0.0.0", 80);
-			if (bound > 0)
+			bound	= server->bind("0.0.0.0", 80, hostnames);
+
+			if (bound != NULL)
 				serverBlockConfig.interfaces.push_back(bound);
 			else
 			{
-				bound	= server->bind("0.0.0.0", 8000);
-				if (bound > 0)
+				bound	= server->bind("0.0.0.0", 8000, hostnames);
+
+				if (bound != NULL)
 					serverBlockConfig.interfaces.push_back(bound);
 			}
 		}
@@ -134,6 +140,7 @@ int main(int argc, char **argv)
 		for (Parse::locationsMap::const_reverse_iterator itLoc = (*it).locations.rbegin(); itLoc != (*it).locations.rend(); itLoc++)
 		{
 			Parse::s_allow 						getAllow = config.allow((*itLoc).second);
+			Parse::s_return						getReturn = config._return((*itLoc).second);
 			Parse::s_clientBodyBufferSize		getBodyMaxSize = config.clientBodyBufferSize((*itLoc).second);
 			Parse::s_autoindex					getAutoindex = config.autoindex((*itLoc).second);
 			std::string 						getRoot = config.root((*itLoc).second);
@@ -153,6 +160,14 @@ int main(int argc, char **argv)
 
 				server->use(*eject, F_NORMAL, M_ALL, location_name, serverBlockConfig);
 				ejectMiddlewares.push_back(eject);
+			}
+
+			if (getReturn.code != C_UNKNOWN)
+			{
+				Redirect	*redirect	= new Redirect(getReturn.code, getReturn.url);
+
+				server->use(*redirect, F_NORMAL, M_ALL, location_name, serverBlockConfig);
+				redirectMiddlewares.push_back(redirect);
 			}
 
 			if (getUpload.first.length() && (methods & M_PUT))
@@ -246,6 +261,9 @@ int main(int argc, char **argv)
 	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
 		delete (*it);
 
+	for (std::vector<Redirect *>::iterator it = redirectMiddlewares.begin(); it != redirectMiddlewares.end(); it++)
+		delete (*it);
+
 	for (std::vector<Upload *>::iterator it = uploadMiddlewares.begin(); it != uploadMiddlewares.end(); it++)
 		delete (*it);
 
@@ -265,6 +283,8 @@ int main(int argc, char **argv)
 	delete sendBodyFromFD;
 
 	#pragma endregion Middlewares cleanup 
+
+	delete server;
 	
 	return (EXIT_SUCCESS);
 }

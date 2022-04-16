@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/04/13 23:21:57 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/15 23:26:39 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -98,33 +98,51 @@ class	Serve
 			return (ip);
 		}
 
-		int				_hasBind(std::string &host, uint16_t &port)
+		server_bind_t	*_hasBind(std::string &host, uint16_t &port)
 		{
 			binds_t::iterator	it		= _binds.begin();
 
 			while (it != _binds.end())
 			{
 				if (it->port == port && it->host == host)
-					return (it->fd);
+					return &(*it);
 				++it;
 			}
 
-			return (-1);
+			return (NULL);
+		}
+
+		server_bind_t	*_bindForFD(int fd)
+		{
+			binds_t::iterator	it		= _binds.begin();
+
+			while (it != _binds.end())
+			{
+				if (it->fd == fd)
+					return &(*it);
+				++it;
+			}
+
+			return (NULL);
 		}
 
 	public:
-		int		bind(std::string host, uint16_t port)
+		server_bind_t	*bind(std::string host, uint16_t port, std::vector<std::string> &hostnames)
 		{
 			in_addr_t			ip;
 			server_bind_t		bind;
+			server_bind_t		*bind_ptr;
 			int					opts	= 1;
 			std::stringstream	error;
 
-			if ((bind.fd = _hasBind(host, port)) > 0)
-				return (bind.fd);
+			if ((bind_ptr = _hasBind(host, port)) != NULL)
+			{
+				bind_ptr->hostnames.insert(hostnames.begin(), hostnames.end());
+				return (bind_ptr);
+			}
 
 			if ((ip = _ipFromHost(host)) == INADDR_NONE)
-				return (-1);
+				return (NULL);
 			if ((bind.fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
 				throw ServerSocketException("Socket creation failed");
 			if (setsockopt(bind.fd, SOL_SOCKET, SO_REUSEADDR, &opts, sizeof(opts)) == -1)
@@ -136,6 +154,7 @@ class	Serve
 			bind.host = host;
 			bind.ip = _netIpToStr(ip);
 			bind.port = port;
+			bind.hostnames.insert(hostnames.begin(), hostnames.end());
 			bind.sockaddr_in.sin_family = AF_INET;
 			bind.sockaddr_in.sin_addr.s_addr = ip;
 			bind.sockaddr_in.sin_port = htons(port);
@@ -146,12 +165,13 @@ class	Serve
 				error << "Fail to bind " << host << " [" << bind.ip << "] to port " << port;
 				logger.fail(error.str(), errno);
 				_destroyBind(bind);
-				return (-1);
+				return (NULL);
 			}
 			else
-				_binds.push_back(bind);
-			
-			return (bind.fd);
+			{
+				bind_ptr = &(*_binds.insert(_binds.end(), bind));
+				return (bind_ptr);
+			}
 		}
 
 		void	begin(void)
@@ -200,7 +220,7 @@ class	Serve
 			_response_chain.use(middleware, flag, methods, pathname, serverConfig);
 		}
 
-		RunningChain	*exec(int connection, int interface, std::string client_ip, uint32_t events)
+		RunningChain	*exec(int connection, server_bind_t *interface, std::string client_ip, uint32_t events)
 		{
 			return (_response_chain.exec(connection, interface, client_ip, events, logger));
 		}
@@ -246,6 +266,7 @@ class	Serve
 				}
 				else if (data.type == ET_BIND)
 				{
+					server_bind_t		*interface;
 					struct sockaddr_in	client_ip;
 					int					client_ip_len	= 0;
 
@@ -260,7 +281,10 @@ class	Serve
 						{
 							try
 							{
-								chainInstance = exec(connection, data.fd, inet_ntoa(client_ip.sin_addr), 0);
+								interface		= _bindForFD(data.fd);
+								if (!interface)
+									throw ServerException("No interface found for the connection FD");
+								chainInstance	= exec(connection, interface, inet_ntoa(client_ip.sin_addr), 0);
 								
 								if (chainInstance)
 									_epoll.add(connection, ET_CONNECTION, chainInstance);

@@ -820,7 +820,9 @@ class Parse : public ParseTypedef
 			stringVector	get = findKey("return", vec);
 			s_return		ret;
 			
-			if (get[0] != NO_KEY)
+			if (get[0] == NO_KEY)
+				ret.code = C_UNKNOWN;
+			else
 			{
 				int number = std::atoi(get[0].c_str());
 				if (number == C_UNKNOWN ||
