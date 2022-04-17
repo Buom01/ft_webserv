@@ -63,7 +63,8 @@ int main(int argc, char **argv)
 	}
 	if (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")
 	{
-		help();
+		Help	help;
+		help.print();
 		exit(EXIT_SUCCESS);
 	}
 	try
