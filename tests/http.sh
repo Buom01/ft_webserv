@@ -1,6 +1,6 @@
 #/bin/sh
 
-../webserv ./tests.conf &
+../webserv ./tests.conf > /dev/null &
 server_pid=$!
 
 sleep 3
