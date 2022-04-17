@@ -1,9 +1,9 @@
 <?php
 	echo "<meta charset=\"UTF-8\">";
-	$nom = $_POST['nom'];
-	$prenom = $_POST['prenom'];
+	$firstname = $_POST['first_name'];
+	$lastname = $_POST['last_name'];
 	echo "POST form";
-	echo "<h3>Bienvenue à ".$prenom.' '.$nom,"</h3>";
+	echo "<h3>Hello ".$firstname.' '.$lastname." !</h3>";
 
 	$target_dir = "uploads/";
 	if (!empty($target_dir) && !is_dir($target_dir))
@@ -17,5 +17,5 @@
 		echo "File is not an image.";
 	move_uploaded_file($_FILES["fichier"]["tmp_name"], $target_file);
 	echo "<p>Go to ".$target_file." for get your file</p>";
-	echo "<p><a href='index.php'>Retour au formulaire</a></p>";
+	echo "<p><a href='index.php'>Go to index</a></p>";
 ?>
