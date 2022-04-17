@@ -96,28 +96,58 @@ describe('Server', function () {
 				.expect(200, "Hi from domain-three.fr", done);
 		});
 		it('route to a default server block with multiple server_name', function (done) {
-			request.agent(endpoint(9007))
+			request(endpoint(9007))
 				.get('/')
 				.expect('Content-Type', "text/plain")
 				.expect(200, "Hi from domain-one.fr", done);
 		});
 		it('have defaults HTML error pages', function (done) {
-			request.agent(endpoint(9008))
+			request(endpoint(9008))
 				.get('/a_file_that_does_not_exits')
 				.expect('Content-Type', "text/html")
 				.expect(404, /\<html/, done);
 		});
 		it('have customizable HTML per-error pages', function (done) {
-			request.agent(endpoint(9009))
+			request(endpoint(9009))
 				.get('/static/a_file_that_does_not_exits')
 				.expect('Content-Type', "text/html")
 				.expect(404, '<html><body><h1>No ! File not found.</h1></body></html>', done);
 		});
 		it('have customizable HTML all-error pages', function (done) {
-			request.agent(endpoint(9009))
+			request(endpoint(9009))
 				.get('/not-configured/location')
 				.expect('Content-Type', "text/html")
 				.expect(501, '<html><body><h1>This is a simple error page wich can be a template</h1></body></html>', done);
+		});
+	});
+
+	describe('is per-location block configurable', function () {
+		it('can define which methods are allowed, GET only', function (done) {
+			request(endpoint(9100))
+				.get('/allow-get-only')
+				.expect(200, function () {
+					request(endpoint(9100))
+						.post('/allow-get-only')
+						.expect(200, done);
+				});
+		});
+		it('can define which methods are allowed, POST only', function (done) {
+			request(endpoint(9100))
+				.get('/allow-post-only')
+				.expect(200, function () {
+					request(endpoint(9100))
+						.post('/allow-post-only')
+						.expect(200, done);
+				});
+		});
+		it('can define which methods are allowed, both POST and GET', function (done) {
+			request(endpoint(9100))
+				.get('/allow-get-n-post')
+				.expect(200, function () {
+					request(endpoint(9100))
+						.post('/allow-get-n-post')
+						.expect(200, done);
+				});
 		});
 	});
 
