@@ -45,7 +45,7 @@ class Body: public AEpoll
 			return (true);
 		}
 
-		bool	_get_transferEncoding(Request &req)
+		bool	_get_transferEncoding(Request &req, Response &res)
 		{
 			std::vector<std::string>					header_values;
 			std::vector<std::string>::const_iterator	header_values_it;
@@ -130,7 +130,7 @@ class Body: public AEpoll
 				(
 					!_get_contentlength(req)
 					|| !_get_bondary(req)
-					|| !_get_transferEncoding(req)
+					|| !_get_transferEncoding(req, res)
 				)
 			)
 				return (true);
@@ -175,7 +175,7 @@ class Body: public AEpoll
 						chunkSize = 0;
 						readSize = 0;
 						std::stringstream	sstream(line);
-						sstream >> chunkSize;
+						sstream >> std::hex >> chunkSize;
 						if (chunkSize <= 0)
 							break;
 						isChunk = true;
@@ -190,9 +190,6 @@ class Body: public AEpoll
 					}
 				}
 			}
-			//std::cout << "==== FINISH BODY ====" << std::endl;
-			//std::cout << req.body << std::endl;
-			//std::cout << "==== =========== ====" << std::endl;
 			/*while (req.body_remainingsize)
 			{
 				read_chunksize = req.body_remainingsize < req.body_chunksize ? req.body_remainingsize : req.body_chunksize;

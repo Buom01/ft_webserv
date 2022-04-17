@@ -145,7 +145,7 @@ int main(int argc, char **argv)
 			Parse::s_autoindex					getAutoindex = config.autoindex((*itLoc).second);
 			std::string 						getRoot = config.root((*itLoc).second);
 			std::string							getIndex = config.index((*itLoc).second);
-			Parse::mapErrors 					getErrors = config.errorPage((*itLoc).second);
+			Parse::mapErrors 					getErrors = config.errorPage((*it).options);
 			Parse::s_cgi						getCgi = config.cgi((*itLoc).second);
 			std::pair<std::string, std::string>	getUpload = config.upload((*itLoc).second);
 			method_t 							methods = method(getAllow);
