@@ -117,35 +117,35 @@ describe('Server', function () {
 			request(endpoint(9009))
 				.get('/not-configured/location')
 				.expect('Content-Type', "text/html")
-				.expect(501, '<html><body><h1>This is a simple error page wich can be a template</h1></body></html>', done);
+				.expect(403, '<html><body><h1>This is a simple error page wich can be a template</h1></body></html>', done);
 		});
 	});
 
 	describe('is per-location block configurable', function () {
 		it('can define which methods are allowed, GET only', function (done) {
 			request(endpoint(9100))
-				.get('/allow-get-only')
+				.get('/allow-get-only/')
 				.expect(200, function () {
 					request(endpoint(9100))
-						.post('/allow-get-only')
-						.expect(200, done);
+						.post('/allow-get-only/')
+						.expect(405, done);
 				});
 		});
 		it('can define which methods are allowed, POST only', function (done) {
 			request(endpoint(9100))
-				.get('/allow-post-only')
-				.expect(200, function () {
+				.get('/allow-post-only/')
+				.expect(405, function () {
 					request(endpoint(9100))
-						.post('/allow-post-only')
+						.post('/allow-post-only/')
 						.expect(200, done);
 				});
 		});
 		it('can define which methods are allowed, both POST and GET', function (done) {
 			request(endpoint(9100))
-				.get('/allow-get-n-post')
+				.get('/allow-get-n-post/')
 				.expect(200, function () {
 					request(endpoint(9100))
-						.post('/allow-get-n-post')
+						.post('/allow-get-n-post/')
 						.expect(200, done);
 				});
 		});
