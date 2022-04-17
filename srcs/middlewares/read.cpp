@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/15 02:46:56 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/17 17:00:17 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,7 @@ bool	parseStartLine(Request &req, Response &res)
 		return (false);
 	}
 
-	regex.exec(line, "^([A-Z]+)\\ ([^\\ ]+)\\ HTTP\\/([0-9\\.]+)$", GLOBAL_FLAG);
+	regex.exec(line, "^([A-Z]{3,10})\\ ([^\\ ]+)\\ HTTP\\/([0-9\\.]{3,6})$", GLOBAL_FLAG);
 	if (regex.size() != 3)
 		throw Serve::ServerSocketException("Malformed request start line");
 
