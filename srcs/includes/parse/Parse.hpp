@@ -684,6 +684,7 @@ class Parse : public ParseTypedef
 		mapErrors errorPage(optionsMap vec)
 		{
 			std::vector<stringVector>	errorsList;
+			std::string 				correctPath;
 			mapErrors					errors;
 			int							hundred, ten, unit;
 
@@ -694,6 +695,7 @@ class Parse : public ParseTypedef
 			{
 				for (std::vector<stringVector>::iterator page = errorsList.begin(); page != errorsList.end(); page++)
 				{
+					correctPath = concatPath(configDirectory, trim((*page)[1]));
 					Regex.exec((*page)[0], "(-?[0-9x]+)", GLOBAL_FLAG);
 					for (size_t x = 0; x < Regex.size(); x++)
 					{
@@ -702,12 +704,12 @@ class Parse : public ParseTypedef
 						ten 	= (expand.match()[1].occurence != "x") ? std::atoi(expand.match()[1].occurence.c_str()) : -1;
 						unit 	= (expand.match()[2].occurence != "x") ? std::atoi(expand.match()[2].occurence.c_str()) : -1;
 						if (hundred != -1 && ten != -1 && unit != -1)
-							errors.insert(std::pair<int,std::string>(std::atoi(Regex.match()[x].occurence.c_str()), trim((*page)[1])));
+							errors.insert(std::pair<int,std::string>(std::atoi(Regex.match()[x].occurence.c_str()), correctPath));
 						else
 							for (int one = (hundred == -1) ? 1 : hundred; one <= ((hundred == -1) ? 5 : hundred); one++)
 								for (int two = (ten == -1) ? 0 : ten; two <= ((ten == -1) ? 9 : ten); two++)
 									for (int three = (unit == -1) ? 0 : unit; three <= ((unit == -1) ? 9 : unit); three++)
-										errors.insert(std::pair<int,std::string>(generate(one, two, three), trim((*page)[1])));
+										errors.insert(std::pair<int,std::string>(generate(one, two, three), correctPath));
 					}
 				}
 			}
@@ -863,7 +865,7 @@ class Parse : public ParseTypedef
 
 			if (get[0] != NO_KEY)
 			{
-				Regex.exec(get[0], "([a-zA-Z0-9_.]+)", GLOBAL_FLAG);
+				Regex.exec(get[0], "([-a-zA-Z0-9.]+)", GLOBAL_FLAG);
 				for (size_t x = 0; x < Regex.size(); x++)
 					ret.push_back(Regex.match()[x].occurence);
 			}

@@ -62,6 +62,7 @@ class Request
 		std::string			upload_filename;
 		std::string			upload_filename_tmp;
 
+		bool 				body_chuncked;
 		size_t				body_chunksize;
 		size_t				body_remainingsize;
 		ssize_t				body_length;
@@ -104,6 +105,7 @@ class Request
 			upload_filename(""),
 			upload_filename_tmp(""),
 
+			body_chuncked(false),
 			body_chunksize(1024),
 			body_remainingsize(0),
 			body_length(0),

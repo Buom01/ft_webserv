@@ -1,11 +1,13 @@
 #ifndef __BODY_CPP
 # define __BODY_CPP
-
+# define LF "\n"
+# define CRLF "\r\n"
 # include "Request.hpp"
 # include "Response.hpp"
 # include "Serve.hpp"
 # include "AEpoll.hpp"
 # include "utils.hpp"
+# include "http.hpp"
 # include "File.hpp"
 
 class Body: public AEpoll
@@ -43,9 +45,33 @@ class Body: public AEpoll
 			return (true);
 		}
 
+		bool	_get_transferEncoding(Request &req, Response &res)
+		{
+			std::vector<std::string>					header_values;
+			std::vector<std::string>::const_iterator	header_values_it;
+
+			header_values = req.headers.headerValues("transfer-encoding");
+			header_values_it = header_values.begin();
+			if (header_values.begin() == header_values.end())
+				return (false);
+			if (header_values_it != header_values.end())
+			{
+				if (*header_values_it == "chunked")
+					req.body_chuncked = true;
+				else
+				{
+					res.code = C_BAD_REQUEST;
+					return (false);
+				}
+					
+			}
+			return (true);
+		}
+
 		bool	_get_bondary(Request &req)
 		{
-			size_t _pos(0);
+			std::string									boundary("boundary=");
+			size_t										_pos(0), boundarySize(boundary.size());
 			std::vector<std::string>					header_values;
 			std::vector<std::string>::const_iterator	header_values_it;
 
@@ -55,15 +81,14 @@ class Body: public AEpoll
 				return (false);
 			for (std::vector<std::string>::const_iterator it = header_values.begin(); it != header_values.end(); it++)
 			{
-				_pos = (*it).find("boundary=");
+				_pos = (*it).find(boundary);
 				if (_pos != std::string::npos)
 				{
-					req.body_boundary = (*it);
-					req.body_boundary.substr(0, _pos);
+					req.body_boundary = (*it).substr(_pos).erase(0, boundarySize);
 					req.body_boundary_end.append(req.body_boundary);
 					req.body_boundary_end.append("--");
 					break;
-				}		
+				}
 			}
 			return (true);
 		}
@@ -91,9 +116,9 @@ class Body: public AEpoll
 	public:
 		bool	operator()(Request &req, Response &res)
 		{
-			size_t	read_chunksize;
-			char	read_buffer[req.upload_chunksize];
-			ssize_t	read_ret(-1);
+			//size_t	read_chunksize;
+			//char	read_buffer[req.upload_chunksize];
+			//ssize_t	read_ret(-1);
 			
 			if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
 				return (true);
@@ -101,54 +126,84 @@ class Body: public AEpoll
 				return (true);
 			if (req.finish())
 				return (true);
-			if (req.body.empty() && (!_get_contentlength(req) || !_get_bondary(req)))
+			if (req.body.empty() &&
+				(
+					!_get_contentlength(req)
+					|| !_get_bondary(req)
+					|| !_get_transferEncoding(req, res)
+				)
+			)
 				return (true);
 			if (!req.await(EPOLLIN))
 				return (false);
-
-			req.body.clear();
-			req.body.append(req.buff);
-			req.buff.clear();
 			
-			if (req.body_length)
+			req.body.clear();
+			if (req.body_length || !req.body_boundary.empty())
 			{
-				/* If Content-length is present */
-				while (req.body_remainingsize)
+				std::string	line("");
+				ssize_t		body_size(0);
+
+				while (get_next_line_string(req.fd, line, req.buff))
 				{
-					read_chunksize = req.body_remainingsize < req.body_chunksize ? req.body_remainingsize : req.body_chunksize;
-					read_ret = read(req.fd, read_buffer, read_chunksize);
-					if (read_ret == -1)
+					req.body.append(line);
+					req.body.append(CRLF);
+					if (!!(req.body_length > 0))
 					{
-						req.unfire(EPOLLIN);
-						return (false);
+						body_size += line.size();
+						if (body_size >= req.body_length)
+							break;
 					}
-					req.body_remainingsize -= read_ret;
-					req.body.append(read_buffer, read_ret);
+					else
+					{
+						if (line == req.body_boundary_end)
+							break;
+					}
+					
 				}
+				
 			}
-			else
+			else if (req.body_chuncked)
 			{
-				/* If multipart/form-data is present */
-				std::string	tmp(""), line("");
-				bool isFinish(false);
-				while (true)
+				std::string	line("");
+				ssize_t		chunkSize(0), readSize(0);
+				bool		isChunk(false);
+
+				while (get_next_line_string(req.fd, line, req.buff))
 				{
-					read_ret = read(req.fd, read_buffer, req.body_chunksize);
-					tmp.append(read_buffer, read_ret);
-					while (getLine(tmp, line))
+					if (!isChunk)
+					{
+						chunkSize = 0;
+						readSize = 0;
+						std::stringstream	sstream(line);
+						sstream >> std::hex >> chunkSize;
+						if (chunkSize <= 0)
+							break;
+						isChunk = true;
+					}
+					else
 					{
 						req.body.append(line);
-						if (line == req.body_boundary_end)
-						{
-							isFinish = true;
-							break;
-						}
+						req.body.append(CRLF);
+						readSize += line.size();
+						if (readSize >= chunkSize)
+							isChunk = false;
 					}
 				}
 			}
+			/*while (req.body_remainingsize)
+			{
+				read_chunksize = req.body_remainingsize < req.body_chunksize ? req.body_remainingsize : req.body_chunksize;
+				read_ret = read(req.fd, read_buffer, read_chunksize);
+				if (read_ret == -1)
+				{
+					req.unfire(EPOLLIN);
+					return (false);
+				}
+				req.body_remainingsize -= read_ret;
+				req.body.append(read_buffer, read_ret);
+			}*/
 			return (true);
 		}
-
 };
 
 #endif
