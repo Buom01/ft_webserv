@@ -5,7 +5,8 @@
     "supertest": "^6.2.2"
   },
   "scripts": {
-    "start": "mocha",
+    "start:program": "mocha program",
+    "start:http": "sh http.sh",
 	"benchmark": "./siege.sh"
   }
 }
