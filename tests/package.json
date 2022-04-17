@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "mocha": "^9.2.2",
+    "superagent": "^7.1.2",
+    "supertest": "^6.2.2"
+  },
+  "scripts": {
+    "start": "mocha",
+	"benchmark": "./siege.sh"
+  }
+}
