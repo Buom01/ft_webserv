@@ -280,9 +280,9 @@ class CGI : public cgiEnv, public IMiddleware
 
 		bool		setGenerateHeader(Response &res)
 		{
-			size_t npos = 0;
+			size_t npos(0);
 			std::string	line, buff;
-
+			
 			while (get_next_line_string(res.response_fd, line, buff))
 			{
 				npos += line.size();
@@ -291,6 +291,7 @@ class CGI : public cgiEnv, public IMiddleware
 				res.headers.set(line);
 			}
 			lseek(res.response_fd, npos, SEEK_SET);
+			res.response_fd_header_size = npos;
 			return (true);
 		}
 	public:
