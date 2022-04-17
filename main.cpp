@@ -14,7 +14,6 @@
 #include "remover.cpp"
 #include "Cgi.hpp"
 #include "Response.hpp"
-//#include "readToTrashbin.cpp"
 #include "write_headers.cpp"
 #include "write_body.cpp"
 #include "forbidden.cpp"
@@ -106,10 +105,11 @@ int main(int argc, char **argv)
 	
 	for (Parse::serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
-		ServerConfig		serverBlockConfig;
-		Parse::mapListens	listen 				= config.listen((*it).options);
-		Parse::stringVector	hostnames        	= config.serverName((*it).options);
-		server_bind_t		*bound;
+		ServerConfig			serverBlockConfig;
+		Parse::mapListens		listen 				= config.listen((*it).options);
+		Parse::stringVector		hostnames        	= config.serverName((*it).options);
+		Parse::mapErrors		getErrors			= config.errorPage((*it).options);
+		server_bind_t			*bound;
 
 		serverBlockConfig.hostnames.insert(hostnames.begin(), hostnames.end());
 
@@ -146,7 +146,6 @@ int main(int argc, char **argv)
 			Parse::s_autoindex					getAutoindex = config.autoindex((*itLoc).second);
 			std::string 						getRoot = config.root((*itLoc).second);
 			std::string							getIndex = config.index((*itLoc).second);
-			Parse::mapErrors 					getErrors = config.errorPage((*it).options);
 			Parse::s_cgi						getCgi = config.cgi((*itLoc).second);
 			std::pair<std::string, std::string>	getUpload = config.upload((*itLoc).second);
 			method_t 							methods = method(getAllow);
@@ -228,7 +227,6 @@ int main(int argc, char **argv)
 	server->use(*mimetypes, F_ALL);
 	server->use(addResponseHeaders, F_ALL);
 	server->use(serializeHeaders, F_ALL);
-	// server->use(readToTrashbin, F_ALL);
 	server->use(sendHeader, F_ALL);
 	server->use(sendBodyFromBuffer, F_ALL);
 	server->use(*sendBodyFromFD, F_ALL);

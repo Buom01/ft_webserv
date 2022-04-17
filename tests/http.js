@@ -28,7 +28,7 @@ describe('Server', function () {
 			request(endpoint(9002))
 				.get('/')
 				.expect('Content-Type', "text/html")
-				.expect(200, "<html><body><h1>Hello from the INDEX.HTML</h1></body><html>", done);
+				.expect(200, "<html><body><h1>Hello from the INDEX.HTML</h1></body></html>", done);
 		});
 		it('allow client to download binary files', function (done) {
 			this.timeout(10000);
@@ -63,16 +63,61 @@ describe('Server', function () {
 				getSimpleStatic(done, 9004);
 			}, 9003)
 		});
-		it('works through 127.0.0.1 only', function (done) {
+		it('works through 127.0.0.1', function (done) {
 			getSimpleStatic(done, 9005);
 		});
-		it('works with server_name', function (done) {
+		it('works with a simple server_name', function (done) {
 			getSimpleStatic(
 				done,
 				9006,
 				'/',
 				request.agent(endpoint(9006)).host('mockservername.dev')
 			);
+		});
+		it('route to the first domain with multiple server_name', function (done) {
+			request.agent(endpoint(9007))
+				.set('Host', 'domain-one.fr')
+				.get('/')
+				.expect('Content-Type', "text/plain")
+				.expect(200, "Hi from domain-one.fr", done);
+		});
+		it('route to the second domain with multiple server_name', function (done) {
+			request.agent(endpoint(9007))
+				.set('Host', 'domain-two.fr')
+				.get('/')
+				.expect('Content-Type', "text/plain")
+				.expect(200, "Hi from domain-two.fr", done);
+		});
+		it('route to the last domain with multiple server_name', function (done) {
+			request.agent(endpoint(9007))
+				.set('Host', 'domain-three.fr')
+				.get('/')
+				.expect('Content-Type', "text/plain")
+				.expect(200, "Hi from domain-three.fr", done);
+		});
+		it('route to a default server block with multiple server_name', function (done) {
+			request.agent(endpoint(9007))
+				.get('/')
+				.expect('Content-Type', "text/plain")
+				.expect(200, "Hi from domain-one.fr", done);
+		});
+		it('have defaults HTML error pages', function (done) {
+			request.agent(endpoint(9008))
+				.get('/a_file_that_does_not_exits')
+				.expect('Content-Type', "text/html")
+				.expect(404, /\<html/, done);
+		});
+		it('have customizable HTML per-error pages', function (done) {
+			request.agent(endpoint(9009))
+				.get('/static/a_file_that_does_not_exits')
+				.expect('Content-Type', "text/html")
+				.expect(404, '<html><body><h1>No ! File not found.</h1></body></html>', done);
+		});
+		it('have customizable HTML all-error pages', function (done) {
+			request.agent(endpoint(9009))
+				.get('/not-configured/location')
+				.expect('Content-Type', "text/html")
+				.expect(501, '<html><body><h1>This is a simple error page wich can be a template</h1></body></html>', done);
 		});
 	});
 
