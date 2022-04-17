@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/16 03:49:16 by badam             #+#    #+#             */
-/*   Updated: 2022/04/14 01:12:35 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/17 15:25:46 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -66,13 +66,13 @@ std::string *replace_all(std::string *str, const std::string& from, const std::s
     return str;
 }
 
-std::string bind_to_string(server_bind_t &bind)
+std::string bind_to_string(server_bind_t *bind)
 {
     std::stringstream    sstr;
 
-    sstr << bind.host;
+    sstr << bind->host;
     sstr << ":";
-    sstr << bind.port;
+    sstr << bind->port;
 
     return (sstr.str());
 }

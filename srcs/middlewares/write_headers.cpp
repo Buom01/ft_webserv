@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/16 01:25:47 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/16 21:39:15 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,7 +87,7 @@ bool	sendHeader(Request &req, Response &res)
 	while (res.headers_buff.length())
 	{
 		write_size	= min(res.send_chunksize, res.headers_buff.length());
-		send_ret = send(res.fd, res.headers_buff.c_str(), write_size, MSG_NOSIGNAL | MSG_DONTWAIT);
+		send_ret = send(res.fd, res.headers_buff.c_str(), write_size, MSG_NOSIGNAL);
 
 		if (send_ret > 0)
 			res.headers_buff.erase(0, send_ret);

@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 23:42:44 by badam             #+#    #+#             */
-/*   Updated: 2022/04/15 23:26:39 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/17 15:27:43 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,14 +52,12 @@ class	Serve
 		}
 
 	private:
-		void			_destroyBind(server_bind_t &bind)
+		void			_destroyBind(server_bind_t *bind)
 		{
-			if (bind.fd)
-			{
-				if (_epoll.has(bind.fd))
-					_epoll.remove(bind.fd);
-				nothrow_close(bind.fd);
-			}
+			if (_epoll.has(bind->fd))
+				_epoll.remove(bind->fd);
+			nothrow_close(bind->fd);
+			delete bind;
 		}
 
 		std::string		_netIpToStr(in_addr_t ip)
@@ -104,8 +102,8 @@ class	Serve
 
 			while (it != _binds.end())
 			{
-				if (it->port == port && it->host == host)
-					return &(*it);
+				if ((*it)->port == port && (*it)->host == host)
+					return (*it);
 				++it;
 			}
 
@@ -118,8 +116,8 @@ class	Serve
 
 			while (it != _binds.end())
 			{
-				if (it->fd == fd)
-					return &(*it);
+				if ((*it)->fd == fd)
+					return (*it);
 				++it;
 			}
 
@@ -130,67 +128,68 @@ class	Serve
 		server_bind_t	*bind(std::string host, uint16_t port, std::vector<std::string> &hostnames)
 		{
 			in_addr_t			ip;
-			server_bind_t		bind;
-			server_bind_t		*bind_ptr;
+			server_bind_t		*bind;
 			int					opts	= 1;
 			std::stringstream	error;
 
-			if ((bind_ptr = _hasBind(host, port)) != NULL)
+			if ((bind = _hasBind(host, port)) != NULL)
 			{
-				bind_ptr->hostnames.insert(hostnames.begin(), hostnames.end());
-				return (bind_ptr);
+				bind->hostnames.insert(hostnames.begin(), hostnames.end());
+				return (bind);
 			}
+
+			bind = new server_bind_t();
 
 			if ((ip = _ipFromHost(host)) == INADDR_NONE)
 				return (NULL);
-			if ((bind.fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
-				throw ServerSocketException("Socket creation failed");
-			if (setsockopt(bind.fd, SOL_SOCKET, SO_REUSEADDR, &opts, sizeof(opts)) == -1)
+			if ((bind->fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1
+				|| setsockopt(bind->fd, SOL_SOCKET, SO_REUSEADDR, &opts, sizeof(opts)) == -1)
 			{
+				logger.fail("Socket creation failed", errno);
 				_destroyBind(bind);
-				throw ServerSocketException("Failed to set socket options");
+				return (NULL);
 			}
 
-			bind.host = host;
-			bind.ip = _netIpToStr(ip);
-			bind.port = port;
-			bind.hostnames.insert(hostnames.begin(), hostnames.end());
-			bind.sockaddr_in.sin_family = AF_INET;
-			bind.sockaddr_in.sin_addr.s_addr = ip;
-			bind.sockaddr_in.sin_port = htons(port);
-			bind.sockaddr = reinterpret_cast<sockaddr_t*>(&bind.sockaddr_in);
-			bind.len = sizeof(bind.sockaddr_in);
-			if (::bind(bind.fd, bind.sockaddr, bind.len) == -1)
+			bind->host = host;
+			bind->ip = _netIpToStr(ip);
+			bind->port = port;
+			bind->hostnames.insert(hostnames.begin(), hostnames.end());
+			bind->sockaddr_in.sin_family = AF_INET;
+			bind->sockaddr_in.sin_addr.s_addr = ip;
+			bind->sockaddr_in.sin_port = htons(port);
+			bind->sockaddr = reinterpret_cast<sockaddr_t*>(&(bind->sockaddr_in));
+			bind->len = sizeof(bind->sockaddr_in);
+			if (::bind(bind->fd, bind->sockaddr, bind->len) == -1)
 			{
-				error << "Fail to bind " << host << " [" << bind.ip << "] to port " << port;
+				error << "Fail to bind " << host << " [" << bind->ip << "] to port " << port;
 				logger.fail(error.str(), errno);
 				_destroyBind(bind);
 				return (NULL);
 			}
 			else
 			{
-				bind_ptr = &(*_binds.insert(_binds.end(), bind));
-				return (bind_ptr);
+				_binds.insert(_binds.end(), bind);
+				return (bind);
 			}
 		}
 
 		void	begin(void)
 		{
 			binds_t::iterator	it		= _binds.begin();
-			server_bind_t		bind;
+			server_bind_t		*bind;
 
 			while (it != _binds.end())
 			{
 				bind = *it;
 
-				if (listen(bind.fd, 1) == -1)
+				if (listen(bind->fd, 1) == -1)
 					logger.fail("Socket failed to listen on " + bind_to_string(bind));
 				else
 				{
 					try
 					{
-						_epoll.add(bind.fd, ET_BIND, NULL);
-						logger.greeting(bind.host, bind.port);
+						_epoll.add(bind->fd, ET_BIND, NULL);
+						logger.greeting(bind->host, bind->port);
 						_alive = true;
 					}
 					catch (...)
@@ -273,11 +272,10 @@ class	Serve
 					bzero(&client_ip, sizeof(client_ip));
 
 					connection		= ::accept(data.fd, (struct sockaddr *)(&client_ip), (socklen_t *)(&client_ip_len));
-					fcntl(connection, F_SETFL, O_NONBLOCK);
 
 					if (connection >= 0)
 					{
-						if (_alive)
+						if (_alive && fcntl(connection, F_SETFL, O_NONBLOCK) != -1)
 						{
 							try
 							{
