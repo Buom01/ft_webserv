@@ -48,6 +48,8 @@ class Request
 		std::string			hostname;
 		std::string			port;
 		std::string			pathname;
+		std::string			username;
+		std::string			password;
 		std::string			querystring;
 		std::string			trusted_complete_pathname;
 		std::string			trusted_pathname;
@@ -88,6 +90,8 @@ class Request
 			hostname(""),
 			port(""),
 			pathname(""),
+			username(""),
+			password(""),
 			querystring(""),
 			trusted_complete_pathname("/"),
 			trusted_pathname("/"),

@@ -1,12 +1,12 @@
 CXX 		:=	clang++
 NAME		:= 	webserv
-
-SRCS		:=	main.cpp
-
-OBJS		:=	$(SRCS:.cpp=.o)
 RM			:=	rm -f
-LIBRARY		?=	-I ./srcs/cgi -I ./srcs/includes -I ./srcs/includes/parse -I ./srcs/log \
-				-I ./srcs/middlewares -I ./srcs/serve  -I ./srcs/static
+
+SRCS		?=	main.cpp
+OBJS		:=	$(SRCS:.cpp=.o)
+LIBRARY		?=	-I ./srcs/help -I ./srcs/includes -I ./srcs/includes/parse \
+				-I ./srcs/log -I ./srcs/middlewares -I ./srcs/serve \
+				-I ./srcs/static
 CXXFLAGS	?=  -Wall -Werror -Wextra -std=c++98 -g $(LIBRARY)
 
 $(NAME): $(OBJS) $(SUBDIRS)

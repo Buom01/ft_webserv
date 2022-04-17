@@ -3,6 +3,7 @@
 # define REGEX_SIZE 14
 # define NO_KEY "NO_KEY"
 # include <algorithm>
+# include <iterator>
 # include <iostream>
 # include <sstream>
 # include <fstream>
@@ -30,14 +31,14 @@ struct s_defineRegex
 } REGEX[REGEX_SIZE] =
 {
 	{ "server", "^[ \t]*(server)[ \t]*\\{?[ \t]*$", false },
-	{ "location", "^[ \t]*location[ \t]+([a-zA-Z0-9_/.]*)[ \t]*\\{*$", false},
+	{ "location", "^[ \t]*location[ \t]+([a-zA-Z0-9_/. \t]*)\\{*$", false},
 	{ "endBlock", "^[ \t]*(});*$", false },
 	/* Rules regex */
 	{ "allow", "^[ \t]*allow[ \t]+(.*);[ \t]*$", true },
 	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);[ \t]*$", true },
 	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)[ \t](\\.?\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);[ \t]*$", true },
 	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);[ \t]*$", true },
-	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\/.*);[ \t]*$", false },
+	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\.?\\/.*);[ \t]*$", false },
 	{ "index", "^[ \t]*index[ \t]+(.*);[ \t]*$", true },
 	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", false },
 	{ "return", "^[ \t]*return[ \t]+([a-zA-Z0-9_.\\/]+)[ \t]+(.*);[ \t]*$", true },
@@ -64,6 +65,7 @@ struct ParseTypedef
 	{
 		bool						isDefined;
 		std::vector<std::string>	extensions;
+		std::string 				root;
 		std::string					path;
 		s_allow						allow;
 	};
@@ -133,25 +135,46 @@ class Parse : public ParseTypedef
 		Parse operator=(const Parse *);
 	#pragma region Read config file and parse in a resiliente way
 	private:
-		void generateParseError(int lineNumber, std::string str)
+		std::string createString(int lineNumber = -1, std::string str = "")
 		{
 			std::string err("");
 			std::stringstream strstream;
 			strstream << lineNumber;
 
+			err.append(COLOR_ARGS);
 			err.append("[");
 			err.append(configPath);
-			err.append("] line ");
-			err.append(strstream.str());
+			err.append("]");
+			err.append(COLOR_RESET);
+			if (lineNumber != -1)
+			{
+				err.append(COLOR_WARNING);
+				err.append(" line ");
+				err.append("\x1b[4m");
+				err.append(strstream.str());
+				err.append(COLOR_RESET);
+			}
 			err.append(" > ");
 			err.append(str);
-			throw IncorrectConfig(err);
+			return err;
+		}
+
+		void generateParseError(int lineNumber = -1, std::string str = "")
+		{
+			throw IncorrectConfig(createString(lineNumber, str));
+		}
+
+		std::string removeRelativeStart(std::string str)
+		{
+			if (str.size() > 2 && str.at(0) == '.' && str.at(1) == '/')
+				str.erase(0, 2);
+			return str;
 		}
 	public:
 		Parse() {}
 		Parse(std::string configFilePath) : configPath(configFilePath) { init(configPath); }
 		
-		void init(std::string configFilePath, bool setDefaultLocation = true)
+		void init(std::string configFilePath, bool setDefaultLocation = true, bool sendInfo = false)
 		{
 			pairLocations	locationTemp;
 			s_server		serverTemp;
@@ -181,9 +204,15 @@ class Parse : public ParseTypedef
 				{
 					Regex.exec(line, REGEX[i].regex, GLOBAL_FLAG);
 					if (Regex.size() == 0)
+					{
+						if (i == (REGEX_SIZE - 1) && trim(line) != "{" && trim(line) != "}" && sendInfo)
+							std::cerr << COLOR_TITLE << "WEBSERV" << COLOR_RESET << " - " << createString(lineNumber, "no valid rule was recognized, type \x1b[92mwebserv \x1b[94m--help\x1b[0m for get more information about the correct format of the rules") << std::endl;
 						continue;
+					}
 					if (REGEX[i].name == "endBlock")
 					{
+						if (!isLocationBlock && !isServerBlock)
+							generateParseError(lineNumber, "a close bracket is desperately alone, it needs a companion");
 						if (isLocationBlock && isServerBlock)
 						{
 							serverTemp.locations.insert(locationTemp);
@@ -206,11 +235,17 @@ class Parse : public ParseTypedef
 						if (isLocationBlock)
 							generateParseError(lineNumber, "a location block cannot contain another one");
 						isLocationBlock = true;
+						std::string location = trim(Regex.match()[0].occurence);
 						locationTemp.first.clear();
 						locationTemp.second.clear();
-						for (size_t m = 0; m < Regex.size(); m++)
-							if (!Regex.match()[m].occurence.empty())
-								locationTemp.first += trim(Regex.match()[m].occurence);
+						if (location.empty())
+							generateParseError(lineNumber, "a location block must at least contain the path '/'");
+						Regex.exec(location, "([a-zA-Z0-9_\\/.]+)", GLOBAL_FLAG);
+						if (Regex.size() > 1)
+							generateParseError(lineNumber, "only one path is allowed");
+						if (serverTemp.locations.find(location) != serverTemp.locations.end())
+							generateParseError(lineNumber, "this location block has already been defined");
+						locationTemp.first.append(location);
 					}
 					else if (REGEX[i].name == "server")
 					{
@@ -271,17 +306,34 @@ class Parse : public ParseTypedef
 			for (serversVector::iterator it = servers.begin(); it != servers.end(); it++)
 			{
 				pairLocations	root;
-				root.first = "/";
+				locationsMap::iterator find = (*it).locations.find("/");
 
-				for (optionsMap::iterator itConf = (*it).options.begin(); itConf != (*it).options.end(); itConf++)
+				root.first = "/";
+				if (find != (*it).locations.end())
 				{
-					if ((*itConf).first == "listen" || (*itConf).first == "server_name" || (*itConf).first == "client_body_buffer_size" || (*itConf).first == "error_page")
-						continue;
-					root.second.push_back((*itConf));
-					(*it).options.erase(itConf);
-					itConf = (*it).options.begin();
+					root.second = (*find).second;
+					(*it).locations.erase(find);
+				}
+				if ((*it).options.size() <= 0 && (*it).locations.size() <= 0)
+					generateParseError(-1, "no option(s) or location block(s) is present. A configuration must be in at least one option or one location block");
+				for (optionsMap::iterator itConf = (*it).options.begin(); itConf != (*it).options.end();)
+				{
+					if ((*itConf).first		!= "listen"	
+						&&	(*itConf).first	!= "server_name"
+						&&	(*itConf).first	!= "client_body_buffer_size"
+						&&	(*itConf).first	!= "error_page")
+					{
+						root.second.push_back((*itConf));
+						(*it).options.erase(itConf);
+						if ((*it).options.size() <= 0)
+							break;
+						itConf = (*it).options.begin();
+					}
+					else
+						++itConf;
 				}
 				(*it).locations.insert((*it).locations.begin(), root);
+
 			}
 		}
 	private:
@@ -513,25 +565,20 @@ class Parse : public ParseTypedef
 			autoindex.active = false;
 			if (!get.empty() && get[0] != NO_KEY)
 			{
+				std::string temp = trim(get[0]);
 				autoindex.isDefined = true;
 				if (get.size() > 1)
 				{
 					err += "there can be only one argument";
 					throw IncorrectConfig(err);
 				}
-				Regex.exec(get[0], "([-a-zA-Z0-9_]+)", GLOBAL_FLAG);
-				if (Regex.size() > 1)
+				if (temp != "on" && temp != "off")
 				{
-					err += "there can be only one argument";
+					err += "the argument can only be 'on' or 'off', not ";
+					err.append(temp);
 					throw IncorrectConfig(err);
 				}
-				if (Regex.match()[0].occurence != "on" && Regex.match()[0].occurence != "off")
-				{
-					err += "the argument can only be on or off, not ";
-					err += Regex.match()[0].occurence;
-					throw IncorrectConfig(err);
-				}
-				autoindex.active = (Regex.match()[0].occurence == "off") ? false : true;
+				autoindex.active = (temp == "off") ? false : true;
 			}
 			return autoindex;
 		}
@@ -543,7 +590,7 @@ class Parse : public ParseTypedef
 			std::string err = "rule 'cgi': ";
 			
 			cgi.isDefined = true;
-			if (get.size() == 1 && get[0] == "NO_KEY")
+			if (get.size() == 1 && get[0] == NO_KEY)
 			{
 				cgi.isDefined = false;
 				return cgi;
@@ -556,8 +603,13 @@ class Parse : public ParseTypedef
 			Regex.exec(get[0], "(\\.[a-zA-Z0-9_]+)", GLOBAL_FLAG);
 			for (size_t x = 0; x < Regex.size(); x++)
 				cgi.extensions.push_back(Regex.match()[x].occurence);
-
-			cgi.path = concatPath(configDirectory, get[1]);
+			cgi.root = root(vec);
+			if (cgi.root.empty())
+			{
+				err += "a cgi cannot be defined without without at least one 94mroot rule in the block server";
+				throw IncorrectConfig(err.c_str());
+			}
+			cgi.path = concatPath(configDirectory, removeRelativeStart(get[1]));
 			if (!exist(cgi.path))
 			{
 				err += "the executable does not exist";
@@ -798,10 +850,10 @@ class Parse : public ParseTypedef
 		
 			if (get[0] == NO_KEY)
 				return "";
-			Regex.exec(get[0], "([-a-zA-Z0-9_\\./\\]+)", GLOBAL_FLAG);
+			Regex.exec(get[0], "([a-zA-Z0-9_\\.\\/-]+)", GLOBAL_FLAG);
 			if (Regex.size() > 1)
 				throw IncorrectConfig("rule 'root': only one directory definition is allowed");
-			return concatPath(configDirectory, Regex.match()[0].occurence);
+			return concatPath(configDirectory, trim(get[0]));
 		}
 
 		stringVector serverName(optionsMap vec)

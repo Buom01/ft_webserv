@@ -1,6 +1,5 @@
 #ifndef __CGI
 # define __CGI
-# define BUFFER_SIZE 1024
 # define GATEWAY_VERSION "CGI/1.1"
 # define ENV_NULL "NULL"
 # include <cstring>
@@ -24,6 +23,7 @@
 # include "Url.hpp"
 # include "nullptr_t.hpp"
 # include "http.hpp"
+# include "File.hpp"
 
 class cgiEnv
 {
@@ -36,7 +36,7 @@ class cgiEnv
 		struct s_file
 		{
 			std::string path;
-			std::string script;
+			std::string file;
 			std::string extension;
 		};
 		std::map<std::string, std::string>	env;
@@ -139,8 +139,6 @@ class cgiEnv
 
 class CGI : public cgiEnv, public IMiddleware
 {
-	protected:
-		Log				&_logger;
 	private:
 		cgiEnv			env;
 		s_file 			file;
@@ -148,8 +146,7 @@ class CGI : public cgiEnv, public IMiddleware
 		std::string		_location;
 		std::string		_index;
 	public:
-		CGI(Log &logger, Parse::s_cgi config, std::string location, std::string index):
-			_logger(logger),
+		CGI(Parse::s_cgi config, std::string location, std::string index):
 			_config(config),
 			_location(location),
 			_index(index)
@@ -159,26 +156,18 @@ class CGI : public cgiEnv, public IMiddleware
 	private:
 		void		fileExtension(Request &req)
 		{
-			file.path = req.trusted_pathname;
-			file.path.insert(0, "./");
-			file.extension.clear();
+			size_t nposIndex(0);
 
-			std::cout << file.path << std::endl;
-
-			exit(0);
-			/*
-			path.insert(0, options.root);
 			file.path = req.trusted_pathname;
-			std::string::iterator end = --(file.path.end());
-			if (*end == '/')
-				file.path.erase(end);
-			if (file.path == _location)
-			{
-				file.path.append("/");
+			file.path.insert(0, ".");
+			if (file.path == "./")
 				file.path.append(_index);
-			}
-			file.script = file.path.substr(file.path.find_last_of("/"));
-			file.extension = file.path.substr(file.path.find_last_of("."));*/
+			nposIndex = file.path.find_last_of("/");
+			if (nposIndex == std::string::npos)
+				return;
+			file.file = file.path.substr(nposIndex + 1);
+			file.extension = file.path.substr(file.path.find_last_of("."));
+			file.path = concatPath(_config.root, file.path);
 		}
 
 		bool		isMethod(Request &req)
@@ -247,59 +236,62 @@ class CGI : public cgiEnv, public IMiddleware
 
 		void		setHeader(Request &req)
 		{
-			URL _url(req.trusted_pathname);
-			
-			/*
-			GATEWAY_INTERFACE=CGI/1.1
-			PATH_INFO=/website/sendDatas/data.php
-			REQUEST_METHOD=POST
-			SCRIPT_FILENAME=./website/sendDatas/data.php
-			SERVER_PROTOCOL=HTTP/1.1
-			REDIRECT_STATUS=200
-			CONTENT_TYPE=application/x-www-form-urlencoded
-			CONTENT_LENGTH=11
-			/usr/bin/php-cgi
-			*/
-
 			#pragma region Mandatory
-				env.addVariable("CONTENT_LENGTH", sval(req.headers.header("CONTENT_LENGTH"), itos(req.body.size())));
-				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT_TYPE"));
+				env.addVariable("CONTENT_LENGTH",
+					sval(req.headers.header("CONTENT-LENGTH", true), itos(req.body.size()))
+				);
+				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT-TYPE", true));
 				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
-				env.addVariable("PATH_INFO", req.pathname);
+				env.addVariable("PATH_INFO", file.path);
 				env.addVariable("QUERY_STRING", req.querystring);
 				env.addVariable("REMOTE_ADDR", req.client_ip);
 				env.addVariable("REQUEST_METHOD", convertMethod(req.method));
-				env.addVariable("SCRIPT_NAME", "./html/php/index.php");
+				env.addVariable("SCRIPT_FILENAME", file.path);
 				env.addVariable("SERVER_NAME", req.hostname);
 				env.addVariable("SERVER_PORT", req.port);
 				env.addVariable("SERVER_PROTOCOL", req.protocol);
 				env.addVariable("SERVER_SOFTWARE", SERVER_SOFTWARE);
 			#pragma endregion Mandatory
 			#pragma region Should
-				env.addVariable("AUTH_TYPE", (!_url.username().empty()) ? "Basic" : ENV_NULL);
-				env.addVariable("HTTP_ACCEPT", req.headers.header("ACCEPT"));
-				env.addVariable("HTTP_ACCEPT_CHARSET", req.headers.header("ACCEPT_CHARSET"));
-				env.addVariable("HTTP_ACCEPT_ENCODING", req.headers.header("ACCEPT_ENCODING"));
-				env.addVariable("HTTP_ACCEPT_LANGUAGE", req.headers.header("ACCEPT_LANGUAGE"));
-				env.addVariable("HTTP_COOKIE", req.headers.header("COOKIE"));
-				env.addVariable("HTTP_FORWARDED", req.headers.header("FORWARDED"));
-				env.addVariable("HTTP_HOST", req.headers.header("HOST"));
-				env.addVariable("HTTP_PROXY_AUTHORIZATION", req.headers.header("PROXY_AUTHORIZATION"));
-				env.addVariable("HTTP_USER_AGENT", req.headers.header("USER_AGENT"));
-				env.addVariable("REMOTE_HOST", sval(req.headers.header("REMOTE_HOST"), ENV_NULL));
+				env.addVariable("AUTH_TYPE", (!req.username.empty()) ? "Basic" : ENV_NULL);
+				env.addVariable("HTTP_ACCEPT", req.headers.header("ACCEPT", true));
+				env.addVariable("HTTP_ACCEPT_CHARSET", req.headers.header("ACCEPT-CHARSET", true));
+				env.addVariable("HTTP_ACCEPT_ENCODING", req.headers.header("ACCEPT-ENCODING", true));
+				env.addVariable("HTTP_ACCEPT_LANGUAGE", req.headers.header("ACCEPT-LANGUAGE", true));
+				env.addVariable("HTTP_COOKIE", req.headers.header("COOKIE", true));
+				env.addVariable("HTTP_FORWARDED", req.headers.header("FORWARDED", true));
+				env.addVariable("HTTP_HOST", req.headers.header("HOST", true));
+				env.addVariable("HTTP_PROXY_AUTHORIZATION", req.headers.header("PROXY-AUTHORIZATION", true));
+				env.addVariable("HTTP_USER_AGENT", req.headers.header("USER_AGENT", true));
+				env.addVariable("REMOTE_HOST", sval(req.headers.header("REMOTE_HOST", true), ENV_NULL));
 			#pragma endregion Should
 			#pragma region May
-				env.addVariable("PATH_TRANSLATED", "");
+				std::string requestUri(file.file);
+				requestUri.append("?");
+				requestUri.append(req.querystring);
+				env.addVariable("PATH_TRANSLATED", file.path);
 				env.addVariable("REDIRECT_STATUS", "200");
-				env.addVariable("REMOTE_USER", _url.username());
-				env.addVariable("REMOTE_PASS", _url.password());
-				env.addVariable("REQUEST_URI", "");
-				
-				std::string script(".");
-				script.append(file.path);
-				env.addVariable("SCRIPT_FILENAME", script);
+				env.addVariable("REMOTE_USER", req.username);
+				env.addVariable("REMOTE_PASS", req.password);
+				env.addVariable("REQUEST_URI", requestUri);
+				env.addVariable("SCRIPT_NAME", file.file);
 			#pragma endregion May
-			env.printVariable();
+		}
+
+		bool		setGenerateHeader(Response &res)
+		{
+			size_t npos = 0;
+			std::string	line, buff;
+
+			while (get_next_line_string(res.response_fd, line, buff))
+			{
+				npos += line.size();
+				if (line.empty())
+					break;
+				res.headers.set(line);
+			}
+			lseek(res.response_fd, npos, SEEK_SET);
+			return (true);
 		}
 	public:
 		/**
@@ -317,7 +309,6 @@ class CGI : public cgiEnv, public IMiddleware
 			res.code = C_OK;
 			write(fdIN, req.body.c_str(), static_cast<int>(req.body.size()));
 			lseek(fdIN, 0, SEEK_SET);
-
 			if ((pid = fork()) == -1)
 				return -1;
 			else if (pid == 0)
@@ -326,7 +317,7 @@ class CGI : public cgiEnv, public IMiddleware
 
 				dup2(fdIN, STDIN_FILENO);
 				dup2(fdOUT, STDOUT_FILENO);
-				if (execve(getVariable("SCRIPT_FILENAME").value.c_str(), _null, env.envForCGI()))
+				if (execve(_config.path.c_str(), _null, env.envForCGI()))
 				{
 					res.code = C_INTERNAL_SERVER_ERROR;
 					std::cout << "Status: 500\r\n";
@@ -339,13 +330,14 @@ class CGI : public cgiEnv, public IMiddleware
 			}
 			dup2(saveFd[0], STDIN_FILENO);
 			dup2(saveFd[1], STDOUT_FILENO);
-			
 			fclose(IN);
-			fclose(OUT); // Pas sûr de celui-là
-
 			close(fdIN);
+			if (pid == 0)
+			{
+				fclose(OUT);
+				close(fdOUT);
+			}
 			close(saveFd[0]); close(saveFd[1]);
-
 			if (pid == 0)
 				exit(EXIT_SUCCESS);
 			return fdOUT;
@@ -367,12 +359,13 @@ class CGI : public cgiEnv, public IMiddleware
 				return (true);
 			}
 			fileExtension(req);
+			if (file.path == ".")
+				return true;
 			std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), file.extension);
 			if (it == _config.extensions.end() || !isMethod(req))
 				return true;
-			_logger.log(202, empty, file.path, "CGI has started");
 			res.response_fd = exec(req, res);
-			_logger.log(201, empty, file.path, "CGI has ended");
+			setGenerateHeader(res);
 			return true;
 		}
 };

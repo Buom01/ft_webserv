@@ -94,6 +94,8 @@ bool	parseStartLine(Request &req, Response &res)
 		req.hostname = uri.hostname();
 		req.port = uri.port();
 		req.pathname = uri.pathname();
+		req.username = uri.username();
+		req.password = uri.password();
 		req.querystring = uri.search();
 		req.trusted_complete_pathname = sanitizeRelativePath(req.pathname);
 	}

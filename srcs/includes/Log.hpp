@@ -23,6 +23,8 @@
 # define COLOR_CLIENT_ERROR "\e[91m"
 # define COLOR_REDIRECT "\e[95m"
 # define COLOR_SUCCESS "\e[92m"
+# define COLOR_TITLE "\e[95m"
+# define COLOR_ARGS "\e[96m"
 
 class	Log
 {
