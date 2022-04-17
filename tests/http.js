@@ -125,8 +125,8 @@ describe('Server', function () {
 		it('have php activate', (done) => {
 			request.agent(endpoint(9200))
 				.get('/info.php')
-				.expect('Content-Type', 'text/html')
-				.expect(200, /\<html/, done);
+				.expect('Content-Type', "text/html; charset=UTF-8")
+				.expect(200, /\<!DOCTYPE html PUBLIC "-\/\/W3C\/\/DTD XHTML 1.0 Transitional\/\/EN" "DTD\/xhtml1-transitional.dtd">/, done);
 		});
 		/*
 - Chunked : https://github.com/visionmedia/superagent/blob/e196345074f57987c166283c302d06d661744f14/docs/index.md#piping-data
