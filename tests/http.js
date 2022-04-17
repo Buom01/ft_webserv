@@ -7,6 +7,14 @@ const endpoint = (port) => (
 	`http://127.0.0.1:${port}`
 )
 
+function getSimpleStatic(callback, port, root = '/', agent = request(endpoint(port)))
+{
+	agent
+		.get(root+'file.txt')
+		.expect('Content-Type', "text/plain")
+		.expect(200, "My plain text file\nWith a simple newline ;)", callback);
+}
+
 describe('Server', function () {
 
 	describe('serve static files', function () {
@@ -50,31 +58,30 @@ describe('Server', function () {
 	});
 
 	describe('is configurable', function () {
-		it('run on multiple ports', async function (done) {
-			const port1 = await request(endpoint(9003)).get('/file.txt');
-			assert.equal(port1.headers['Content-Type'], "text/plain");
-			assert.equal(port1.status, 200);
-			assert.equal(port1.body, "My plain text file\nWith a simple newline ;)");
-
-			const port2 = await request(endpoint(9004)).get('/file.txt');
-			assert.equal(port2.headers['Content-Type'], "text/plain");
-			assert.equal(port2.status, 200);
-			assert.equal(port2.body, "My plain text file\nWith a simple newline ;)");
-			done();
+		it('run on multiple ports', function (done) {
+			getSimpleStatic(() => {
+				getSimpleStatic(done, 9004);
+			}, 9003)
 		});
 		it('works through 127.0.0.1 only', function (done) {
-			request(endpoint(9005))
-				.get('/file.txt')
-				.expect('Content-Type', "text/plain")
-				.expect(200, "My plain text file\nWith a simple newline ;)", done);
+			getSimpleStatic(done, 9005);
 		});
 		it('works with server_name', function (done) {
-			request.agent(endpoint(9006))
-				.host('mockservername.dev')
-				.get('/file.txt')
-				.expect('Content-Type', "text/plain")
-				.expect(200, "My plain text file\nWith a simple newline ;)", done);
+			getSimpleStatic(
+				done,
+				9006,
+				'/',
+				request.agent(endpoint(9006)).host('mockservername.dev')
+			);
 		});
+	});
+
+
+	describe('has a working CGI', function () {
+		/*
+- Chunked : https://github.com/visionmedia/superagent/blob/e196345074f57987c166283c302d06d661744f14/docs/index.md#piping-data
+- Multipart : https://github.com/visionmedia/superagent/blob/e196345074f57987c166283c302d06d661744f14/docs/index.md#multipart
+		*/
 	});
 
 });
