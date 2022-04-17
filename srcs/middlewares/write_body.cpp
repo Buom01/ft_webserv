@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/02/17 21:55:09 by badam             #+#    #+#             */
-/*   Updated: 2022/04/12 21:14:31 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/16 21:39:30 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,7 +65,7 @@ class SendBodyFromFD: public AEpoll
 			
 			while (read_ret != 0 || send_ret != 0)
 			{
-				send_ret = send(res.fd, res.response_fd_buff.c_str(), res.response_fd_buff.length(), MSG_NOSIGNAL | MSG_DONTWAIT);
+				send_ret = send(res.fd, res.response_fd_buff.c_str(), res.response_fd_buff.length(), MSG_NOSIGNAL);
 				if (send_ret > 0)
 					res.response_fd_buff.erase(0, send_ret);
 				if (res.response_fd_buff.length())
@@ -116,7 +116,7 @@ bool	sendBodyFromBuffer(Request &req, Response &res)
 	while (res.body.length())
 	{
 		write_size	= min(res.send_chunksize, res.body.length());
-		send_ret = send(res.fd, res.body.c_str(), write_size, MSG_NOSIGNAL | MSG_DONTWAIT);
+		send_ret = send(res.fd, res.body.c_str(), write_size, MSG_NOSIGNAL);
 		
 		if (send_ret > 0)
 			res.body.erase(0, send_ret);
