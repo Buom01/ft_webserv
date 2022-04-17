@@ -7,9 +7,8 @@
 # include "Serve.hpp"
 # include "AEpoll.hpp"
 # include "utils.hpp"
+# include "http.hpp"
 # include "File.hpp"
-
-# include <cstdio>
 
 class Body: public AEpoll
 {
@@ -42,6 +41,29 @@ class Body: public AEpoll
 			{
 				std::stringstream	sstream(*header_values_it);
 				sstream >> req.body_length;
+			}
+			return (true);
+		}
+
+		bool	_get_transferEncoding(Request &req)
+		{
+			std::vector<std::string>					header_values;
+			std::vector<std::string>::const_iterator	header_values_it;
+
+			header_values = req.headers.headerValues("transfer-encoding");
+			header_values_it = header_values.begin();
+			if (header_values.begin() == header_values.end())
+				return (false);
+			if (header_values_it != header_values.end())
+			{
+				if (*header_values_it == "chunked")
+					req.body_chuncked = true;
+				else
+				{
+					res.code = C_BAD_REQUEST;
+					return (false);
+				}
+					
 			}
 			return (true);
 		}
@@ -104,16 +126,20 @@ class Body: public AEpoll
 				return (true);
 			if (req.finish())
 				return (true);
-			if (req.body.empty() && (!_get_contentlength(req) || !_get_bondary(req)))
+			if (req.body.empty() &&
+				(
+					!_get_contentlength(req)
+					|| !_get_bondary(req)
+					|| !_get_transferEncoding(req)
+				)
+			)
 				return (true);
 			if (!req.await(EPOLLIN))
 				return (false);
 			
 			req.body.clear();
-			
 			if (req.body_length || !req.body_boundary.empty())
 			{
-				// If content-length is present
 				std::string	line("");
 				ssize_t		body_size(0);
 
@@ -134,30 +160,50 @@ class Body: public AEpoll
 					}
 					
 				}
-				/*while (req.body_remainingsize)
-				{
-					read_chunksize = req.body_remainingsize < req.body_chunksize ? req.body_remainingsize : req.body_chunksize;
-					read_ret = read(req.fd, read_buffer, read_chunksize);
-					if (read_ret == -1)
-					{
-						req.unfire(EPOLLIN);
-						return (false);
-					}
-					req.body_remainingsize -= read_ret;
-					req.body.append(read_buffer, read_ret);
-				}*/
+				
 			}
-			/*else if (!req.body_boundary.empty())
+			else if (req.body_chuncked)
 			{
-				// If multipart/form-data is present
 				std::string	line("");
+				ssize_t		chunkSize(0), readSize(0);
+				bool		isChunk(false);
+
 				while (get_next_line_string(req.fd, line, req.buff))
 				{
-					req.body.append(line);
-					req.body.append(CRLF);
-					if (line == req.body_boundary_end)
-						break;
+					if (!isChunk)
+					{
+						chunkSize = 0;
+						readSize = 0;
+						std::stringstream	sstream(line);
+						sstream >> chunkSize;
+						if (chunkSize <= 0)
+							break;
+						isChunk = true;
+					}
+					else
+					{
+						req.body.append(line);
+						req.body.append(CRLF);
+						readSize += line.size();
+						if (readSize >= chunkSize)
+							isChunk = false;
+					}
 				}
+			}
+			//std::cout << "==== FINISH BODY ====" << std::endl;
+			//std::cout << req.body << std::endl;
+			//std::cout << "==== =========== ====" << std::endl;
+			/*while (req.body_remainingsize)
+			{
+				read_chunksize = req.body_remainingsize < req.body_chunksize ? req.body_remainingsize : req.body_chunksize;
+				read_ret = read(req.fd, read_buffer, read_chunksize);
+				if (read_ret == -1)
+				{
+					req.unfire(EPOLLIN);
+					return (false);
+				}
+				req.body_remainingsize -= read_ret;
+				req.body.append(read_buffer, read_ret);
 			}*/
 			return (true);
 		}
