@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/08/17 12:59:44 by badam             #+#    #+#             */
-/*   Updated: 2022/04/14 22:53:27 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/17 02:42:40 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,18 +69,19 @@ std::string sanitizeRelativePath(std::string path)
 std::string	relativeToAbsoluteDir(const std::string &path)
 {
 	char		absPath[PATH_MAX];
-	std::string	dirPath;
-	size_t		lastSlash = path.find_last_of('/');
+	std::string	plainPath;
+	size_t		lastSlash;
 
+	if (realpath(path.c_str(), absPath))
+		plainPath = absPath;
+	else
+		plainPath = path;
+
+	lastSlash = plainPath.find_last_of('/');
 	if (lastSlash == std::string::npos)
-		dirPath = path;
+		return (plainPath);
 	else
-		dirPath = path.substr(0, lastSlash);
-
-	if (realpath(dirPath.c_str(), absPath))
-		return (absPath);
-	else
-		return (dirPath);
+		return (plainPath.substr(0, lastSlash));
 }
 
 std::string	concatPath(const std::string &root, const std::string &path)
