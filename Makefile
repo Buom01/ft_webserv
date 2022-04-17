@@ -12,7 +12,10 @@ CXXFLAGS	?=  -Wall -Werror -Wextra -std=c++98 -g $(LIBRARY)
 $(NAME): $(OBJS) $(SUBDIRS)
 	$(CXX) $(LIBRARY) -o $(NAME) $(OBJS)
 
-all: $(NAME)
+all: help $(NAME)
+
+help:
+	xxd -i ./srcs/help/documentation > srcs/help/generateDocumentation.hpp
 
 fclean:
 	$(RM) $(OBJS)
