@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/10 18:19:19 by badam             #+#    #+#             */
-/*   Updated: 2022/04/15 22:20:30 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/17 15:19:48 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,7 @@ typedef struct server_bind_s
 	socklen_t				len;
 } server_bind_t;
 
-typedef	std::vector<server_bind_t>	binds_t;
+typedef	std::vector<server_bind_t *>	binds_t;
 
 typedef enum chain_flag_e
 {
