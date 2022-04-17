@@ -865,7 +865,7 @@ class Parse : public ParseTypedef
 
 			if (get[0] != NO_KEY)
 			{
-				Regex.exec(get[0], "([a-zA-Z0-9_.]+)", GLOBAL_FLAG);
+				Regex.exec(get[0], "([-a-zA-Z0-9.]+)", GLOBAL_FLAG);
 				for (size_t x = 0; x < Regex.size(); x++)
 					ret.push_back(Regex.match()[x].occurence);
 			}
