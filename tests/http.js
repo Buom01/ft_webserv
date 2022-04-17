@@ -121,8 +121,13 @@ describe('Server', function () {
 		});
 	});
 
-
 	describe('has a working CGI', function () {
+		it('have php activate', (done) => {
+			request.agent(endpoint(9200))
+				.get('/info.php')
+				.expect('Content-Type', 'text/html')
+				.expect(200, /\<html/, done);
+		});
 		/*
 - Chunked : https://github.com/visionmedia/superagent/blob/e196345074f57987c166283c302d06d661744f14/docs/index.md#piping-data
 - Multipart : https://github.com/visionmedia/superagent/blob/e196345074f57987c166283c302d06d661744f14/docs/index.md#multipart

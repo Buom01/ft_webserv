@@ -31,7 +31,7 @@ struct s_defineRegex
 } REGEX[REGEX_SIZE] =
 {
 	{ "server", "^[ \t]*(server)[ \t]*\\{?[ \t]*$", false },
-	{ "location", "^[ \t]*location[ \t]+([a-zA-Z0-9_/. \t]*)\\{*$", false},
+	{ "location", "^[ \t]*location[ \t]+([-a-zA-Z0-9_/. \t]*)\\{*$", false},
 	{ "endBlock", "^[ \t]*(});*$", false },
 	/* Rules regex */
 	{ "allow", "^[ \t]*allow[ \t]+(.*);[ \t]*$", true },
@@ -205,8 +205,13 @@ class Parse : public ParseTypedef
 					Regex.exec(line, REGEX[i].regex, GLOBAL_FLAG);
 					if (Regex.size() == 0)
 					{
-						if (i == (REGEX_SIZE - 1) && trim(line) != "{" && trim(line) != "}" && sendInfo)
+						if (i == (REGEX_SIZE - 1)
+							&& trim(line) != "{"
+							&& trim(line) != "}"
+							&& sendInfo)
+						{
 							std::cerr << COLOR_TITLE << "WEBSERV" << COLOR_RESET << " - " << createString(lineNumber, "no valid rule was recognized, type \x1b[92mwebserv \x1b[94m--help\x1b[0m for get more information about the correct format of the rules") << std::endl;
+						}
 						continue;
 					}
 					if (REGEX[i].name == "endBlock")
@@ -240,7 +245,7 @@ class Parse : public ParseTypedef
 						locationTemp.second.clear();
 						if (location.empty())
 							generateParseError(lineNumber, "a location block must at least contain the path '/'");
-						Regex.exec(location, "([a-zA-Z0-9_\\/.]+)", GLOBAL_FLAG);
+						Regex.exec(location, "([-a-zA-Z0-9_\\/.]+)", GLOBAL_FLAG);
 						if (Regex.size() > 1)
 							generateParseError(lineNumber, "only one path is allowed");
 						if (serverTemp.locations.find(location) != serverTemp.locations.end())
