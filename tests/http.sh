@@ -1,9 +1,9 @@
 #/bin/sh
 
-../webserv ./tests.conf > /dev/null &
+../webserv ./http.conf > /dev/null &
 server_pid=$!
 
-sleep 3
+sleep 1
 
 yarn mocha http
 

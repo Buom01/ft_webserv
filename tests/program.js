@@ -41,7 +41,7 @@ const exec = (file, args, cwd, timeout, killSignal) => (
 	)
 )
 
-describe('Programm', function () {
+describe('Program', function () {
 	describe('has a working Makefile', function () {
 		it('should compile', function () {
 			this.timeout(15000);
@@ -52,7 +52,7 @@ describe('Programm', function () {
 		it('should cleanup the sources', function () {
 			command("make clean", "..");
 		});
-		it('should cleanup the programm', function () {
+		it('should cleanup the program', function () {
 			command("make fclean", "..");
 			if (exists("../webserv"))
 				throw "../webserv were not removed";
@@ -82,7 +82,7 @@ describe('Programm', function () {
 		it('works with the test config', function () {
 			this.timeout(6000);
 			try {
-				exec("../webserv", ['./tests.conf'], ".", 4000, 'SIGINT');
+				exec("../webserv", ['./http.conf'], ".", 4000, 'SIGINT');
 			} catch (error) {
 				if (error.code != 'ETIMEDOUT')
 					throw "server have not success to start"

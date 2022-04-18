@@ -149,6 +149,43 @@ describe('Server', function () {
 						.expect(200, done);
 				});
 		});
+		it('can do simple redirection', function (done) {
+			request(endpoint(9101))
+				.get('/')
+				.redirects(1)
+				.expect(200, 'You have been redirected :)', done);
+		});
+		it('can redirect with $request_uri', function (done) {
+			request(endpoint(9101))
+				.get('/test.txt')
+				.redirects(1)
+				.expect(200, 'You have been redirected to the right file :)', done);
+		});
+		it('can serve static files correctly from a custom location to a custom directory', function (done) {
+			request(endpoint(9102))
+				.get('/my-route-to-serve/')
+				.expect(200, '<html><body><h1>Hello from the INDEX.HTML</h1></body></html>', done);
+		});
+		it('can have a custom index file for static serving', function (done) {
+			request(endpoint(9102))
+				.get('/my-route-to-serve-with-custom-indexfile/')
+				.expect(200, 'My plain text file\nWith a simple newline ;)', done);
+		});
+		it('can list files of directory for static serving', function (done) {
+			request(endpoint(9102))
+				.get('/my-route-to-serve-with-listing/')
+				.expect(200, /thunderstorm\.mp4/, done);
+		});
+		it('can disallow directory\'s file listing for static serving', function (done) {
+			request(endpoint(9102))
+				.get('/my-route-to-serve-without-listing/')
+				.expect(403, done);
+		});
+		it('serve index over list files for static serving', function (done) {
+			request(endpoint(9102))
+				.get('/my-route-to-serve-with-both/')
+				.expect(200, 'My plain text file\nWith a simple newline ;)', done);
+		});
 	});
 
 	describe('has a working CGI', function () {
