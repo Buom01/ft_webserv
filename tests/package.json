@@ -8,8 +8,8 @@
   "scripts": {
     "start:program": "mocha program",
     "start:http": "sh http.sh",
-    "start:netowrk": "sh network.sh",
+    "start:network": "sh network.sh",
 	  "start:benchmark": "./siege.sh",
-    "all": "npm run start:program && npm run start:http && npm run start:netowrk && npm run start:benchmark"
+    "all": "npm run start:program && npm run start:http && npm run start:network && npm run start:benchmark"
   }
 }

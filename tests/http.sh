@@ -7,4 +7,4 @@ sleep 1
 
 yarn mocha http
 
-kill $server_pid
+kill $server_pid &

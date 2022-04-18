@@ -85,7 +85,16 @@ describe('Program', function () {
 				exec("../webserv", ['./http.conf'], ".", 4000, 'SIGINT');
 			} catch (error) {
 				if (error.code != 'ETIMEDOUT')
-					throw "server have not success to start"
+					throw "server would not start"
+			}
+		});
+		it('works with default config when found', function () {
+			this.timeout(6000);
+			try {
+				exec("../webserv", [], "./files/default_config", 4000, 'SIGINT');
+			} catch (error) {
+				if (error.code != 'ETIMEDOUT')
+					throw "server would not start"
 			}
 		});
 	});
