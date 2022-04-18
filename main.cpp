@@ -50,17 +50,12 @@ int main(int argc, char **argv)
 	std::vector<SendBodyFromFD *>	sendBodyFDMiddlewares;
 
 	#pragma region Initiale check & Parse configuration file
-	if (argc <= 1)
-	{
-		std::cerr << COLOR_TITLE << "WEBSERV " << COLOR_RESET << " - " << COLOR_ERROR << "No configuration file has been passed" << std::endl;
-		return (EXIT_FAILURE);
-	}
-	else if (argc >= 3)
+	if (argc >= 3)
 	{
 		std::cerr << COLOR_TITLE << "WEBSERV "<< COLOR_RESET << " - " << COLOR_ERROR << "Only one argument is allowed" << std::endl;
 		return (EXIT_FAILURE);
 	}
-	if (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")
+	if (argc >= 2 && (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h"))
 	{
 		Help	help;
 		help.print();
@@ -68,7 +63,7 @@ int main(int argc, char **argv)
 	}
 	try
 	{
-		config.init(argv[1], true, true);
+		config.init((argc >= 2) ? argv[1] : "./default.conf", true, true);
 		config.check();
 		servers = config.getServers();
 		config.print();
