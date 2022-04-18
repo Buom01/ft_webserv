@@ -7,6 +7,6 @@
   "scripts": {
     "start:program": "mocha program",
     "start:http": "sh http.sh",
-	"benchmark": "./siege.sh"
+    "benchmark": "./siege.sh"
   }
 }

@@ -56,7 +56,10 @@ class Body: public AEpoll
 			if (header_values.begin() == header_values.end())
 				return (false);
 			if (*header_values_it == "chunked")
+			{
+				req.body_length = 0;
 				req.body_chuncked = true;
+			}
 			else
 				res.code = C_BAD_REQUEST;
 			return (true);
@@ -78,7 +81,9 @@ class Body: public AEpoll
 				_pos = (*it).find(boundary);
 				if (_pos != std::string::npos)
 				{
-					req.body_boundary = (*it).substr(_pos).erase(0, boundarySize);
+					req.body_length = 0;
+					req.body_boundary.assign((*it).substr(_pos).erase(0, boundarySize));
+					req.body_boundary_end.assign("--");
 					req.body_boundary_end.append(req.body_boundary);
 					req.body_boundary_end.append("--");
 					break;
@@ -95,37 +100,19 @@ class Body: public AEpoll
 				return (true);
 			if (req.finish())
 				return (true);
-			if (req.body.empty() && (
-				!_get_contentlength(req)
-				|| !_get_bondary(req)
-				|| !_get_transferEncoding(req, res)
-			))
+			if (req.body_read_is_finished)
+				return (true);
+			if (!req.body_header_parsed)
+			{
+				_get_contentlength(req);
+				_get_bondary(req);
+				_get_transferEncoding(req, res);
+				req.body_header_parsed = true;
+			}
 			if (!req.await(EPOLLIN))
 				return (false);
-			if (req.body_length || !req.body_boundary.empty())
-			{
-				std::string	line("");
-				ssize_t		body_size(0);
-				while (get_next_line_string(req.fd, line, req.buff))
-				{
-					req.body.append(line);
-					req.body.append(CRLF);
-					if (!!(req.body_length > 0))
-					{
-						body_size += line.size();
-						if (body_size >= req.body_length)
-							break;
-					}
-					else
-					{
-						if (line == req.body_boundary_end)
-							break;
-					}
-					
-				}
-				
-			}
-			else if (req.body_chuncked)
+
+			if (req.body_chuncked == true)
 			{
 				std::string	line("");
 				ssize_t		chunkSize(0), readSize(0);
@@ -140,7 +127,10 @@ class Body: public AEpoll
 						std::stringstream	sstream(line);
 						sstream >> std::hex >> chunkSize;
 						if (chunkSize <= 0)
+						{
+							req.body_read_is_finished = true;
 							break;
+						}
 						isChunk = true;
 					}
 					else
@@ -153,7 +143,35 @@ class Body: public AEpoll
 					}
 				}
 			}
-			return (true);
+			else
+			{
+				std::string	line("");
+				ssize_t		body_size(0);
+				
+				while (get_next_line_string(req.fd, line, req.buff))
+				{
+					req.body.append(line);
+					req.body.append(CRLF);
+					if (!req.body_boundary_end.empty())
+					{
+						if (line.compare(req.body_boundary_end) == 0)
+						{
+							req.body_read_is_finished = true;
+							break;
+						}
+					}
+					else
+					{
+						body_size += line.size();
+						if (body_size >= req.body_length)
+						{
+							req.body_read_is_finished = true;
+							break;
+						}
+					}
+				}
+			}
+			return (req.body_read_is_finished);
 		}
 };
 

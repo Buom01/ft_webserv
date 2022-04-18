@@ -62,9 +62,9 @@ class Request
 		std::string			upload_filename;
 		std::string			upload_filename_tmp;
 
+		bool				body_header_parsed;
+		bool				body_read_is_finished;
 		bool 				body_chuncked;
-		size_t				body_chunksize;
-		size_t				body_remainingsize;
 		ssize_t				body_length;
 		std::string 		body_boundary;
 		std::string 		body_boundary_end;
@@ -105,9 +105,9 @@ class Request
 			upload_filename(""),
 			upload_filename_tmp(""),
 
+			body_header_parsed(false),
+			body_read_is_finished(false),
 			body_chuncked(false),
-			body_chunksize(1024),
-			body_remainingsize(0),
 			body_length(0),
 			body_boundary(""),
 			body_boundary_end(""),
