@@ -100,6 +100,11 @@ class Body: public AEpoll
 				return (true);
 			if (req.finish())
 				return (true);
+			if (req.body.empty()
+				&& req.method != M_POST
+				&& req.method != M_PUT
+				&& req.method != M_ALL)
+			return (true);
 			if (req.body_read_is_finished)
 				return (true);
 			if (!req.body_header_parsed)
