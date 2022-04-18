@@ -1,10 +1,7 @@
 const request = require('supertest');
 const crypto = require("crypto");
 const assert = require('assert');
-
 const path = require('path');
-const fs = require('fs');
-const FormData = require('form-data');
 
 const endpoint = (port) => (
 	`http://127.0.0.1:${port}`
@@ -19,7 +16,6 @@ function getSimpleStatic(callback, port, root = '/', agent = request(endpoint(po
 }
 
 describe('Server', function () {
-	/*
 	describe('serve static files', function () {
 		it('serve simple text file', function (done) {
 			request(endpoint(9002))
@@ -153,28 +149,27 @@ describe('Server', function () {
 				});
 		});
 	});
-*/
+
 	describe('has a working CGI', function () {
-		/*it('run php', (done) => {
+		it('run php', (done) => {
 			request.agent(endpoint(9200))
 				.get('/info.php')
 				.expect('Content-Type', "text/html; charset=UTF-8")
 				.expect(200, /\<!DOCTYPE html PUBLIC "-\/\/W3C\/\/DTD XHTML 1.0 Transitional\/\/EN" "DTD\/xhtml1-transitional.dtd">/, done);
-		});*/
-		/*it('send GET request', (done) => {
+		});
+		it('send GET request', (done) => {
 			request.agent(endpoint(9200))
 				.get('/form_get.php')
 				.query({first_name: 'John'})
 				.query({last_name: 'Doe'})
 				.expect(200, '<meta charset="UTF-8">GET form<h3>Hello John Doe !</h3><p><a href=\'index.php\'>Go to index</a></p>', done);
-		});*/
-		
+		});
 		it('send POST request', (done) => {
 			request.agent(endpoint(9200))
 				.post('/form_post.php')
 				.field('first_name', 'John')
 				.field('last_name', 'Doe')
-				.attach('file', path.join(__dirname, 'files', 'cgi', 'index.php'), { contentType: 'application/octet-stream'})
+				.attach('file', path.join(__dirname, 'program.js'), { contentType: 'application/x-javascript'})
 				.expect(200, '<meta charset="UTF-8">POST form<h3>Hello John Doe !</h3>File is an application/x-javascript, and is a size of 1965 bytes<p>Go to uploads/program.js for get your file</p><p><a href=\'index.php\'>Go to index</a></p>', done);
 		});
 		/*

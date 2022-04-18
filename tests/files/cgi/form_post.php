@@ -5,8 +5,6 @@
 	echo "POST form";
 	echo "<h3>Hello ".$firstname.' '.$lastname." !</h3>";
 
-	print_r($_FILES);
-
 	$target_dir = "uploads/";
 	if (!empty($target_dir) && !is_dir($target_dir))
 		mkdir($target_dir);    

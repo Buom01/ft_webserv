@@ -1,4 +1,6 @@
 {
+  "license": "proprietary",
+  "private": true,
   "dependencies": {
     "mocha": "^9.2.2",
     "superagent": "^7.1.2",
