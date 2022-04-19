@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/06 16:28:32 by badam             #+#    #+#             */
-/*   Updated: 2022/04/16 01:21:27 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/19 01:49:23 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,20 +78,20 @@ class	Log
 
 		void	warn(std::string warn_str, int error_nb= -1)
 		{
-			std::cout
+			std::cerr
 				<< COLOR_WARNING << "[WARNING] " << COLOR_RESET << warn_str;
 			if (error_nb >= 0)
-				std::cout << ": " << strerror(error_nb);
-			std::cout << std::endl;
+				std::cerr << ": " << strerror(error_nb);
+			std::cerr << std::endl;
 		}
 
 		void	fail(std::string error_str, int error_nb = -1)
 		{
-			std::cout
+			std::cerr
 				<< COLOR_ERROR << "[ERROR] " << COLOR_RESET << error_str;
 			if (error_nb >= 0)
-				std::cout << ": " << strerror(error_nb);
-			std::cout << std::endl;
+				std::cerr << ": " << strerror(error_nb);
+			std::cerr << std::endl;
 		}
 };
 
