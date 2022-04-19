@@ -243,6 +243,8 @@ class CGI : public cgiEnv, public IMiddleware
 				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT-TYPE", true));
 				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
 				env.addVariable("PATH_INFO", file.path);
+				if (!req.querystring.empty() && req.querystring.at(0) == '?')
+					req.querystring.erase(0, 1);
 				env.addVariable("QUERY_STRING", req.querystring);
 				env.addVariable("REMOTE_ADDR", req.client_ip);
 				env.addVariable("REQUEST_METHOD", convertMethod(req.method));
@@ -285,10 +287,16 @@ class CGI : public cgiEnv, public IMiddleware
 			
 			while (get_next_line_string(res.response_fd, line, buff))
 			{
-				npos += line.size();
 				if (line.empty())
+				{
+					npos += 2;
 					break;
-				res.headers.set(line);
+				}
+				else
+				{
+					npos += line.size() + 2;
+					res.headers.set(line);
+				}
 			}
 			lseek(res.response_fd, npos, SEEK_SET);
 			res.response_fd_header_size = npos;
