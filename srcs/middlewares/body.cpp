@@ -118,30 +118,27 @@ class Body: public AEpoll
 
 			if (req.body_chuncked == true)
 			{
-				ssize_t		chunkSize(0), readSize(0);
-				bool		isChunk(false);
-
 				while (get_next_line_string(req.fd, line, newline_ptr, req.buff))
 				{
-					if (!isChunk)
+					if (!req.body_is_chunk)
 					{
-						chunkSize = 0;
-						readSize = 0;
-						std::stringstream	sstream(line);
-						sstream >> std::hex >> chunkSize;
-						if (chunkSize <= 0)
+						req.body_chunk_size = 0;
+						req.body_read_size = 0;
+						std::stringstream sstream(line);
+						sstream >> std::hex >> req.body_chunk_size;
+						if (req.body_chunk_size <= 0)
 						{
 							req.body_read_is_finished = true;
 							break;
 						}
-						isChunk = true;
+						req.body_is_chunk = true;
 					}
 					else
 					{
 						req.body.append(line);
-						readSize += line.size();
-						if (readSize >= chunkSize)
-							isChunk = false;
+						req.body_read_size += line.size();
+						if (req.body_read_size >= req.body_chunk_size)
+							req.body_is_chunk = false;
 					}
 				}
 			}
@@ -178,6 +175,8 @@ class Body: public AEpoll
 					}
 				}
 			}
+			if (!req.body_read_is_finished)
+				req.unfire(EPOLLIN);
 			return (req.body_read_is_finished);
 		}
 };
