@@ -1,6 +1,5 @@
 {
-  "license": "proprietary",
-  "private": true,
+  "license": "UNLICENSED",
   "dependencies": {
     "mocha": "^9.2.2",
     "superagent": "^7.1.2",
@@ -9,6 +8,8 @@
   "scripts": {
     "start:program": "mocha program",
     "start:http": "sh http.sh",
-    "benchmark": "./siege.sh"
+    "start:network": "sh network.sh",
+	  "start:benchmark": "./siege.sh",
+    "all": "npm run start:program && npm run start:http && npm run start:network && npm run start:benchmark"
   }
 }

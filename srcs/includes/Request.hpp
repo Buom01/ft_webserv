@@ -68,6 +68,7 @@ class Request
 		ssize_t				body_length;
 		std::string 		body_boundary;
 		std::string 		body_boundary_end;
+		std::string 		body_boundary_end_webkit;
 		std::string 		body;
 
 		Request(int connection, server_bind_t *_interface, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
@@ -111,6 +112,7 @@ class Request
 			body_length(0),
 			body_boundary(""),
 			body_boundary_end(""),
+			body_boundary_end_webkit(""),
 			body("")
 		{
 			buff.reserve(SERVER_BUFFER_SIZE);

@@ -83,6 +83,8 @@ class Body: public AEpoll
 				{
 					req.body_length = 0;
 					req.body_boundary.assign((*it).substr(_pos).erase(0, boundarySize));
+					req.body_boundary_end_webkit.assign(req.body_boundary);
+					req.body_boundary_end_webkit.append("--");
 					req.body_boundary_end.assign("--");
 					req.body_boundary_end.append(req.body_boundary);
 					req.body_boundary_end.append("--");
@@ -159,7 +161,8 @@ class Body: public AEpoll
 					req.body.append(CRLF);
 					if (!req.body_boundary_end.empty())
 					{
-						if (line.compare(req.body_boundary_end) == 0)
+						if (line.compare(req.body_boundary_end) == 0
+							|| line.compare(req.body_boundary_end_webkit) == 0)
 						{
 							req.body_read_is_finished = true;
 							break;
