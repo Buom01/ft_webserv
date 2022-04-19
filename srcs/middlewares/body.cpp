@@ -83,11 +83,9 @@ class Body: public AEpoll
 				{
 					req.body_length = 0;
 					req.body_boundary.assign((*it).substr(_pos).erase(0, boundarySize));
-					req.body_boundary_end_webkit.assign(req.body_boundary);
-					req.body_boundary_end_webkit.append("--");
-					req.body_boundary_end.assign("--");
-					req.body_boundary_end.append(req.body_boundary);
-					req.body_boundary_end.append("--");
+					if (req.body_boundary[0] == '"' && req.body_boundary[req.body_boundary.size() - 1] == '"')
+						req.body_boundary = req.body_boundary.substr(1, req.body_boundary.size() - 2);
+					req.body_boundary.append("--");
 					break;
 				}
 			}
@@ -102,11 +100,6 @@ class Body: public AEpoll
 				return (true);
 			if (req.finish())
 				return (true);
-			if (req.body.empty()
-				&& req.method != M_POST
-				&& req.method != M_PUT
-				&& req.method != M_ALL)
-			return (true);
 			if (req.body_read_is_finished)
 				return (true);
 			if (!req.body_header_parsed)
@@ -119,13 +112,16 @@ class Body: public AEpoll
 			if (!req.await(EPOLLIN))
 				return (false);
 
+			std::string	line("");
+			std::string	newline("");
+			std::string	*newline_ptr	= &newline;
+
 			if (req.body_chuncked == true)
 			{
-				std::string	line("");
 				ssize_t		chunkSize(0), readSize(0);
 				bool		isChunk(false);
 
-				while (get_next_line_string(req.fd, line, req.buff))
+				while (get_next_line_string(req.fd, line, newline_ptr, req.buff))
 				{
 					if (!isChunk)
 					{
@@ -143,7 +139,6 @@ class Body: public AEpoll
 					else
 					{
 						req.body.append(line);
-						req.body.append(CRLF);
 						readSize += line.size();
 						if (readSize >= chunkSize)
 							isChunk = false;
@@ -152,27 +147,31 @@ class Body: public AEpoll
 			}
 			else
 			{
-				std::string	line("");
-				ssize_t		body_size(0);
-				
-				while (get_next_line_string(req.fd, line, req.buff))
+				while (get_next_line_string(req.fd, line, newline_ptr, req.buff))
 				{
 					req.body.append(line);
-					req.body.append(CRLF);
-					if (!req.body_boundary_end.empty())
+					if (!req.body_boundary.empty())
 					{
-						if (line.compare(req.body_boundary_end) == 0
-							|| line.compare(req.body_boundary_end_webkit) == 0)
+						if (
+							(line.size() >= req.body_boundary.size()
+							&& line.size() <= req.body_boundary.size() + 2)
+							&& line.substr(line.size() - req.body_boundary.size(), req.body_boundary.size()) == req.body_boundary
+						)
 						{
 							req.body_read_is_finished = true;
 							break;
 						}
+						else
+							req.body.append(newline);
 					}
 					else
 					{
-						body_size += line.size();
-						if (body_size >= req.body_length)
+						req.body.append(newline);
+						if (req.body.size() >= static_cast<size_t>(req.body_length))
 						{
+							std::cout << req.body_length << std::endl;
+							std::cout << req.body.size() << std::endl;
+							std::cout << req.body << std::endl;
 							req.body_read_is_finished = true;
 							break;
 						}

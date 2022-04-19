@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/19 00:03:55 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/19 15:20:32 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,7 +36,7 @@ bool	parseStartLine(Request &req, Response &res)
 	if (!req.await(EPOLLIN))
 		return (false);
 
-	if (!get_next_line_string(req.fd, line, req.buff))
+	if (!get_next_line_string(req.fd, line, NULL, req.buff))
 	{
 		req.unfire(EPOLLIN);
 		return (false);
@@ -145,7 +145,7 @@ bool	parseRequestHeaders(Request &req, Response &res)
 	if (!req.await(EPOLLIN))
 		return (false);
 
-	while (get_next_line_string(req.fd, line, req.buff))
+	while (get_next_line_string(req.fd, line, NULL, req.buff))
 	{
 		if (!line.length())
 		{

@@ -285,7 +285,7 @@ class CGI : public cgiEnv, public IMiddleware
 			size_t npos(0);
 			std::string	line, buff;
 			
-			while (get_next_line_string(res.response_fd, line, buff))
+			while (get_next_line_string(res.response_fd, line, NULL, buff))
 			{
 				if (line.empty())
 				{

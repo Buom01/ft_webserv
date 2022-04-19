@@ -165,6 +165,22 @@ int main(int argc, char **argv)
 				redirectMiddlewares.push_back(redirect);
 			}
 
+			if  (getCgi.isDefined || getUpload.first.length())
+			{
+				Body		*body	= new Body(server->logger);
+				method_t	upload_methods = M_UNKNOWN;
+
+				if (getCgi.isDefined)
+					upload_methods = static_cast<method_t>((methods & method(getCgi.allow)) & (M_POST | M_PUT));
+				if (getUpload.first.length())
+					upload_methods = static_cast<method_t>(upload_methods | (methods & M_PUT));
+				if (upload_methods == M_UNKNOWN)
+					break ;
+
+				server->use(*body, F_NORMAL, upload_methods, location_name, serverBlockConfig);
+				bodyMiddlewares.push_back(body);
+			}
+
 			if (getUpload.first.length() && (methods & M_PUT))
 			{
 				Upload	*upload		= new Upload(server->logger, getUpload.first, getUpload.second);
@@ -178,12 +194,9 @@ int main(int argc, char **argv)
 
 			if (getCgi.isDefined)
 			{
-				Body *_body	= new Body(server->logger);
 				CGI *_cgi	= new CGI(getCgi, location_name, getIndex);
 
-				server->use(*_body, F_NORMAL, method(getCgi.allow), location_name, serverBlockConfig);
 				server->use(*_cgi, F_NORMAL, method(getCgi.allow), location_name, serverBlockConfig);
-				bodyMiddlewares.push_back(_body);
 				cgiMiddlewares.push_back(_cgi);
 			}
 
