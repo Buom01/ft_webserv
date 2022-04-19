@@ -167,18 +167,25 @@ int main(int argc, char **argv)
 
 			if  (getCgi.isDefined || getUpload.first.length())
 			{
-				Body		*body	= new Body(server->logger);
 				method_t	upload_methods = M_UNKNOWN;
 
+				if (getUpload.first.length() && methods & M_PUT)
+					upload_methods = static_cast<method_t>(upload_methods | M_PUT);
 				if (getCgi.isDefined)
-					upload_methods = static_cast<method_t>((methods & method(getCgi.allow)) & (M_POST | M_PUT));
-				if (getUpload.first.length())
-					upload_methods = static_cast<method_t>(upload_methods | (methods & M_PUT));
-				if (upload_methods == M_UNKNOWN)
-					break ;
+				{
+					if (method(getCgi.allow) & methods & M_POST)
+						upload_methods = static_cast<method_t>(upload_methods | M_POST);
+					if (method(getCgi.allow) & methods & M_PUT)
+						upload_methods = static_cast<method_t>(upload_methods | M_PUT);
+				}
 
-				server->use(*body, F_NORMAL, upload_methods, location_name, serverBlockConfig);
-				bodyMiddlewares.push_back(body);
+				if (upload_methods != M_UNKNOWN)
+				{
+					Body		*body	= new Body(server->logger);
+
+					server->use(*body, F_NORMAL, upload_methods, location_name, serverBlockConfig);
+					bodyMiddlewares.push_back(body);
+				}
 			}
 
 			if (getUpload.first.length() && (methods & M_PUT))
