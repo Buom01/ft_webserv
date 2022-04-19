@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/04/20 01:21:46 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/20 01:26:19 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,7 +65,13 @@ class Request
 		bool				body_header_parsed;
 		bool				body_read_is_finished;
 		bool 				body_chuncked;
+
+		ssize_t				body_chunk_size;
+		ssize_t				body_read_size;
+		ssize_t				body_is_chunk;
+
 		ssize_t				body_length;
+
 		std::string 		body_boundary;
 		std::string 		body_boundary_end;
 		std::string 		body;
@@ -108,6 +114,11 @@ class Request
 			body_header_parsed(false),
 			body_read_is_finished(false),
 			body_chuncked(false),
+
+			body_chunk_size(0),
+			body_read_size(0),
+			body_is_chunk(false),
+
 			body_length(0),
 			body_boundary(""),
 			body_boundary_end(""),
