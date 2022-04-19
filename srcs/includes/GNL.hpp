@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/12/04 17:06:14 by badam             #+#    #+#             */
-/*   Updated: 2022/04/19 15:18:51 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/20 00:55:36 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,7 @@ bool		get_next_line_string(int fd, std::string &line, std::string *newline, std:
 	while (!get_line(line, newline, buff, read_ret == 0))
 	{
 		read_ret = read(fd, read_buff, SERVER_BUFFER_SIZE);
-		if (read_ret < 0)
+		if (read_ret <= 0)
 			return (false);
 		else if (read_ret > 0)
 			buff.append(read_buff, read_ret);
