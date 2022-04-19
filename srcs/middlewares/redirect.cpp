@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/18 08:00:23 by badam             #+#    #+#             */
-/*   Updated: 2022/04/14 23:28:14 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/19 13:04:45 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,8 +60,6 @@ class Redirect: public IMiddleware
 			res.headers.set("Location: " + newLocation);
 			res.code = options.code;
 
-			std::cout << "Done" << std::endl;
-			
 			return (true);
 		}
 
