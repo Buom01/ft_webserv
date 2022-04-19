@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/04/20 01:26:19 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/20 01:27:27 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,7 +68,7 @@ class Request
 
 		ssize_t				body_chunk_size;
 		ssize_t				body_read_size;
-		ssize_t				body_is_chunk;
+		bool				body_is_chunk;
 
 		ssize_t				body_length;
 

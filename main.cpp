@@ -42,7 +42,6 @@ int main(int argc, char **argv)
 	std::vector<Eject *>			ejectMiddlewares;
 	std::vector<Redirect *>			redirectMiddlewares;
 	std::vector<Upload *>			uploadMiddlewares;
-	std::vector<Body *>				bodyMiddlewares;
 	std::vector<Remover *>			removerMiddlewares;
 	std::vector<CGI *>				cgiMiddlewares;
 	std::vector<Static *>			staticMiddlewares;
@@ -180,12 +179,7 @@ int main(int argc, char **argv)
 				}
 
 				if (upload_methods != M_UNKNOWN)
-				{
-					Body		*body	= new Body(server->logger);
-
-					server->use(*body, F_NORMAL, upload_methods, location_name, serverBlockConfig);
-					bodyMiddlewares.push_back(body);
-				}
+					server->use(body, F_NORMAL, upload_methods, location_name, serverBlockConfig);
 			}
 
 			if (getUpload.first.length() && (methods & M_PUT))
@@ -266,11 +260,6 @@ int main(int argc, char **argv)
 
 
 	#pragma region Middlewares cleanup 
-
-	for (std::vector<Body *>::iterator it = bodyMiddlewares.begin(); it != bodyMiddlewares.end(); it++)
-	{
-		delete (*it);
-	}
 
 	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
 		delete (*it);
