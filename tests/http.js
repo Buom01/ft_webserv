@@ -185,6 +185,15 @@ describe('Server', function () {
 				.get('/my-route-to-serve-with-both/')
 				.expect(200, 'My plain text file\nWith a simple newline ;)', done);
 		});
+		// it('can accept to download file and decide where to save', function (done) {
+		// 	// remove old file
+		// 	// download it
+		// 	// test it
+
+		// 	// dont forget to do gitignore
+		// });
+		// it('can accept to download chunked file', function (done) {
+		// });
 	});
 
 	describe('has a working CGI', function () {
@@ -206,8 +215,8 @@ describe('Server', function () {
 				.post('/form_post.php')
 				.field('first_name', 'John')
 				.field('last_name', 'Doe')
-				.attach('file', path.join(__dirname, 'program.js'), { contentType: 'application/x-javascript'})
-				.expect(200, '<meta charset="UTF-8">POST form<h3>Hello John Doe !</h3>File is an application/x-javascript, and is a size of 1965 bytes<p>Go to uploads/program.js for get your file</p><p><a href=\'index.php\'>Go to index</a></p>', done);
+				.attach('file', path.join(__dirname, './files/static/Bill_Gates_2017_(cropped).jpg'), { contentType: 'image/jpeg'})
+				.expect(200, '<meta charset="UTF-8">POST form<h3>Hello John Doe !</h3>File is an image/jpeg, with an MD5 as : 39bea58f55a6c930aa0b2f8eca3d4512<p>Go to uploads/Bill_Gates_2017_(cropped).jpg for get your file</p><p><a href=\'index.php\'>Go to index</a></p>', done);
 		});
 		/*
 - Chunked : https://github.com/visionmedia/superagent/blob/e196345074f57987c166283c302d06d661744f14/docs/index.md#piping-data
