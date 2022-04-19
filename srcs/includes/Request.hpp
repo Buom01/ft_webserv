@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/04/15 23:08:13 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/20 01:21:46 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,7 +68,6 @@ class Request
 		ssize_t				body_length;
 		std::string 		body_boundary;
 		std::string 		body_boundary_end;
-		std::string 		body_boundary_end_webkit;
 		std::string 		body;
 
 		Request(int connection, server_bind_t *_interface, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
@@ -99,7 +98,7 @@ class Request
 			trusted_pathname("/"),
 			http_version(""),
 			headers(),
-			upload_chunksize(1024),
+			upload_chunksize(10240),
 			upload_remainingsize(0),
 			upload_fd(0),
 			upload_fd_buff(""),
@@ -112,7 +111,6 @@ class Request
 			body_length(0),
 			body_boundary(""),
 			body_boundary_end(""),
-			body_boundary_end_webkit(""),
 			body("")
 		{
 			buff.reserve(SERVER_BUFFER_SIZE);
