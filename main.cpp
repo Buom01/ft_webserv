@@ -19,6 +19,7 @@
 #include "forbidden.cpp"
 #include "mimetypes.cpp"
 #include "body.cpp"
+#include "graceful_shutdown.cpp"
 #include "help.hpp"
 
 static Serve	*server			= NULL;
@@ -233,6 +234,9 @@ int main(int argc, char **argv)
 	server->use(sendHeader, F_ALL);
 	server->use(sendBodyFromBuffer, F_ALL);
 	server->use(*sendBodyFromFD, F_ALL);
+
+	server->use(sendFinPacket, F_ALL);
+	server->use(awaitClosed, F_ALL);
 
 	errorMiddlewares.push_back(fallbackError);
 
