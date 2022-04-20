@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/20 06:53:49 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/20 16:43:39 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,6 +72,7 @@ bool	serializeHeaders(Request &req, Response &res)
 	infos << get_elasped_ms(req.start);
 	infos << "ms";
 	res.logger.log(
+		req.method_str,
 		res.code,
 		req.hostname.size() ? req.hostname : req.interface->ip,
 		req.interface->port,
