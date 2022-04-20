@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/20 18:59:55 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/20 19:33:12 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,8 +15,10 @@
 # include "Request.hpp"
 # include "Response.hpp"
 
-bool	sendFinPacket(Request &req, Response &)
+bool	sendFinPacket(Request &req, Response &res)
 {
+	if (req.closed())
+		res.logger.warn("Request closed by the client");
 	shutdown(req.fd, SHUT_RDWR);
 	return (true);
 }

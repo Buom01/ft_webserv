@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/04/20 16:15:56 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/20 19:34:01 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -215,9 +215,7 @@ class   Chain
 				}
 				++(instance.pos);
 			}
-			if (instance.req.closed())
-				instance.res.logger.warn("Request closed by the client");
-			else if (instance.req.finish())
+			if (instance.req.finish() && !instance.req.closed())
 				instance.req.logger.warn("Connection was cut up cause of timeout");
 			else if (!instance.res.sent && instance.res.code == C_OK)
 				instance.res.logger.warn("Chain finished without sending data");
