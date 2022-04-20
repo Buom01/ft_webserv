@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/08 16:19:54 by badam             #+#    #+#             */
-/*   Updated: 2022/04/15 23:59:14 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/20 16:15:56 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -160,6 +160,12 @@ class   Chain
 
 		bool	_canUseLink(chain_link_t &link, Request &req, Response &res)
 		{
+			if ( req.method != M_UNKNOWN && !(link.methods & req.method) )
+				return (false);
+			if (res.error && !(link.flag & F_ERROR))
+				return (false);
+			if ( req.pathname.length() && !_isSubpathOf(req.trusted_complete_pathname, link.pathname) )
+				return (false);
 			if (link.serverConfig.interfaces.size() && !_hasInterface(req.interface, link.serverConfig.interfaces))
 				return (false);
 			if (req.hostname.length() && link.serverConfig.hostnames.size())
@@ -167,12 +173,6 @@ class   Chain
 				if (!_hasHostname(req.hostname, link.serverConfig.hostnames, req.interface->hostnames))
 					return (false);
 			}
-			if ( req.method != M_UNKNOWN && !(link.methods & req.method) )
-				return (false);
-			if ( req.pathname.length() && !_isSubpathOf(req.trusted_complete_pathname, link.pathname) )
-				return (false);
-			if (res.error && !(link.flag & F_ERROR))
-				return (false);
 
 			return (true);
 		}
