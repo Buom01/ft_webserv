@@ -1,7 +1,9 @@
 #ifndef __CGI
 # define __CGI
-# define GATEWAY_VERSION "CGI/1.1"
 # define ENV_NULL "NULL"
+# define REDIRECT_STATUS "200"
+# define SERVER_PROTOCOL "HTTP/1.1"
+# define GATEWAY_VERSION "CGI/1.1"
 # include <cstring>
 # include <cstdio>
 # include <cstdlib>
@@ -43,6 +45,7 @@ class cgiEnv
 		std::map<std::string, std::string>	env;
 	public:
 		std::vector<s_environment>			ENV;
+		std::vector<std::string>			predefinedHeaders;
 		char								**generateEnv;
 	private:
 		void clean()
@@ -55,7 +58,16 @@ class cgiEnv
 			generateEnv = NULL;
 		}
 	public:
-		cgiEnv() { generateEnv = NULL; };
+		cgiEnv()
+		{
+			predefinedHeaders.push_back("auth-scheme");
+			predefinedHeaders.push_back("content-length");
+			predefinedHeaders.push_back("content-type");
+			predefinedHeaders.push_back("remote-host");
+			predefinedHeaders.push_back("transfer-encoding");
+			generateEnv = NULL;
+		};
+
 		virtual ~cgiEnv() { clean(); };
 
 		/**
@@ -155,6 +167,13 @@ class CGI : public cgiEnv, public IMiddleware
 
 		virtual ~CGI() {};
 	private:
+		std::string toLowerCase(std::string _string)
+		{
+			std::string ret = _string;
+			std::transform(ret.begin(), ret.end(), ret.begin(), ::tolower);
+			return ret;
+		}
+
 		void		fileExtension(Request &req)
 		{
 			size_t nposIndex(0);
@@ -236,47 +255,70 @@ class CGI : public cgiEnv, public IMiddleware
 			return value;
 		}
 
+		std::string correctHeaderFormat(std::string name)
+		{
+			if (name.empty())
+				return "";
+			for (std::string::iterator it = name.begin(); it != name.end(); it++)
+			{
+				if ((*it) == '-')
+					(*it) = '_';
+				else
+					*it = std::toupper(*it);
+			}
+			name.insert(0, "HTTP_");
+			return name;
+		}
+
 		void		setHeader(Request &req)
 		{
-			#pragma region Mandatory
+			Header::_headers mapHeaders = req.headers.map();
+			
+			#pragma region Not defined by http headers
+				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
+				env.addVariable("PATH_INFO", file.path_info);
+				env.addVariable("PATH_TRANSLATED", file.path_info);
+				if (!req.querystring.empty() && req.querystring.at(0) == '?')
+					req.querystring.erase(0, 1);
+				env.addVariable("QUERY_STRING", req.querystring);
+				env.addVariable("REDIRECT_STATUS", "200");
+				env.addVariable("REMOTE_ADDR", req.client_ip);
+				env.addVariable("REMOTE_IDENT", req.username);
+				env.addVariable("REMOTE_PASS", req.password);
+				env.addVariable("REMOTE_USER", req.username);
+				env.addVariable("REQUEST_METHOD", convertMethod(req.method));
+				env.addVariable("REQUEST_URI", file.path_info);
+				env.addVariable("SCRIPT_FILENAME", file.path);
+				env.addVariable("SCRIPT_NAME", file.file);
+				env.addVariable("SERVER_NAME", req.hostname);
+				env.addVariable("SERVER_PORT", req.port);
+				env.addVariable("SERVER_PROTOCOL", SERVER_PROTOCOL);
+				env.addVariable("SERVER_SOFTWARE", SERVER_SOFTWARE);
+			#pragma endregion Not defined by http headers
+
+			#pragma region Predefined Headers
+				env.addVariable("AUTH_TYPE", sval(req.headers.header("AUTH-SCHEME", true), ((!req.username.empty()) ? "Basic" : "")));
 				env.addVariable("CONTENT_LENGTH",
 					sval(req.headers.header("CONTENT-LENGTH", true), itos(req.body.size()))
 				);
 				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT-TYPE", true));
-				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
-				env.addVariable("PATH_INFO", file.path_info);
-				if (!req.querystring.empty() && req.querystring.at(0) == '?')
-					req.querystring.erase(0, 1);
-				env.addVariable("QUERY_STRING", req.querystring);
-				env.addVariable("REMOTE_ADDR", req.client_ip);
-				env.addVariable("REQUEST_METHOD", convertMethod(req.method));
-				env.addVariable("SCRIPT_FILENAME", file.path);
-				env.addVariable("SERVER_NAME", req.hostname);
-				env.addVariable("SERVER_PORT", req.port);
-				env.addVariable("SERVER_PROTOCOL", "HTTP/1.1");
-				env.addVariable("SERVER_SOFTWARE", SERVER_SOFTWARE);
-			#pragma endregion Mandatory
-			#pragma region Should
-				env.addVariable("AUTH_TYPE", (!req.username.empty()) ? "Basic" : ENV_NULL);
-				env.addVariable("HTTP_ACCEPT", req.headers.header("ACCEPT", true));
-				env.addVariable("HTTP_ACCEPT_CHARSET", req.headers.header("ACCEPT-CHARSET", true));
-				env.addVariable("HTTP_ACCEPT_ENCODING", req.headers.header("ACCEPT-ENCODING", true));
-				env.addVariable("HTTP_ACCEPT_LANGUAGE", req.headers.header("ACCEPT-LANGUAGE", true));
-				env.addVariable("HTTP_COOKIE", req.headers.header("COOKIE", true));
-				env.addVariable("HTTP_FORWARDED", req.headers.header("FORWARDED", true));
-				env.addVariable("HTTP_HOST", req.headers.header("HOST", true));
-				env.addVariable("HTTP_PROXY_AUTHORIZATION", req.headers.header("PROXY-AUTHORIZATION", true));
-				env.addVariable("HTTP_USER_AGENT", req.headers.header("USER_AGENT", true));
 				env.addVariable("REMOTE_HOST", sval(req.headers.header("REMOTE_HOST", true), ENV_NULL));
-			#pragma endregion Should
-			#pragma region May
-				env.addVariable("PATH_TRANSLATED", file.path_info);
-				env.addVariable("REDIRECT_STATUS", "200");
-				env.addVariable("REMOTE_USER", req.username);
-				env.addVariable("REMOTE_PASS", req.password);
-				env.addVariable("REQUEST_URI", req.raw_pathname);
-				env.addVariable("SCRIPT_NAME", file.file);
-			#pragma endregion May
+			#pragma endregion Predefined Headers
+
+			#pragma region HTTP_*
+			for (Header::_headers::iterator it = mapHeaders.begin(); it != mapHeaders.end(); it++)
+			{
+				std::string headerName(toLowerCase((*it).first)), var("");
+
+				if (std::find(predefinedHeaders.begin(), predefinedHeaders.end(), headerName) == predefinedHeaders.end())
+				{
+					env.addVariable(
+						correctHeaderFormat((*it).first),
+						req.headers.header(headerName, true)
+					);
+				}
+			}
+			#pragma endregion HTTP_*
 		}
 
 		bool		setGenerateHeader(Request &, Response &res)
