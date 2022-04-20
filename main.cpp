@@ -35,6 +35,7 @@ void	stop_signal(int)
 int main(int argc, char **argv)
 {
 	signal(SIGINT, stop_signal);
+	std::ios::sync_with_stdio(false);
 
 	Parse					config;
 	Parse::serversVector	servers;
