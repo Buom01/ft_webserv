@@ -35,9 +35,10 @@ class cgiEnv
 		};
 		struct s_file
 		{
-			std::string path;
-			std::string file;
-			std::string extension;
+			std::string	path_info;	
+			std::string	path;
+			std::string	file;
+			std::string	extension;
 		};
 		std::map<std::string, std::string>	env;
 	public:
@@ -86,8 +87,8 @@ class cgiEnv
 		 */
 		bool			addVariable(std::string key, std::string value)
 		{
-			if (value.empty())
-				return false;
+			//if (value.empty())
+			//	return false;
 			s_environment temp;
 			temp.key = key;
 			temp.value = value;
@@ -158,7 +159,8 @@ class CGI : public cgiEnv, public IMiddleware
 		{
 			size_t nposIndex(0);
 
-			file.path = req.trusted_pathname;
+			file.path_info = req.pathname;
+			file.path = req.pathname;
 			file.path.insert(0, ".");
 			if (file.path == "./")
 				file.path.append(_index);
@@ -242,7 +244,7 @@ class CGI : public cgiEnv, public IMiddleware
 				);
 				env.addVariable("CONTENT_TYPE", req.headers.header("CONTENT-TYPE", true));
 				env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
-				env.addVariable("PATH_INFO", file.path);
+				env.addVariable("PATH_INFO", file.path_info);
 				if (!req.querystring.empty() && req.querystring.at(0) == '?')
 					req.querystring.erase(0, 1);
 				env.addVariable("QUERY_STRING", req.querystring);
@@ -251,7 +253,7 @@ class CGI : public cgiEnv, public IMiddleware
 				env.addVariable("SCRIPT_FILENAME", file.path);
 				env.addVariable("SERVER_NAME", req.hostname);
 				env.addVariable("SERVER_PORT", req.port);
-				env.addVariable("SERVER_PROTOCOL", req.protocol);
+				env.addVariable("SERVER_PROTOCOL", "HTTP/1.1");
 				env.addVariable("SERVER_SOFTWARE", SERVER_SOFTWARE);
 			#pragma endregion Mandatory
 			#pragma region Should
@@ -268,19 +270,16 @@ class CGI : public cgiEnv, public IMiddleware
 				env.addVariable("REMOTE_HOST", sval(req.headers.header("REMOTE_HOST", true), ENV_NULL));
 			#pragma endregion Should
 			#pragma region May
-				std::string requestUri(file.file);
-				requestUri.append("?");
-				requestUri.append(req.querystring);
-				env.addVariable("PATH_TRANSLATED", file.path);
+				env.addVariable("PATH_TRANSLATED", file.path_info);
 				env.addVariable("REDIRECT_STATUS", "200");
 				env.addVariable("REMOTE_USER", req.username);
 				env.addVariable("REMOTE_PASS", req.password);
-				env.addVariable("REQUEST_URI", requestUri);
+				env.addVariable("REQUEST_URI", req.raw_pathname);
 				env.addVariable("SCRIPT_NAME", file.file);
 			#pragma endregion May
 		}
 
-		bool		setGenerateHeader(Response &res)
+		bool		setGenerateHeader(Request &, Response &res)
 		{
 			size_t npos(0);
 			std::string	line, buff;
@@ -374,7 +373,7 @@ class CGI : public cgiEnv, public IMiddleware
 			if (it == _config.extensions.end() || !isMethod(req))
 				return true;
 			res.response_fd = exec(req, res);
-			setGenerateHeader(res);
+			setGenerateHeader(req, res);
 			return true;
 		}
 };

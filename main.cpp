@@ -137,16 +137,12 @@ int main(int argc, char **argv)
 			Parse::s_allow 						getAllow = config.allow((*itLoc).second);
 			Parse::s_return						getReturn = config._return((*itLoc).second);
 			Parse::s_clientBodyBufferSize		getBodyMaxSize = config.clientBodyBufferSize((*itLoc).second);
-			Parse::s_autoindex					getAutoindex = config.autoindex((*itLoc).second);
 			std::string 						getRoot = config.root((*itLoc).second);
 			std::string							getIndex = config.index((*itLoc).second);
 			Parse::s_cgi						getCgi = config.cgi((*itLoc).second);
 			std::pair<std::string, std::string>	getUpload = config.upload((*itLoc).second);
 			method_t 							methods = method(getAllow);
 			std::string							location_name = (*itLoc).first;
-
-			if (getAllow.isDefined)
-				server->use(forbidden_method, F_ALL, static_cast<method_t>(~(methods)), location_name, serverBlockConfig);
 
 			if (getBodyMaxSize.isDefined)
 			{
@@ -165,22 +161,46 @@ int main(int argc, char **argv)
 			}
 
 			if  (getCgi.isDefined || getUpload.first.length())
+            {
+                method_t    upload_methods = M_UNKNOWN;
+
+                if (getUpload.first.length() && methods & M_PUT)
+                    upload_methods = static_cast<method_t>(upload_methods | M_PUT);
+                if (getCgi.isDefined)
+                {
+                    if (method(getCgi.allow) & M_POST)
+                        upload_methods = static_cast<method_t>(upload_methods | M_POST);
+                    if (method(getCgi.allow) & M_PUT)
+                        upload_methods = static_cast<method_t>(upload_methods | M_PUT);
+                }
+
+                if (upload_methods != M_UNKNOWN)
+                    server->use(body, F_NORMAL, upload_methods, location_name, serverBlockConfig);
+            }
+
+			if (getCgi.isDefined)
 			{
-				method_t	upload_methods = M_UNKNOWN;
+				CGI *_cgi	= new CGI(getCgi, location_name, getIndex);
 
-				if (getUpload.first.length() && methods & M_PUT)
-					upload_methods = static_cast<method_t>(upload_methods | M_PUT);
-				if (getCgi.isDefined)
-				{
-					if (method(getCgi.allow) & methods & M_POST)
-						upload_methods = static_cast<method_t>(upload_methods | M_POST);
-					if (method(getCgi.allow) & methods & M_PUT)
-						upload_methods = static_cast<method_t>(upload_methods | M_PUT);
-				}
-
-				if (upload_methods != M_UNKNOWN)
-					server->use(body, F_NORMAL, upload_methods, location_name, serverBlockConfig);
+				server->use(*_cgi, F_NORMAL, method(getCgi.allow), location_name, serverBlockConfig);
+				cgiMiddlewares.push_back(_cgi);
 			}
+		}
+
+		for (Parse::locationsMap::const_reverse_iterator itLoc = (*it).locations.rbegin(); itLoc != (*it).locations.rend(); itLoc++)
+		{
+			Parse::s_allow 						getAllow = config.allow((*itLoc).second);
+			Parse::s_return						getReturn = config._return((*itLoc).second);
+			Parse::s_autoindex					getAutoindex = config.autoindex((*itLoc).second);
+			std::string 						getRoot = config.root((*itLoc).second);
+			std::string							getIndex = config.index((*itLoc).second);
+			Parse::s_cgi						getCgi = config.cgi((*itLoc).second);
+			std::pair<std::string, std::string>	getUpload = config.upload((*itLoc).second);
+			method_t 							methods = method(getAllow);
+			std::string							location_name = (*itLoc).first;
+
+			if (getAllow.isDefined)
+				server->use(forbidden_method, F_ALL, static_cast<method_t>(~(methods)), location_name, serverBlockConfig);
 
 			if (getUpload.first.length() && (methods & M_PUT))
 			{
@@ -191,14 +211,6 @@ int main(int argc, char **argv)
 				server->use(*remover, F_NORMAL, M_DELETE, location_name, serverBlockConfig);
 				uploadMiddlewares.push_back(upload);
 				removerMiddlewares.push_back(remover);
-			}
-
-			if (getCgi.isDefined)
-			{
-				CGI *_cgi	= new CGI(getCgi, location_name, getIndex);
-
-				server->use(*_cgi, F_NORMAL, method(getCgi.allow), location_name, serverBlockConfig);
-				cgiMiddlewares.push_back(_cgi);
 			}
 
 			if (getRoot.size())
