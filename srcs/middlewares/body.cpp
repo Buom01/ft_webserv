@@ -108,15 +108,15 @@ bool	body(Request &req, Response &res)
 				req.body_read_size = 0;
 				std::stringstream sstream(line);
 				sstream >> std::hex >> req.body_chunk_size;
+				req.body_is_chunk = true;
+			}
+			else
+			{
 				if (req.body_chunk_size <= 0)
 				{
 					req.body_read_is_finished = true;
 					break;
 				}
-				req.body_is_chunk = true;
-			}
-			else
-			{
 				req.body.append(line);
 				req.body_read_size += line.size();
 				if (req.body_read_size >= req.body_chunk_size)
