@@ -39,8 +39,8 @@ int main(int argc, char **argv)
 	Parse::serversVector	servers;
 	Parse::locationsMap		locations;
 
-	std::vector<Eject *>			ejectMiddlewares;
 	std::vector<Redirect *>			redirectMiddlewares;
+	std::vector<EjectBody *>		ejectBodyMiddlewares;
 	std::vector<Upload *>			uploadMiddlewares;
 	std::vector<Remover *>			removerMiddlewares;
 	std::vector<CGI *>				cgiMiddlewares;
@@ -86,7 +86,6 @@ int main(int argc, char **argv)
 
 	server							= new Serve();
 
-	Eject			*preEject		= new Eject(-1);
 	Error			*fallbackError	= new Error(server->logger);
 	Mimetypes		*mimetypes		= new Mimetypes();
 	SendBodyFromFD	*sendBodyFromFD	= new SendBodyFromFD(server->logger);
@@ -95,7 +94,8 @@ int main(int argc, char **argv)
 
 	server->use(parseStartLine, F_ALL);
 	server->use(parseRequestHeaders, F_ALL);
-	server->use(*preEject, F_ALL);
+	server->use(eject, F_ALL);
+	server->use(body, F_NORMAL, static_cast<method_t>(M_POST | M_PUT));
 	
 	for (Parse::serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
@@ -144,38 +144,20 @@ int main(int argc, char **argv)
 			method_t 							methods = method(getAllow);
 			std::string							location_name = (*itLoc).first;
 
-			if (getBodyMaxSize.isDefined)
-			{
-				Eject	*eject	= new Eject(getBodyMaxSize.size);
-
-				server->use(*eject, F_NORMAL, M_ALL, location_name, serverBlockConfig);
-				ejectMiddlewares.push_back(eject);
-			}
-
 			if (getReturn.code != C_UNKNOWN)
 			{
 				Redirect	*redirect	= new Redirect(getReturn.code, getReturn.url);
 
-				server->use(*redirect, F_NORMAL, M_ALL, location_name, serverBlockConfig);
+				server->use(*redirect, F_NORMAL, methods, location_name, serverBlockConfig);
 				redirectMiddlewares.push_back(redirect);
 			}
 
-			if  (getCgi.isDefined || getUpload.first.length())
+			if  (getBodyMaxSize.isDefined)
             {
-                method_t    upload_methods = M_UNKNOWN;
+				EjectBody *ejectBody	= new EjectBody(getBodyMaxSize.size);
 
-                if (getUpload.first.length() && methods & M_PUT)
-                    upload_methods = static_cast<method_t>(upload_methods | M_PUT);
-                if (getCgi.isDefined)
-                {
-                    if (method(getCgi.allow) & M_POST)
-                        upload_methods = static_cast<method_t>(upload_methods | M_POST);
-                    if (method(getCgi.allow) & M_PUT)
-                        upload_methods = static_cast<method_t>(upload_methods | M_PUT);
-                }
-
-                if (upload_methods != M_UNKNOWN)
-                    server->use(body, F_NORMAL, upload_methods, location_name, serverBlockConfig);
+				server->use(*ejectBody, F_NORMAL, static_cast<method_t>(M_POST | M_PUT), location_name, serverBlockConfig);
+				ejectBodyMiddlewares.push_back(ejectBody);
             }
 
 			if (getCgi.isDefined)
@@ -252,7 +234,6 @@ int main(int argc, char **argv)
 	server->use(sendBodyFromBuffer, F_ALL);
 	server->use(*sendBodyFromFD, F_ALL);
 
-	ejectMiddlewares.push_back(preEject);
 	errorMiddlewares.push_back(fallbackError);
 
 	server->begin();
@@ -273,10 +254,10 @@ int main(int argc, char **argv)
 
 	#pragma region Middlewares cleanup 
 
-	for (std::vector<Eject *>::iterator it = ejectMiddlewares.begin(); it != ejectMiddlewares.end(); it++)
+	for (std::vector<Redirect *>::iterator it = redirectMiddlewares.begin(); it != redirectMiddlewares.end(); it++)
 		delete (*it);
 
-	for (std::vector<Redirect *>::iterator it = redirectMiddlewares.begin(); it != redirectMiddlewares.end(); it++)
+	for (std::vector<EjectBody *>::iterator it = ejectBodyMiddlewares.begin(); it != ejectBodyMiddlewares.end(); it++)
 		delete (*it);
 
 	for (std::vector<Upload *>::iterator it = uploadMiddlewares.begin(); it != uploadMiddlewares.end(); it++)

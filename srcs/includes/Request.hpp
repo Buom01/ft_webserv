@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/04/20 01:27:27 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/20 14:30:00 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,6 +75,7 @@ class Request
 		std::string 		body_boundary;
 		std::string 		body_boundary_end;
 		std::string 		body;
+		bool				body_size_valid;
 
 		Request(int connection, server_bind_t *_interface, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
 			start(get_time()),
@@ -122,7 +123,8 @@ class Request
 			body_length(0),
 			body_boundary(""),
 			body_boundary_end(""),
-			body("")
+			body(""),
+			body_size_valid(false)
 		{
 			buff.reserve(SERVER_BUFFER_SIZE);
 		}

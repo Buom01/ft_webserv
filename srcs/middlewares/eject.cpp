@@ -6,74 +6,62 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/23 00:49:38 by badam             #+#    #+#             */
-/*   Updated: 2022/04/09 21:54:13 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/20 14:31:16 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef __EJECT_CPP
 # define __EJECT_CPP
 
-# include <vector>
-# include <string>
 # include "IMiddleware.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
 
-class Eject: public IMiddleware
+bool	eject(Request &req, Response &res)
+{
+	if (res.code != C_NOT_IMPLEMENTED)
+		return (true);
+
+	if (req.http_version != "1.0" && req.http_version != "1.1")
+	{
+		res.code = C_HTTP_VERSION_NOT_SUPPORTED;
+		return (true);
+	}
+	if (req.method == M_UNKNOWN)
+	{
+		res.code = C_METHOD_NOT_ALLOWED;
+		return (true);
+	}
+
+	return (true);
+}
+
+class	EjectBody: public IMiddleware
 {
 	typedef	IMiddleware	_parent;
 
 	public:
-		size_t	max_payload_size;
+		size_t	max_body_size;
 
-		Eject(size_t _max_payload_size = 1024 * 200) :
-			max_payload_size(_max_payload_size)
+		EjectBody(size_t _max_body_size)
+		{
+			max_body_size = _max_body_size;
+		}
+
+		virtual ~EjectBody()
 		{}
 
-		virtual ~Eject()
-		{}
-		
 	public:
 		bool	operator()(Request &req, Response &res)
 		{
-			std::vector<std::string>					header_values;
-			std::vector<std::string>::const_iterator	header_values_it;
-
-			if (res.code != C_NOT_IMPLEMENTED)
+			if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
+				return (true);
+			if (res.response_fd > 0 || res.body.length() > 0)
 				return (true);
 
-			if (req.http_version != "1.0" && req.http_version != "1.1")
-			{
-				res.code = C_HTTP_VERSION_NOT_SUPPORTED;
-				return (true);
-			}
-			if (req.method == M_UNKNOWN)
-			{
-				res.code = C_METHOD_NOT_ALLOWED;
-				return (true);
-			}
-
-			if (max_payload_size > 0)
-			{
-				header_values = res.headers.headerValues("content-length");
-				header_values_it = header_values.begin();
-				while (header_values_it != header_values.end())
-				{
-					std::stringstream	sstream(*header_values_it);
-					size_t				contentlength;
-
-					sstream >> contentlength;
-
-					if (contentlength > max_payload_size)
-					{
-						res.code = C_REQUEST_ENTITY_TOO_LARGE;
-						return (true);
-					}
-					else
-						++header_values_it;
-				}
-			}
-
+			if (!req.body_size_valid && req.body.size() > max_body_size)
+				res.code = C_REQUEST_ENTITY_TOO_LARGE;
+			req.body_size_valid	= true;
 			return (true);
 		}
 };

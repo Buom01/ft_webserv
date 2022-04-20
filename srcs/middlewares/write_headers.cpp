@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/16 21:39:15 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/20 06:53:49 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@
 # include "Serve.hpp"
 # include "utils.hpp"
 
-bool	addResponseHeaders(Request &, Response &res)
+bool	addResponseHeaders(Request &req, Response &res)
 {
 	Header		&h		= res.headers;
 	off_t		length	= -1;
@@ -31,11 +31,19 @@ bool	addResponseHeaders(Request &, Response &res)
 	else if (res.response_fd)
 		length = fdFileSize(res.response_fd) - res.response_fd_header_size;
 
-	if (length >= 0)
+	if (length >= 0 && !(req.method & (M_HEAD | M_GET)))
 	{
 		std::stringstream	to_str;
 
 		to_str << length;
+		h.add("Content-Length: " + to_str.str());
+	}
+
+	if (req.body_read_size)
+	{
+		std::stringstream	to_str;
+
+		to_str << req.body_read_size;
 		h.set("Content-Length: " + to_str.str());
 	}
 	
