@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/07/08 12:50:37 by badam             #+#    #+#             */
-/*   Updated: 2022/03/21 17:20:39 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/20 16:43:25 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,7 +53,7 @@ class Response
 			response_fd_buff(""),
 			errorpage_fd(0),
 			body(""),
-			send_chunksize(1024),
+			send_chunksize(10240),
 			sent(false)
 		{}
 
