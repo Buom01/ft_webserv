@@ -90,6 +90,8 @@ bool	body(Request &req, Response &res)
 		_get_bondary(req);
 		_get_transferEncoding(req, res);
 		req.body_header_parsed = true;
+		if (!req.body_chuncked && req.body_boundary.empty() && req.body_length <= 0)
+			return (req.body_read_is_finished = true);
 	}
 	if (!req.await(EPOLLIN))
 		return (false);

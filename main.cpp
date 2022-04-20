@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 	server->use(parseStartLine, F_ALL);
 	server->use(parseRequestHeaders, F_ALL);
 	server->use(eject, F_ALL);
-	server->use(body, F_NORMAL, static_cast<method_t>(M_POST | M_PUT));
+	server->use(body, F_NORMAL, M_ALL);
 	
 	for (Parse::serversVector::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
