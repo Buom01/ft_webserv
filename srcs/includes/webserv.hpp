@@ -41,15 +41,16 @@
 # include "Request.hpp"
 # include "Response.hpp"
 # include "Parse.hpp"
-# include "components/page.hpp"
-# include "components/utils.hpp"
-# include "components/list.hpp"
+
+// components
+# include "comp_utils.hpp"
+# include "comp_page.hpp"
+# include "comp_list.hpp"
 
 // middlewares
 # include "AEpoll.hpp"
 # include "IMiddleware.hpp"
 # include "Cgi.hpp"
-
 # include "body.hpp"
 # include "eject.hpp"
 # include "error.hpp"
@@ -62,5 +63,12 @@
 # include "upload.hpp"
 # include "write_body.hpp"
 # include "write_headers.hpp"
+
+// serve
+# include "Chain.hpp"
+# include "Serve.hpp"
+
+// static
+# include "Static.hpp"
 
 #endif

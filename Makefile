@@ -1,6 +1,7 @@
 CXX 		:=	clang++
 NAME		:= 	webserv
 RM			:=	rm -f
+
 SRCS		:=	srcs/lib/split.cpp srcs/lib/gnl.cpp srcs/lib/file.cpp \
 				srcs/lib/utils.cpp \
 				\
@@ -12,15 +13,21 @@ SRCS		:=	srcs/lib/split.cpp srcs/lib/gnl.cpp srcs/lib/file.cpp \
 				srcs/middlewares/upload.cpp srcs/middlewares/write_body.cpp \
 				srcs/middlewares/write_headers.cpp \
 				\
+				srcs/serve/Chain.cpp srcs/serve/Serve.cpp \
+				\
+				srcs/static/Static.cpp \
+				\
 				main.cpp
-OBJS		:=	$(SRCS:.cpp=.o)
-LIBRARY		?=	-I ./srcs/lib/includes \
-				-I ./srcs/help \
-				-I ./srcs/includes -I ./srcs/includes/components \
-				-I ./srcs/middlewares/includes \
-				-I ./srcs/serve \
-				-I ./srcs/Static
 
+LIBRARY		?=	-I ./srcs/components \
+				-I ./srcs/help \
+				-I ./srcs/includes \
+				-I ./srcs/lib/includes \
+				-I ./srcs/middlewares/includes \
+				-I ./srcs/serve/includes \
+				-I ./srcs/static/includes
+
+OBJS		:=	$(SRCS:.cpp=.o)
 CXXFLAGS	?=  -Wall -Werror -Wextra -std=c++98 -g $(LIBRARY)
 
 $(NAME): $(OBJS) $(SUBDIRS)
