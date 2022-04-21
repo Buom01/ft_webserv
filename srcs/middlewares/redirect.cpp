@@ -1,68 +1,27 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   redirect.cpp                                       :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/03/18 08:00:23 by badam             #+#    #+#             */
-/*   Updated: 2022/04/19 13:04:45 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+#include "redirect.hpp"
 
-#ifndef __REDIRECT_CPP
-# define __REDIRECT_CPP
-
-# include "IMiddleware.hpp"
-# include "Response.hpp"
-# include "Request.hpp"
-# include "utils.hpp"
-
-class Redirect: public IMiddleware
+Redirect::Redirect(http_code_t code, std::string &location)
 {
-	typedef	IMiddleware	_parent;
+	options.code = code;
+	options.location = location;
+}
 
-	public:
-		typedef struct	options_s
-		{
-			http_code_t	code;
-			std::string	location;
-		}				options_t;
-		
-		options_t		options;
+Redirect::Redirect(options_t opts)
+{
+	options = opts;
+}
 
+Redirect::~Redirect() {}
 
-		Redirect(http_code_t code, std::string &location)
-		{
-			options.code = code;
-			options.location = location;
-		}
-
-		Redirect(options_t opts)
-		{
-			options = opts;
-		}
-
-		virtual ~Redirect()
-		{}
-
-	public:
-		bool	operator()(Request &req, Response &res)
-		{
-			if (res.code != C_NOT_IMPLEMENTED)
-				return (true);
-			if (res.response_fd > 0 || res.body.length() > 0)
-				return (true);
-			
-			std::string	newLocation(options.location);
-
-			replace_all(&newLocation, "$request_uri", req.pathname);
-			res.headers.set("Location: " + newLocation);
-			res.code = options.code;
-
-			return (true);
-		}
-
-};
-
-#endif
+bool	Redirect::operator()(Request &req, Response &res)
+{
+	if (res.code != C_NOT_IMPLEMENTED)
+		return (true);
+	if (res.response_fd > 0 || res.body.length() > 0)
+		return (true);
+	std::string	newLocation(options.location);
+	replace_all(&newLocation, "$request_uri", req.pathname);
+	res.headers.set("Location: " + newLocation);
+	res.code = options.code;
+	return (true);
+}

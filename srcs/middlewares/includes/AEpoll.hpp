@@ -12,10 +12,8 @@
 
 #ifndef AEPOLL_HPP
 # define AEPOLL_HPP
-
-# include <set>
 # include "IMiddleware.hpp"
-# include "Epoll.hpp"
+# include "webserv.hpp"
 
 class AEpoll: public IMiddleware
 {

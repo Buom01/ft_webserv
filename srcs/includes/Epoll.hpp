@@ -12,10 +12,8 @@
 
 #ifndef EPOLL_HPP
 # define EPOLL_HPP
-
 # include <vector>
-# include "http.hpp"
-# include "File.hpp"
+# include "lib.hpp"
 
 typedef	std::vector<epoll_event_t>	events_t;
 

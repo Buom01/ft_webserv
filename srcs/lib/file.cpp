@@ -1,22 +1,4 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   File.hpp                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/08/17 12:59:44 by badam             #+#    #+#             */
-/*   Updated: 2022/04/17 02:42:40 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#ifndef __File_HPP
-# define __File_HPP
-# include <stdlib.h>
-# include <fcntl.h>
-# include <sys/stat.h>
-# include <sys/types.h>
-# include <dirent.h>
+# include "file.hpp"
 
 void	nothrow_close(int fd)
 {
@@ -172,5 +154,3 @@ std::vector<std::string>	listFile(const std::string &path)
 
 	return (files);
 }
-
-#endif

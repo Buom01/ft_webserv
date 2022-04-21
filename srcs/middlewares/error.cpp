@@ -1,32 +1,6 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   error.cpp                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/03/21 01:02:06 by badam             #+#    #+#             */
-/*   Updated: 2022/04/17 23:44:02 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+#include "error.hpp"
 
-#ifndef __ERROR_CPP
-# define __ERROR_CPP
-
-# include <map>
-# include <string>
-# include <sstream>
-# include "utils.hpp"
-# include "File.hpp"
-# include "AEpoll.hpp"
-# include "Response.hpp"
-# include "Request.hpp"
-# include "components/page.hpp"
-# include "components/utils.hpp"
-# include "components/list.hpp"
-
-
-static std::string	getErrorTitle(Response &res)
+std::string	getErrorTitle(Response &res)
 {
 	std::stringstream	title;
 
@@ -108,7 +82,7 @@ static std::string	getErrorTitle(Response &res)
 	}
 }
 
-static std::string	getErrorMessage(Response &res)
+std::string	getErrorMessage(Response &res)
 {
 	std::stringstream	message;
 
@@ -190,159 +164,118 @@ static std::string	getErrorMessage(Response &res)
 	}
 }
 
+Error::Error(Log &logger): _parent(logger), _logger(logger) {}
 
-class Error: public AEpoll
+Error::Error(options_t opts, Log &logger): _parent(logger), _logger(logger)
 {
-	typedef	AEpoll	_parent;
+	options = opts;
+}
 
-	Log		&_logger;
+Error::~Error() {}
 
-	public:
-		typedef	std::map<int, std::string>	errorpages_t;
-		
-		typedef struct	options_s
+void Error::add(int error, std::string page)
+{
+	options.errorpages.insert(std::pair<int, std::string>(error, page));
+}
+
+int	Error::getErrorpageFD(int code)
+{
+	errorpages_t::const_iterator	it;
+	int								open_ret;
+
+	it = options.errorpages.find(code);
+	if (it == options.errorpages.end())
+		return (-1);
+	else
+	{
+		open_ret = open(it->second.c_str(), O_NONBLOCK | O_RDONLY);
+		if (open_ret == -1)
+			_logger.warn("Failed to open error page: " + it->second);
+		return open_ret;
+	}
+}
+
+std::string	Error::generateErrorPage(Response &res)
+{
+	std::stringstream	code_str;
+
+	code_str << res.code;
+	return page(
+		getErrorTitle(res),
+		title(code_str.str() + " - " + getErrorTitle(res)) +
+		paragraph(getErrorMessage(res))
+	);
+}
+
+bool Error::operator()(Request &req, Response &res)
+{
+	if (res.response_fd > 0 || res.body.length() > 0)
+		return (true);
+	if (res.errorpage_fd <= 0)
+	{
+		if (
+			(res.code >= 300 && (res.code != 304 && res.code != 305 && res.code != 306) && res.body.length() == 0 && res.response_fd <= 0)
+			|| (res.code >= 400)
+			|| res.code == C_UNKNOWN
+		)
 		{
-			errorpages_t	errorpages;
-		}				options_t;
-		
-		options_t		options;
-
-
-		Error(Log &logger):
-			_parent(logger),
-			_logger(logger)
-		{}
-
-		Error(options_t opts, Log &logger):
-			_parent(logger),
-			_logger(logger)
-		{
-			options = opts;
-		}
-
-		virtual ~Error()
-		{}
-
-		void	add(int error, std::string page)
-		{
-			options.errorpages.insert(std::pair<int, std::string>(error, page));
-		}
-
-		int	getErrorpageFD(int code)
-		{
-			errorpages_t::const_iterator	it;
-			int								open_ret;
-
-			it = options.errorpages.find(code);
-
-			if (it == options.errorpages.end())
-				return (-1);
-			else
+			if (res.code == C_UNKNOWN || res.code == C_NOT_IMPLEMENTED)
+				res.code = C_FORBIDDEN;
+			if (res.response_fd > 0)
 			{
-				open_ret = open(it->second.c_str(), O_NONBLOCK | O_RDONLY);
-				if (open_ret == -1)
-					_logger.warn("Failed to open error page: " + it->second);
-				return open_ret;
+				nothrow_close(res.response_fd);
+				res.response_fd = -1;
 			}
-		}
-
-		std::string	generateErrorPage(Response &res)
-		{
-			std::stringstream	code_str;
-
-			code_str << res.code;
-
-			return page(
-				getErrorTitle(res),
-				title(code_str.str() + " - " + getErrorTitle(res)) +
-				paragraph(getErrorMessage(res))
-			);
-		}
-
-	public:
-		bool	operator()(Request &req, Response &res)
-		{
-			if (res.response_fd > 0 || res.body.length() > 0)
-				return (true);
-				
+			res.headers.set("Content-Type: text/html");
+			res.errorpage_fd = getErrorpageFD(res.code);
 			if (res.errorpage_fd <= 0)
 			{
-				if (
-					(res.code >= 300 && (res.code != 304 && res.code != 305 && res.code != 306) && res.body.length() == 0 && res.response_fd <= 0)
-					|| (res.code >= 400)
-					|| res.code == C_UNKNOWN
-				)
-				{
-					if (res.code == C_UNKNOWN || res.code == C_NOT_IMPLEMENTED)
-						res.code = C_FORBIDDEN;
-					if (res.response_fd > 0)
-					{
-						nothrow_close(res.response_fd);
-						res.response_fd = -1;
-					}
-					res.headers.set("Content-Type: text/html");
-					
-					res.errorpage_fd = getErrorpageFD(res.code);
-
-					if (res.errorpage_fd <= 0)
-					{
-						res.body = generateErrorPage(res);
-						return (true);
-					}
-					else
-					{
-						res.body = "";
-						return (false);
-					}
-				}
+				res.body = generateErrorPage(res);
+				return (true);
 			}
 			else
 			{
-				ssize_t				read_ret 			= -1;
-				char				read_buffer[1024];
-				std::string			errorpage;
-				std::stringstream	code_str;
-				
-				if (req.finish())
-				{
-					if (_parent::has(res.errorpage_fd))
-					{
-						_parent::cleanup(res.errorpage_fd);
-						nothrow_close(res.errorpage_fd);
-					}
-					return (true);
-				}
-					
-				if (!_parent::has(res.errorpage_fd))
-					_parent::setup(res.errorpage_fd, ET_BODY);
-				if (!_parent::await(res.errorpage_fd, EPOLLIN))
-					return (false);
-				
-				while (read_ret != 0 )
-				{
-					read_ret = read(res.errorpage_fd, read_buffer, 1024);
-					if (read_ret == -1)
-					{
-						_parent::clear_events(res.errorpage_fd, EPOLLIN);
-						return (false);
-					}
-					errorpage.append(read_buffer, read_ret);
-				}
+				res.body = "";
+				return (false);
+			}
+		}
+	}
+	else
+	{
+		ssize_t				read_ret 			= -1;
+		char				read_buffer[1024];
+		std::string			errorpage;
+		std::stringstream	code_str;
 
-				code_str << res.code;
-
-				res.body = *replace_all(replace_all(replace_all(&errorpage, "{code}", code_str.str()), "{title}", getErrorTitle(res)), "{message}", getErrorMessage(res));
-
+		if (req.finish())
+		{
+			if (_parent::has(res.errorpage_fd))
+			{
 				_parent::cleanup(res.errorpage_fd);
 				nothrow_close(res.errorpage_fd);
-				res.errorpage_fd = 0;
-				
-				return (true);
 			}
-			
 			return (true);
 		}
-
-};
-
-#endif
+		if (!_parent::has(res.errorpage_fd))
+			_parent::setup(res.errorpage_fd, ET_BODY);
+		if (!_parent::await(res.errorpage_fd, EPOLLIN))
+			return (false);
+		while (read_ret != 0 )
+		{
+			read_ret = read(res.errorpage_fd, read_buffer, 1024);
+			if (read_ret == -1)
+			{
+				_parent::clear_events(res.errorpage_fd, EPOLLIN);
+				return (false);
+			}
+			errorpage.append(read_buffer, read_ret);
+		}
+		code_str << res.code;
+		res.body = *replace_all(replace_all(replace_all(&errorpage, "{code}", code_str.str()), "{title}", getErrorTitle(res)), "{message}", getErrorMessage(res));
+		_parent::cleanup(res.errorpage_fd);
+		nothrow_close(res.errorpage_fd);
+		res.errorpage_fd = 0;
+		return (true);
+	}
+	return (true);
+}

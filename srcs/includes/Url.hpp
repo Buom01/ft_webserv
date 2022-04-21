@@ -16,8 +16,7 @@
 # include <vector>
 # include <utility>
 # include <exception>
-# include "Regex.hpp"
-# include "Split.hpp"
+# include "lib.hpp"
 
 /**
  *	Create class for get specific part of url, every function return empty string if no occurence.

@@ -1,3 +1,4 @@
+/*
 #include <iostream>
 #include <exception>
 #include <unistd.h>
@@ -21,6 +22,9 @@
 #include "body.cpp"
 #include "graceful_shutdown.cpp"
 #include "help.hpp"
+*/
+
+#include "webserv.hpp"
 
 static Serve	*server			= NULL;
 static bool	stop_requested	= false;
@@ -289,3 +293,4 @@ int main(int argc, char **argv)
 	
 	return (EXIT_SUCCESS);
 }
+*/

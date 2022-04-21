@@ -1,29 +1,10 @@
-#ifndef __PARSE
-# define __PARSE
+#ifndef __PARSE_HPP
+# define __PARSE_HPP
 # define REGEX_SIZE 14
 # define NO_KEY "NO_KEY"
-# include <algorithm>
-# include <iterator>
-# include <iostream>
-# include <sstream>
-# include <fstream>
-# include <cstring>
-# include <cctype>
-# include <cstdio>
-# include <stdexcept>
-# include <map>
-# include <vector>
-# include <string>
-# include <bits/stdc++.h>
-# include <sys/stat.h>
-# include <arpa/inet.h>
-# include "Regex.hpp"
-# include "nullptr_t.hpp"
-# include "Split.hpp"
-# include "File.hpp"
-# include "http.hpp"
+# include "lib.hpp"
 
-struct s_defineRegex
+static struct s_defineRegex
 {
 	std::string		name;
 	std::string		regex;

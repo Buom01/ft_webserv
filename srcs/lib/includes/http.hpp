@@ -12,7 +12,6 @@
 
 #ifndef HTTP_HPP
 # define HTTP_HPP
-
 # define SERVER_SOFTWARE "FT_WebServ"
 # include <sys/types.h>
 # include <sys/epoll.h>

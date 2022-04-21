@@ -12,12 +12,7 @@
 
 #ifndef REQUEST_HPP
 # define REQUEST_HPP
-
-# include <time.h>
-# include "Log.hpp"
-# include "Header.hpp"
-# include "http.hpp"
-# include "utils.hpp"
+# include "webserv.hpp"
 
 typedef enum	chain_state_e
 {

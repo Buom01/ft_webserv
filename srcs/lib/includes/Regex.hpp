@@ -1,5 +1,5 @@
-#ifndef __REGEX
-# define __REGEX
+#ifndef __LIB_REGEX_HPP
+# define __LIB_REGEX_HPP
 # define NO_FLAG 0
 # define GLOBAL_FLAG 1
 # include <sys/types.h>

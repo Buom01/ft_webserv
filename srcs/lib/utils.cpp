@@ -1,24 +1,6 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   utils.hpp                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/03/16 03:49:16 by badam             #+#    #+#             */
-/*   Updated: 2022/04/17 15:25:46 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+#include "utils.hpp"
 
-#ifndef __UTILS_HPP
-# define __UTILS_HPP
-
-# include <time.h>
-# include <string>
-# include <sstream>
-# include "http.hpp"
-
-inline size_t	min(size_t a, size_t b)
+size_t	min(size_t a, size_t b)
 {
 	return (a < b) ? a : b;
 }
@@ -100,5 +82,3 @@ method_t method(Parse::s_allow allow)
 		ret = static_cast<method_t>(ret | M_ALL);
 	return ret;
 }
-
-#endif

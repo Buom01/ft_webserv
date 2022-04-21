@@ -1,5 +1,5 @@
-#ifndef __FT_NULLPTR_T
-# define __FT_NULLPTR_T
+#ifndef __LIB_NULLPTR_HPP
+# define __LIB_NULLPTR_HPP
 
 const class nullptr_t
 {

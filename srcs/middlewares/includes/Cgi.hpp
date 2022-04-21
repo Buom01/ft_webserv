@@ -4,28 +4,7 @@
 # define REDIRECT_STATUS "200"
 # define SERVER_PROTOCOL "HTTP/1.1"
 # define GATEWAY_VERSION "CGI/1.1"
-# include <cstring>
-# include <cstdio>
-# include <cstdlib>
-# include <iostream>
-# include <string>
-# include <map>
-# include <vector>
-# include <sys/types.h>
-# include <sys/wait.h>
-# include <unistd.h>
-# include <stdlib.h>
-# include "Log.hpp"
-# include "Parse.hpp"
-# include "Split.hpp"
-# include "MimeType.hpp"
-# include "Header.hpp"
-# include "Request.hpp"
-# include "Response.hpp"
-# include "Url.hpp"
-# include "nullptr_t.hpp"
-# include "http.hpp"
-# include "File.hpp"
+# include "webserv.hpp"
 
 class cgiEnv
 {

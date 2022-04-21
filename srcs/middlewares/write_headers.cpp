@@ -1,22 +1,4 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   write_headers.cpp                                  :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/20 16:43:39 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#ifndef __WRITE_HEADERS_CPP
-# define __WRITE_HEADERS_CPP
-
-# include "Request.hpp"
-# include "Response.hpp"
-# include "Serve.hpp"
-# include "utils.hpp"
+#include "write_headers.hpp"
 
 bool	addResponseHeaders(Request &req, Response &res)
 {
@@ -110,5 +92,3 @@ bool	sendHeader(Request &req, Response &res)
 	res.headers_sent = true;
 	return (true);
 }
-
-#endif
