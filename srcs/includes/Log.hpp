@@ -41,10 +41,10 @@ class	Log
 			std::cout << "Server stopping..." << std::endl;
 		}
 
-		void	log(int code, std::string &hostname, uint16_t port, std::string &path, std::string infos = "")
+		void	log(std::string &method, int code, std::string &hostname, uint16_t port, std::string &path, std::string infos = "")
 		{
 			std::cout
-				<< "[" << colorFromCode(code) << code << COLOR_RESET << "] Generated http://" << hostname;
+				<< "[" << colorFromCode(code) << code << COLOR_RESET << "] " << method << " http://" << hostname;
 			if (port != 80)
 				std::cout << ":" << port;
 			std::cout << path;
