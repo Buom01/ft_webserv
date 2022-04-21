@@ -216,6 +216,7 @@ int main(int argc, char **argv)
 
 	server->use(sendFinPacket, F_ALL);
 	server->use(awaitClosed, F_ALL);
+	server->use(awaitNextRequest, F_ALL);
 
 	errorMiddlewares.push_back(fallbackError);
 

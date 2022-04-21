@@ -127,7 +127,7 @@ std::string	getExtension(std::string path)
 }
 
 /*
-** It also allow us to know if the FD belongs to a file
+** It may not work on FD that doesn't belongs to a file
 */
 off_t	fdFileSize(int fd)
 {

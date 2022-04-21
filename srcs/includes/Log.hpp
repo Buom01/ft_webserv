@@ -18,6 +18,49 @@ class	Log
 				return (COLOR_SUCCESS);
 		}
 
+		void	print_flux(int socket, const char *buffer, size_t length, std::string indicator)
+		{
+			std::stringstream	prefix;
+			std::stringstream	print;
+			size_t				i		= 0;
+			size_t				j;
+
+			prefix << COLOR_DEBUG << socket << " " << indicator << " " << COLOR_RESET;
+
+			print << (prefix.str());
+
+			while (i < length)
+			{
+				switch (buffer[i])
+				{
+					case '\n':
+						if (i + 1 < length)
+						{
+							print << ("\\n\n");
+							print << (prefix.str());
+						}
+						else
+							print << ("\\n");
+						break;
+					case '\r':
+						print << ("\\r");
+						break;
+					default:
+						j = i;
+						while (j < length && buffer[j] != '\n' && buffer[j] != '\r')
+							++j;
+						if (j - i > 255)
+							print << COLOR_DEBUG << "[" << j - i << " characters]" << COLOR_RESET;
+						else
+							print.write(buffer + i, j - i);
+						i = j - 1;
+				}
+				++i;
+			}
+
+			std::cout << print.str() << std::endl;
+		}
+
 	public:
 		Log(void)
 		{
@@ -53,6 +96,13 @@ class	Log
 			std::cout << std::endl;
 		}
 
+		void	info(std::string info_str)
+		{
+			std::cout
+				<< COLOR_INFO << "[INFO] " << COLOR_RESET
+				<< info_str << std::endl;
+		}
+
 		void	warn(std::string warn_str, int error_nb= -1)
 		{
 			std::cerr
@@ -69,6 +119,27 @@ class	Log
 			if (error_nb >= 0)
 				std::cerr << ": " << strerror(error_nb);
 			std::cerr << std::endl;
+		}
+
+		ssize_t	logged_send(int socket, const char *buffer, size_t length, int flags)
+		{
+			ssize_t	ret = send(socket, buffer, length, flags);
+
+			if (ret > 0)
+				print_flux(socket, buffer, ret, ">>>");
+			if (length == 0)
+				warn("Trying to send a buffer of length 0");
+			return (ret);
+		}
+
+		void	log_read(int fd, char *buffer, ssize_t ret)
+		{
+			print_flux(fd, buffer, ret, "READ");
+		}
+
+		void	logged_GNL(int socket, std::string line)
+		{
+			print_flux(socket, line.c_str(), line.size(), "<<<");
 		}
 };
 

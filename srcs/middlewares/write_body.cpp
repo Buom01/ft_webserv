@@ -27,22 +27,30 @@ bool	SendBodyFromFD::operator()(Request &req, Response &res)
 			_parent::cleanup(res.response_fd);
 		return (true);
 	}
+		
 	if (!req.await(EPOLLOUT))
 		return (false);
 	if (!_parent::has(res.response_fd))
 		_parent::setup(res.response_fd, ET_BODY);
 	if (!_parent::await(res.response_fd, EPOLLIN))
 		return (false);
+	
 	while (read_ret != 0 || send_ret != 0)
 	{
-		send_ret = send(res.fd, res.response_fd_buff.c_str(), res.response_fd_buff.length(), MSG_NOSIGNAL);
-		if (send_ret > 0)
-			res.response_fd_buff.erase(0, send_ret);
-		if (res.response_fd_buff.length())
+		if (!res.response_fd_buff.empty())
 		{
-			req.unfire(EPOLLOUT);
-			return (false);
+			send_ret = res.logger.logged_send(res.fd, res.response_fd_buff.c_str(), res.response_fd_buff.length(), MSG_NOSIGNAL);
+			if (send_ret > 0)
+				res.response_fd_buff.erase(0, send_ret);
+			if (res.response_fd_buff.length())
+			{
+				req.unfire(EPOLLOUT);
+				return (false);
+			}
 		}
+		else
+			send_ret = 0;
+
 		read_ret = read(res.response_fd, read_buffer, res.send_chunksize);
 		if (read_ret == -1)
 		{
@@ -51,6 +59,7 @@ bool	SendBodyFromFD::operator()(Request &req, Response &res)
 		}
 		res.response_fd_buff.append(read_buffer, read_ret);
 	}
+
 	res.sent = true;
 	_parent::cleanup(res.response_fd);
 	nothrow_close(res.response_fd);
@@ -79,7 +88,8 @@ bool	sendBodyFromBuffer(Request &req, Response &res)
 	while (res.body.length())
 	{
 		write_size	= min(res.send_chunksize, res.body.length());
-		send_ret = send(res.fd, res.body.c_str(), write_size, MSG_NOSIGNAL);
+		send_ret = res.logger.logged_send(res.fd, res.body.c_str(), write_size, MSG_NOSIGNAL);
+		
 		if (send_ret > 0)
 			res.body.erase(0, send_ret);
 		if (send_ret < static_cast<ssize_t>(write_size))

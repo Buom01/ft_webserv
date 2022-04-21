@@ -99,10 +99,21 @@ bool	Chain::_run(RunningChain &instance)
 		}
 		++(instance.pos);
 	}
-	if (instance.req.finish() && !instance.req.closed())
+	if (instance.req.timeout() && !instance.req.closed() && instance.req.alive)
 		instance.req.logger.warn("Connection was cut up cause of timeout");
 	else if (!instance.res.sent && instance.res.code == C_OK)
 		instance.res.logger.warn("Chain finished without sending data");
+	if (instance.req.keep_alive && !instance.req.finish() && !instance.req.timeout())
+	{
+		instance.pos = _raw_chain.begin();
+		return (false);
+	}
+	{
+		std::stringstream	info;
+
+		info << "Closed connection (FD " << instance.req.fd << ")"; 
+		instance.res.logger.info(info.str());
+	}
 	return (true);
 }
 
@@ -186,6 +197,7 @@ void	Chain::use(IMiddleware &middleware, chain_flag_t flag, method_t methods, st
 	link.serverConfig = serverConfig;
 	link.middleware.obj = &middleware;
 	link.middleware.fct = NULL;
+	
     _raw_chain.push_back(link);
 }
 
@@ -199,6 +211,7 @@ void	Chain::use(bool (&middleware)(Request&, Response&), chain_flag_t flag, meth
 	link.serverConfig = serverConfig;
 	link.middleware.obj = NULL;
 	link.middleware.fct = &middleware;
+
     _raw_chain.push_back(link);
 }
 		

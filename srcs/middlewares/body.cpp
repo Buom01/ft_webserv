@@ -92,7 +92,7 @@ bool	body(Request &req, Response &res)
 
 	if (req.body_chuncked == true)
 	{
-		while (get_next_line_string(req.fd, line, req.buff))
+		while (get_next_line_string(req.fd, line, req.buff, res.logger))
 		{
 			if (!req.body_is_chunk)
 			{
@@ -118,7 +118,7 @@ bool	body(Request &req, Response &res)
 	}
 	else
 	{
-		while (get_next_line_string(req.fd, line, req.buff))
+		while (get_next_line_string(req.fd, line, req.buff, res.logger))
 		{
 			req.body.append(line);
 			if (!req.body_boundary.empty())

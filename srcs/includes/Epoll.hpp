@@ -74,7 +74,7 @@ class	Epoll
 				ev_data->type	= type;
 				ev_data->data	= data;
 
-				ev->events		= events;
+				ev->events		= events | EPOLLRDHUP | EPOLLHUP;
 				ev->data.ptr	= ev_data;
 
 				inner_ev.fallback	= false;

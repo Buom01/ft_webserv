@@ -5,19 +5,28 @@ bool	parseStartLine(Request &req, Response &res)
 	std::string	line;
 	Regex		regex;
 
-	if (req.finish())
+	if (req.finish() || req.closed())
 		return (true);
 	if (req.timeout())
 	{
-		res.code = C_REQUEST_TIMEOUT;
+		std::stringstream	warn;
+		
+		warn << "Timeout while reading StartLine on FD: " << req.fd;
+		res.logger.warn(warn.str());
+		req.keep_alive = false;
 		return (true);
 	}
 	if (!req.await(EPOLLIN))
 		return (false);
 
-	if (!get_next_line_string(req.fd, line, NULL, req.buff))
+	if (!get_next_line_string(req.fd, line, req.buff, res.logger))
 	{
 		req.unfire(EPOLLIN);
+		return (false);
+	}
+	if (line.empty())
+	{
+		res.logger.warn("Empty line before StartLine: Did you miss to read end of the previous request ?");
 		return (false);
 	}
 
@@ -124,7 +133,7 @@ bool	parseRequestHeaders(Request &req, Response &res)
 	if (!req.await(EPOLLIN))
 		return (false);
 
-	while (get_next_line_string(req.fd, line, NULL, req.buff))
+	while (get_next_line_string(req.fd, line, req.buff, res.logger))
 	{
 		if (!line.length())
 		{
