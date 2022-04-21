@@ -1,7 +1,7 @@
 #ifndef __LOG_HPP
 # define __LOG_HPP
 # include "builtin.hpp"
-# include "lib.hpp"
+# include "define.hpp"
 
 class	Log
 {
