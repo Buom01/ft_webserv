@@ -1,29 +1,3 @@
-/*
-#include <iostream>
-#include <exception>
-#include <unistd.h>
-#include "Log.hpp"
-#include "Parse.hpp"
-#include "Serve.hpp"
-#include "utils.hpp"
-#include "Static.cpp"
-#include "error.cpp"
-#include "read.cpp"
-#include "eject.cpp"
-#include "redirect.cpp"
-#include "upload.cpp"
-#include "remover.cpp"
-#include "Cgi.hpp"
-#include "Response.hpp"
-#include "write_headers.cpp"
-#include "write_body.cpp"
-#include "forbidden.cpp"
-#include "mimetypes.cpp"
-#include "body.cpp"
-#include "graceful_shutdown.cpp"
-#include "help.hpp"
-*/
-
 #include "webserv.hpp"
 
 static Serve	*server			= NULL;
@@ -293,4 +267,3 @@ int main(int argc, char **argv)
 	
 	return (EXIT_SUCCESS);
 }
-*/

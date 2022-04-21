@@ -1,6 +1,7 @@
 #ifndef __MIDDLEWARE_MIMETYPES_HPP
 # define __MIDDLEWARE_MIMETYPES_HPP
-# include "webserv.hpp"
+# include "builtin.hpp"
+# include "IMiddleware.hpp"
 
 class Mimetypes: public IMiddleware
 {

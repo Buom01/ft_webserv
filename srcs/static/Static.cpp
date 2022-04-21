@@ -1,6 +1,6 @@
 #include "Static.hpp"
 
-Static::Static()
+Static::Static(void)
 {
 	options.root = "./";
 	options.directory_listing = true;
@@ -14,9 +14,13 @@ Static::Static(options_t opts)
 	options = opts;
 }
 
-Static::~Static() {}
+Static::~Static(void) {}
 
-bool	Static::serveDirectory(Response &res, const std::string &server_path, const std::string &client_path)
+bool	Static::serveDirectory(
+	Response &res,
+	const std::string &server_path,
+	const std::string &client_path
+)
 {
 	if (!hasReadPermissions(server_path))
 		return (false);
@@ -79,7 +83,6 @@ bool	Static::operator()(Request &req, Response &res)
 		res.code = C_REQUEST_TIMEOUT;
 		return (true);
 	}
-
 	std::string	path = req.trusted_pathname;
 	path.insert(0, options.root);
 	if (isDirectory(path))

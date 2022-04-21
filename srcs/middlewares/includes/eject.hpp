@@ -1,6 +1,6 @@
 #ifndef __MIDDLEWARE_EJECT_HPP
 # define __MIDDLEWARE_EJECT_HPP
-# include "webserv.hpp"
+# include "IMiddleware.hpp"
 
 bool	eject(Request &, Response &);
 

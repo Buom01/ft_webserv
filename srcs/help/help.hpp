@@ -1,9 +1,7 @@
-#ifndef __HELP
-# define __HELP
-# include <iostream>
-# include <fstream>
-# include <string>
-# include "Regex.hpp"
+#ifndef __HELP_HPP
+# define __HELP_HPP
+# include "builtin.hpp"
+# include "lib.hpp"
 # include "generateDocumentation.hpp"
 
 class Help

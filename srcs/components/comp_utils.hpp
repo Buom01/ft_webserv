@@ -1,7 +1,6 @@
 #ifndef __COMPONENTS_UTILS_HPP
 # define __COMPONENTS_UTILS_HPP
-# include <string>
-# include <sstream>
+# include "builtin.hpp"
 
 std::string	escape_html(const std::string &data)
 {
@@ -44,12 +43,24 @@ std::string title(const std::string &title, int level = 1)
 
 std::string	paragraph(const std::string &content)
 {
-	return ("<p>" + escape_html(content) + "</p>");
+	std::string ret("");
+
+	ret.append("<p>");
+	ret.append(escape_html(content));
+	ret.append("</p>");
+	return (ret);
 }
 
 std::string	link(std::string &href, std::string &text)
 {
-	return ("<a href=\"" + escape_html(href) + "\">"+ escape_html(text) + "</a>");
+	std::string ret("");
+
+	ret.append("<a href=\"");
+	ret.append(escape_html(href));
+	ret.append("\">");
+	ret.append(escape_html(text));
+	ret.append("</a>");
+	return (ret);
 }
 
 std::string linkify(std::string url)

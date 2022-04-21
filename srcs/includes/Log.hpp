@@ -1,20 +1,6 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Log.hpp                                            :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/06 16:28:32 by badam             #+#    #+#             */
-/*   Updated: 2022/04/20 16:43:18 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#ifndef LOG_HPP
-# define LOG_HPP
-# include <cstring>
-# include <string>
-# include <iostream>
+#ifndef __LOG_HPP
+# define __LOG_HPP
+# include "builtin.hpp"
 # include "lib.hpp"
 
 class	Log

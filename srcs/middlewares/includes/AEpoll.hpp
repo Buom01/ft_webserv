@@ -1,19 +1,10 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   AEpoll.hpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/02/17 22:54:02 by badam             #+#    #+#             */
-/*   Updated: 2022/03/16 05:07:03 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#ifndef AEPOLL_HPP
-# define AEPOLL_HPP
+#ifndef __AEPOLL_HPP
+# define __AEPOLL_HPP
+# include "builtin.hpp"
+# include "lib.hpp"
 # include "IMiddleware.hpp"
-# include "webserv.hpp"
+# include "Epoll.hpp"
+# include "Log.hpp"
 
 class AEpoll: public IMiddleware
 {

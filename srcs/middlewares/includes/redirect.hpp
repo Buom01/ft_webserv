@@ -1,6 +1,9 @@
 #ifndef __MIDDLEWARE_REDIRECT_HPP
 # define __MIDDLEWARE_REDIRECT_HPP
-# include "webserv.hpp"
+# include "builtin.hpp"
+# include "Request.hpp"
+# include "Response.hpp"
+# include "IMiddleware.hpp"
 
 class Redirect: public IMiddleware
 {

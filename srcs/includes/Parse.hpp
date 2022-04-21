@@ -2,6 +2,7 @@
 # define __PARSE_HPP
 # define REGEX_SIZE 14
 # define NO_KEY "NO_KEY"
+# include "builtin.hpp"
 # include "lib.hpp"
 
 static struct s_defineRegex

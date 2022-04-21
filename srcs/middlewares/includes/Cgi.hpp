@@ -1,10 +1,14 @@
-#ifndef __CGI
-# define __CGI
+#ifndef __CGI_HPP
+# define __CGI_HPP
 # define ENV_NULL "NULL"
 # define REDIRECT_STATUS "200"
 # define SERVER_PROTOCOL "HTTP/1.1"
 # define GATEWAY_VERSION "CGI/1.1"
-# include "webserv.hpp"
+# include "builtin.hpp"
+# include "lib.hpp"
+# include "IMiddleware.hpp"
+# include "Request.hpp"
+# include "Response.hpp"
 
 class cgiEnv
 {

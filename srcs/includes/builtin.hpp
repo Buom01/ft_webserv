@@ -1,0 +1,31 @@
+#ifndef __BUILTIN_HPP
+# define __BUILTIN_HPP
+// c lib
+# include <arpa/inet.h>
+# include <bits/stdc++.h>
+# include <regex.h>
+# include <stdlib.h>
+# include <sys/stat.h>
+# include <sys/types.h>
+# include <sys/wait.h>
+# include <time.h>
+# include <unistd.h>
+// c++ lib
+# include <algorithm>
+# include <cctype>
+# include <cstdio>
+# include <cstdlib>
+# include <cstring>
+# include <exception>
+# include <fstream>
+# include <iterator>
+# include <iostream>
+# include <map>
+# include <ostream>
+# include <set>
+# include <stdexcept>
+# include <sstream>
+# include <string>
+# include <utility>
+# include <vector>
+#endif

@@ -2,7 +2,11 @@ CXX 		:=	clang++
 NAME		:= 	webserv
 RM			:=	rm -f
 
-SRCS		:=	srcs/lib/split.cpp srcs/lib/gnl.cpp srcs/lib/file.cpp \
+SRCS		:=	main.cpp \
+				\
+				srcs/components/components.cpp \
+				\
+				srcs/lib/split.cpp srcs/lib/gnl.cpp srcs/lib/file.cpp \
 				srcs/lib/utils.cpp \
 				\
 				srcs/middlewares/body.cpp srcs/middlewares/eject.cpp \
@@ -13,19 +17,18 @@ SRCS		:=	srcs/lib/split.cpp srcs/lib/gnl.cpp srcs/lib/file.cpp \
 				srcs/middlewares/upload.cpp srcs/middlewares/write_body.cpp \
 				srcs/middlewares/write_headers.cpp \
 				\
-				srcs/serve/Chain.cpp srcs/serve/Serve.cpp \
+				srcs/serve/Definition.cpp srcs/serve/Chain.cpp srcs/serve/Serve.cpp \
 				\
-				srcs/static/Static.cpp \
-				\
-				main.cpp
+				srcs/static/Static.cpp
 
-LIBRARY		?=	-I ./srcs/components \
+LIBRARY		?=	-I ./srcs/components/includes \
 				-I ./srcs/help \
 				-I ./srcs/includes \
 				-I ./srcs/lib/includes \
 				-I ./srcs/middlewares/includes \
 				-I ./srcs/serve/includes \
-				-I ./srcs/static/includes
+				-I ./srcs/static/includes \
+				-I ./srcs
 
 OBJS		:=	$(SRCS:.cpp=.o)
 CXXFLAGS	?=  -Wall -Werror -Wextra -std=c++98 -g $(LIBRARY)

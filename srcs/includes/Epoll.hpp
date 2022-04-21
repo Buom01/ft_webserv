@@ -1,18 +1,6 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Epoll.hpp                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/01/26 22:16:47 by badam             #+#    #+#             */
-/*   Updated: 2022/03/30 01:50:40 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#ifndef EPOLL_HPP
-# define EPOLL_HPP
-# include <vector>
+#ifndef __EPOLL_HPP
+# define __EPOLL_HPP
+# include "builtin.hpp"
 # include "lib.hpp"
 
 typedef	std::vector<epoll_event_t>	events_t;

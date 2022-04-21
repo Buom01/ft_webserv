@@ -165,17 +165,34 @@ void	Serve::begin(void)
 	}
 }
 
-void	Serve::use(IMiddleware &middleware, chain_flag_t flag = F_NORMAL, method_t methods = M_ALL, std::string pathname = "", ServerConfig serverConfig = ServerConfig())
+void	Serve::use(
+	IMiddleware &middleware,
+	chain_flag_t flag,
+	method_t methods,
+	std::string pathname,
+	ServerConfig serverConfig
+)
 {
 	_response_chain.use(middleware, flag, methods, pathname, serverConfig);
 }
 
-void	Serve::use(bool (&middleware)(Request&, Response&), chain_flag_t flag = F_NORMAL, method_t methods = M_ALL, std::string pathname = "", ServerConfig serverConfig = ServerConfig())
+void	Serve::use(
+	bool (&middleware)(Request&, Response&),
+	chain_flag_t flag,
+	method_t methods,
+	std::string pathname,
+	ServerConfig serverConfig
+)
 {
 	_response_chain.use(middleware, flag, methods, pathname, serverConfig);
 }
 
-RunningChain	*Serve::exec(int connection, server_bind_t *interface, std::string client_ip, uint32_t events)
+RunningChain	*Serve::exec(
+	int connection,
+	server_bind_t *interface,
+	std::string client_ip,
+	uint32_t events
+)
 {
 	return (_response_chain.exec(connection, interface, client_ip, events, logger));
 }
@@ -280,8 +297,8 @@ void	Serve::stop()
 	_response_chain.stop();
 }
 
-ServerException::ServerException(const std::string &msg = "Unknown internal server error.") :
+Serve::ServerException::ServerException(const std::string &msg) :
 	std::runtime_error(msg) {}
 
-ServerSocketException::ServerSocketException(const std::string &msg = "Server socket exception.") :
+Serve::ServerSocketException::ServerSocketException(const std::string &msg) :
 	ServerException("ServerSocketException: " + msg) {}

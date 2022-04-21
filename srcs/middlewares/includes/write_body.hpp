@@ -1,6 +1,9 @@
 #ifndef __MIDDLEWARE_WRITE_BODY_HPP
 # define __MIDDLEWARE_WRITE_BODY_HPP
-# include "webserv.hpp"
+# include "builtin.hpp"
+# include "Request.hpp"
+# include "Response.hpp"
+# include "AEpoll.hpp"
 
 class SendBodyFromFD: public AEpoll
 {

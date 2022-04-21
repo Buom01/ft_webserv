@@ -1,6 +1,9 @@
 #ifndef __STATIC_HPP
 # define __STATIC_HPP
-# include "webserv.hpp"
+# include "builtin.hpp"
+# include "components.hpp"
+# include "Response.hpp"
+# include "IMiddleware.hpp"
 
 class Static: public IMiddleware
 {
@@ -14,9 +17,9 @@ class Static: public IMiddleware
 		}				options_t;
 		options_t		options;
 	public:
-		Static();
+		Static(void);
 		Static(options_t);
-		virtual ~Static();
+		virtual ~Static(void);
 	protected:
 		bool		serveDirectory(Response &, const std::string &, const std::string &);
 		void		serveFile(Response &, const std::string &);

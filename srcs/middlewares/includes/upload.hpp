@@ -1,6 +1,9 @@
 #ifndef __MIDDLEWARE_UPLOAD_HPP
 # define __MIDDLEWARE_UPLOAD_HPP
-# include "webserv.hpp"
+# include "builtin.hpp"
+# include "Request.hpp"
+# include "Response.hpp"
+# include "AEpoll.hpp"
 
 class Upload: public AEpoll
 {

@@ -1,6 +1,9 @@
-#ifndef __MIDDLEWARE_REDIRECT_HPP
-# define __MIDDLEWARE_REDIRECT_HPP
-# include "webserv.hpp"
+#ifndef __MIDDLEWARE_REMOVER_HPP
+# define __MIDDLEWARE_REMOVER_HPP
+# include "builtin.hpp"
+# include "Request.hpp"
+# include "Response.hpp"
+# include "IMiddleware.hpp"
 
 class Remover: public IMiddleware
 {

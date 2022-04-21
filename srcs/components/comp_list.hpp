@@ -1,6 +1,6 @@
 #ifndef __COMPONENTS_LIST_HPP
 # define __COMPONENTS_LIST_HPP
-# include <string>
+# include "builtin.hpp"
 # include "comp_utils.hpp"
 
 template<class List, class ItemType>

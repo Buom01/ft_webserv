@@ -1,6 +1,8 @@
 #ifndef __MIDDLEWARE_ERROR_HPP
 # define __MIDDLEWARE_ERROR_HPP
-# include "webserv.hpp"
+# include "components.hpp"
+# include "AEpoll.hpp"
+# include "Log.hpp"
 
 std::string	getErrorTitle(Response &);
 std::string	getErrorMessage(Response &);
