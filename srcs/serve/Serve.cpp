@@ -143,7 +143,7 @@ void	Serve::begin(void)
 	while (it != _binds.end())
 	{
 		bind = *it;
-		if (listen(bind->fd, 1) == -1)
+		if (listen(bind->fd, 128) == -1)
 			logger.fail("Socket failed to listen on " + bind_to_string(bind));
 		else
 		{
