@@ -1,23 +1,9 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Request.hpp                                        :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/08 12:27:56 by badam             #+#    #+#             */
-/*   Updated: 2022/04/20 14:30:00 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#ifndef REQUEST_HPP
-# define REQUEST_HPP
-
-# include <time.h>
+#ifndef __REQUEST_HPP
+# define __REQUEST_HPP
+# include "builtin.hpp"
+# include "lib.hpp"
 # include "Log.hpp"
 # include "Header.hpp"
-# include "http.hpp"
-# include "utils.hpp"
 
 typedef enum	chain_state_e
 {

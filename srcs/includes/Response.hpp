@@ -1,22 +1,8 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Response.hpp                                       :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/08 12:50:37 by badam             #+#    #+#             */
-/*   Updated: 2022/04/20 16:43:25 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#ifndef RESPONSE_HPP
-# define RESPONSE_HPP
-
-# include <exception>
-# include <sstream>
+#ifndef __RESPONSE_HPP
+# define __RESPONSE_HPP
+# include "builtin.hpp"
+# include "lib.hpp"
 # include "Log.hpp"
-# include "http.hpp"
 # include "Header.hpp"
 
 class Response

@@ -1,19 +1,4 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   graceful_shutdown.cpp                              :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/20 19:33:12 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#ifndef __GRACEFUL_SHUTDOWN_CPP
-# define __GRACEFUL_SHUTDOWN_CPP
-# include "Request.hpp"
-# include "Response.hpp"
+#include "graceful_shutdown.hpp"
 
 bool	sendFinPacket(Request &req, Response &res)
 {
@@ -29,8 +14,5 @@ bool	awaitClosed(Request &req, Response &)
 		return (true);
 	if (!req.await(EPOLLHUP))
 		return (false);
-		
 	return (true);
 }
-
-#endif

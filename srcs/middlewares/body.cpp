@@ -1,14 +1,4 @@
-#ifndef __BODY_CPP
-# define __BODY_CPP
-# define LF "\n"
-# define CRLF "\r\n"
-# include "Request.hpp"
-# include "Response.hpp"
-# include "Serve.hpp"
-# include "AEpoll.hpp"
-# include "utils.hpp"
-# include "http.hpp"
-# include "File.hpp"
+#include "body.hpp"
 
 bool	_get_contentlength(Request &req)
 {
@@ -160,5 +150,3 @@ bool	body(Request &req, Response &res)
 		req.unfire(EPOLLIN);
 	return (req.body_read_is_finished);
 }
-
-#endif

@@ -1,30 +1,7 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Log.hpp                                            :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/06 16:28:32 by badam             #+#    #+#             */
-/*   Updated: 2022/04/19 01:49:23 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#ifndef LOG_HPP
-# define LOG_HPP
-# include <cstring>
-# include <string>
-# include <iostream>
-# include "http.hpp"
-# define COLOR_RESET "\e[0m"
-# define COLOR_ERROR "\e[91m"
-# define COLOR_WARNING "\e[93m"
-# define COLOR_SERVER_ERROR "\e[91m"
-# define COLOR_CLIENT_ERROR "\e[91m"
-# define COLOR_REDIRECT "\e[95m"
-# define COLOR_SUCCESS "\e[92m"
-# define COLOR_TITLE "\e[95m"
-# define COLOR_ARGS "\e[96m"
+#ifndef __LOG_HPP
+# define __LOG_HPP
+# include "builtin.hpp"
+# include "lib.hpp"
 
 class	Log
 {

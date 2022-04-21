@@ -1,25 +1,7 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Header.hpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/12 14:41:25 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/03 21:42:30 by cbertran         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#ifndef __PARSE_HEADER
-# define __PARSE_HEADER
-# include <iostream>
-# include <utility>
-# include <string>
-# include <algorithm>
-# include <vector>
-# include <map>
-# include <cctype>
-# include "Regex.hpp"
+#ifndef __HEADER_HPP
+# define __HEADER_HPP
+# include "builtin.hpp"
+# include "lib.hpp"
 
 class Header
 {

@@ -1,25 +1,4 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   read.cpp                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/12 19:32:19 by cbertran          #+#    #+#             */
-/*   Updated: 2022/04/19 15:20:32 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#ifndef __READ_HEADERS_CPP
-# define __READ_HEADERS_CPP
-# include <string>
-# include "GNL.hpp"
-# include "Request.hpp"
-# include "Response.hpp"
-# include "Serve.hpp"
-# include "Regex.hpp"
-# include "Url.hpp"
-# include "File.hpp"
+#include "read.hpp"
 
 bool	parseStartLine(Request &req, Response &res)
 {
@@ -160,5 +139,3 @@ bool	parseRequestHeaders(Request &req, Response &res)
 
 	return (false);
 }
-
-#endif

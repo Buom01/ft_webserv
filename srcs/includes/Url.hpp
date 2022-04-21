@@ -1,23 +1,7 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Url.hpp                                            :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: cbertran <cbertran@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/07/20 14:05:57 by cbertran          #+#    #+#             */
-/*   Updated: 2022/03/29 19:47:31 by cbertran         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #ifndef __URL_HPP
 # define __URL_HPP
-# include <string>
-# include <vector>
-# include <utility>
-# include <exception>
-# include "Regex.hpp"
-# include "Split.hpp"
+# include "builtin.hpp"
+# include "lib.hpp"
 
 /**
  *	Create class for get specific part of url, every function return empty string if no occurence.
