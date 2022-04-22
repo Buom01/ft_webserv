@@ -68,8 +68,6 @@ int main(int argc, char **argv)
 
 	#pragma region Start server
 
-	logger.options.verbose			= false;
-	
 	server							= new Serve(logger);
 
 	Error			*fallbackError	= new Error(server->logger);
