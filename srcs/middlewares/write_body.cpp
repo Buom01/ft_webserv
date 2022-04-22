@@ -6,9 +6,9 @@ SendBodyFromFD::~SendBodyFromFD() {}
 		
 bool	SendBodyFromFD::operator()(Request &req, Response &res)
 {
-	ssize_t	read_ret = -1;
-	ssize_t	send_ret = -1;
-	char	read_buffer[res.send_chunksize];
+	ssize_t		read_ret = -1;
+	ssize_t		send_ret = -1;
+	static char	read_buffer[SERVER_BUFFER_SIZE];
 	
 	if (res.sent)
 		return (true);
@@ -51,7 +51,7 @@ bool	SendBodyFromFD::operator()(Request &req, Response &res)
 		else
 			send_ret = 0;
 
-		read_ret = read(res.response_fd, read_buffer, res.send_chunksize);
+		read_ret = read(res.response_fd, read_buffer, SERVER_BUFFER_SIZE);
 		if (read_ret == -1)
 		{
 			_parent::clear_events(res.response_fd, EPOLLIN);
@@ -87,7 +87,7 @@ bool	sendBodyFromBuffer(Request &req, Response &res)
 		return (false);
 	while (res.body.length())
 	{
-		write_size	= min(res.send_chunksize, res.body.length());
+		write_size	= min(SERVER_BUFFER_SIZE, res.body.length());
 		send_ret = res.logger.logged_send(res.fd, res.body.c_str(), write_size, MSG_NOSIGNAL);
 		
 		if (send_ret > 0)

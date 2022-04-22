@@ -23,7 +23,6 @@ class Response
 		int						errorpage_fd;
 		std::string				errorpage;
 		std::string				body;
-		size_t					send_chunksize;
 		bool					sent;
 
 		Response(int connection, Log &_logger) :
@@ -41,7 +40,6 @@ class Response
 			errorpage_fd(0),
 			errorpage(""),
 			body(""),
-			send_chunksize(SERVER_BUFFER_SIZE),
 			sent(false)
 		{}
 
