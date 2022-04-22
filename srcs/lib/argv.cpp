@@ -16,6 +16,7 @@ std::string argumentsError(std::string line)
 {
 	std::string err(COLOR_ERROR);
 	err.append(line);
+	err.append(COLOR_RESET);
 	throw IncorrectArguments(err);
 }
 
@@ -60,6 +61,7 @@ arguments_t	arguments(int argc, char **argv)
 				if (ret.help == true)
 					argumentsError("help option is specified several times");
 				ret.help = true;
+				break;
 			}
 			else if (temp.compare("--verbose") == 0 || temp.compare("-v") == 0)
 			{
@@ -69,10 +71,9 @@ arguments_t	arguments(int argc, char **argv)
 			}
 			else
 			{
-				size_t npos = temp.find_first_not_of("-");
 				std::string err("option ");
 				err.append(COLOR_WARNING);
-				err.append(temp.erase(0, npos));
+				err.append(temp);
 				err.append(COLOR_ERROR);
 				err.append(" is not recognized");
 				argumentsError(err);
@@ -83,10 +84,12 @@ arguments_t	arguments(int argc, char **argv)
 			if (isConfig)
 				argumentsError("no arguments are allowed after the definition of the configuration file");
 			ret.configuration = temp;
+			if (getExtension(temp) != "conf")
+				argumentsError("the configuration file does not have the .conf extension");
 			isConfig = true;
 		}
 	}
-	if (!isConfig)
+	if (!isConfig && !ret.help)
 	{
 		std::cout << COLOR_TITLE << "WEBSERV" << COLOR_RESET << " - no configuration, check if default configuration exist at the root folder" << std::endl;
 		if (!checkDefaultConfig())

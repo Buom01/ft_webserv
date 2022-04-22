@@ -16,8 +16,6 @@ int main(int argc, char **argv)
 	signal(SIGINT, stop_signal);
 	std::ios::sync_with_stdio(false);
 
-	
-
 	Parse					config;
 	Parse::serversVector	servers;
 	Parse::locationsMap		locations;
@@ -42,10 +40,12 @@ int main(int argc, char **argv)
 			help.print();
 			exit(EXIT_SUCCESS);
 		}
+		logger.options.verbose = definedArgs.verbose;
 		config.init(definedArgs.configuration, true, true);
 		config.check();
 		servers = config.getServers();
-		config.print();
+		if (definedArgs.verbose == true)
+			config.print();
 	}
 	catch (IncorrectArguments &e)
 	{

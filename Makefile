@@ -40,7 +40,7 @@ MAGENTA		:= \e[0;95m
 RESET		:= \e[0;0m
 PREFIX		:= $(MAGENTA)$(NAME)$(RESET) => 
 
-$(NAME): help $(OBJS)
+$(NAME): $(OBJS)
 	@echo "$(PREFIX)$(GREEN)Bundling $(RESET)$(NAME)$(GREEN) executable$(RESET)"
 	@$(CXX) $(CXXFLAGS) $(OBJS) $(LIBRARY) -o $@
 
@@ -48,7 +48,7 @@ $(NAME): help $(OBJS)
 	@echo "$(PREFIX)$(GREEN)Compiling file $(RESET)$< $(GREEN)to $(RESET)$@"
 	@$(CXX) $(CXXFLAGS) $(LIBRARY) -c $< -o $@
 
-all: $(NAME)
+all: help $(NAME)
 
 help:
 	@if command -v xxd > /dev/null; then \

@@ -7,6 +7,7 @@
 # include <fstream>
 # include <algorithm>
 # include "define.hpp"
+# include "file.hpp"
 
 struct	arguments_t
 {
