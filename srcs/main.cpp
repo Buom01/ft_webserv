@@ -217,6 +217,7 @@ int main(int argc, char **argv)
 	server->use(sendHeader, F_ALL);
 	server->use(sendBodyFromBuffer, F_ALL);
 	server->use(*sendBodyFromFD, F_ALL);
+	server->use(logRequest, F_ALL);
 
 	server->use(awaitNextRequest, F_ALL);
 	server->use(sendFinPacket, F_ALL);

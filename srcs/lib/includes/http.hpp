@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   http.hpp                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/01/10 18:19:19 by badam             #+#    #+#             */
-/*   Updated: 2022/04/22 04:28:21 by badam            ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #ifndef HTTP_HPP
 # define HTTP_HPP
 # define SERVER_SOFTWARE "FT_WebServ"
@@ -126,5 +114,9 @@ typedef enum http_code_e
 # define SERVER_BUFFER_SIZE 1024*1024*20
 # define ERRORPAGE_BUFFER_SIZE 10240
 # define MAX_EVENTS 10
+
+# define TIMEOUT 25
+# define KEEP_ALIVE 255
+# define KEEP_ALIVE_HEADER "Keep-Alive: timeout=250"
 
 #endif

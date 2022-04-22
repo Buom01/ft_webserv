@@ -30,7 +30,7 @@ bool	get_next_line_string(int fd, std::string &line, std::string &buff, Log &log
 		read_ret = read(fd, read_buff, SERVER_BUFFER_SIZE);
 		if (read_ret <= 0)
 		{
-			// if (errno != EAGAIN)
+			// if (read_ret < 0 && errno != EAGAIN)
 			// 	logger.warn("Read fail for unexpected reason", errno);
 			return (false);
 		}

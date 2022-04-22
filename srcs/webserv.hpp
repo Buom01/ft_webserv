@@ -36,6 +36,7 @@
 # include "upload.hpp"
 # include "write_body.hpp"
 # include "write_headers.hpp"
+# include "log_request.hpp"
 
 // serve
 # include "Definition.hpp"

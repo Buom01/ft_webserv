@@ -39,7 +39,7 @@ bool	awaitNextRequest(Request &req, Response &res)
 		}
 	}
 
-	if (req.timeout())
+	if (req.connection_timeout())
 		return (true);
 	
 	if (!req.await(EPOLLIN))
