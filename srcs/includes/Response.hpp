@@ -21,6 +21,7 @@ class Response
 		int 					response_fd_header_size;
 		std::string				response_fd_buff;
 		int						errorpage_fd;
+		std::string				errorpage;
 		std::string				body;
 		size_t					send_chunksize;
 		bool					sent;
@@ -38,8 +39,9 @@ class Response
 			response_fd_header_size(0),
 			response_fd_buff(""),
 			errorpage_fd(0),
+			errorpage(""),
 			body(""),
-			send_chunksize(10240),
+			send_chunksize(SERVER_BUFFER_SIZE),
 			sent(false)
 		{}
 
@@ -58,6 +60,7 @@ class Response
 			response_fd_header_size = 0;
 			response_fd_buff = "";
 			errorpage_fd = 0;
+			errorpage = "";
 			body = "";
 			sent = false;
 		}

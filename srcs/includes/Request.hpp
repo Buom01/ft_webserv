@@ -93,7 +93,7 @@ class Request
 			trusted_pathname("/"),
 			http_version(""),
 			headers(),
-			upload_chunksize(10240),
+			upload_chunksize(SERVER_BUFFER_SIZE),
 			upload_remainingsize(0),
 			upload_fd(0),
 			upload_fd_buff(""),

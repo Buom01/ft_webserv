@@ -6,7 +6,7 @@
 /*   By: badam <badam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/10 18:19:19 by badam             #+#    #+#             */
-/*   Updated: 2022/04/20 16:29:36 by badam            ###   ########.fr       */
+/*   Updated: 2022/04/22 04:28:21 by badam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -123,7 +123,8 @@ typedef enum http_code_e
 	C_HTTP_VERSION_NOT_SUPPORTED = 505
 } http_code_t;
 
-# define SERVER_BUFFER_SIZE 10240
+# define SERVER_BUFFER_SIZE 1024*1024*20
+# define ERRORPAGE_BUFFER_SIZE 10240
 # define MAX_EVENTS 10
 
 #endif
