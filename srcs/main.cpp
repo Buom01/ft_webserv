@@ -1,7 +1,8 @@
 #include "webserv.hpp"
 
-static Serve	*server			= NULL;
+static Serve	*server		= NULL;
 static bool	stop_requested	= false;
+arguments_t	definedArgs;
 
 void	stop_signal(int)
 {
@@ -30,23 +31,26 @@ int main(int argc, char **argv)
 	std::vector<SendBodyFromFD *>	sendBodyFDMiddlewares;
 
 	#pragma region Initiale check & Parse configuration file
-	if (argc >= 3)
-	{
-		std::cerr << COLOR_TITLE << "WEBSERV "<< COLOR_RESET << " - " << COLOR_ERROR << "Only one argument is allowed" << std::endl;
-		return (EXIT_FAILURE);
-	}
-	if (argc >= 2 && (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h"))
-	{
-		Help	help;
-		help.print();
-		exit(EXIT_SUCCESS);
-	}
 	try
 	{
-		config.init((argc >= 2) ? argv[1] : "./default.conf", true, true);
+		definedArgs = arguments(argc, argv);
+		if (definedArgs.help == true)
+		{
+			Help	help;
+			help.print();
+			exit(EXIT_SUCCESS);
+		}
+		logger.options.verbose = definedArgs.verbose;
+		config.init(definedArgs.configuration, true, true);
 		config.check();
 		servers = config.getServers();
-		config.print();
+		if (definedArgs.verbose == true)
+			config.print();
+	}
+	catch (IncorrectArguments &e)
+	{
+		std::cerr << COLOR_TITLE << "WEBSERV" << COLOR_RESET << " - " << e.what() << std::endl;
+		return (EXIT_FAILURE);
 	}
 	catch (std::ifstream::failure &e)
 	{
@@ -58,10 +62,9 @@ int main(int argc, char **argv)
 		std::cerr << COLOR_TITLE << "WEBSERV" << COLOR_RESET << " - " << e.what() << std::endl;
 		return (EXIT_FAILURE);
 	}
-	#pragma endregion Initiale check & Parse configuration file
-
 	if (stop_requested)
 		return (EXIT_SUCCESS);
+	#pragma endregion Initiale check & Parse configuration file
 
 	#pragma region Start server
 
@@ -224,23 +227,18 @@ int main(int argc, char **argv)
 	errorMiddlewares.push_back(fallbackError);
 
 	server->begin();
-	
 	#pragma endregion Start server
 
-
 	#pragma region Run server
-
 	while (server->alive())
 	{
 		server->accept();
 		usleep(1);
 	}
-
 	#pragma endregion Run server
 
 
 	#pragma region Middlewares cleanup 
-
 	for (std::vector<Redirect *>::iterator it = redirectMiddlewares.begin(); it != redirectMiddlewares.end(); it++)
 		delete (*it);
 
@@ -264,10 +262,8 @@ int main(int argc, char **argv)
 
 	delete mimetypes;
 	delete sendBodyFromFD;
-
 	#pragma endregion Middlewares cleanup 
 
 	delete server;
-	
 	return (EXIT_SUCCESS);
 }

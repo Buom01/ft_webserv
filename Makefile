@@ -2,12 +2,12 @@ CXX 		:=	clang++
 NAME		:= 	webserv
 RM			:=	rm -f
 
-SRCS		:=	main.cpp \
+SRCS		:=	srcs/main.cpp \
 				\
 				srcs/components/components.cpp \
 				\
 				srcs/lib/split.cpp srcs/lib/gnl.cpp srcs/lib/file.cpp \
-				srcs/lib/utils.cpp \
+				srcs/lib/utils.cpp srcs/lib/argv.cpp \
 				\
 				srcs/middlewares/body.cpp srcs/middlewares/eject.cpp \
 				srcs/middlewares/error.cpp srcs/middlewares/forbidden.cpp \
@@ -31,15 +31,32 @@ LIBRARY		?=	-I ./srcs/components/includes \
 				-I ./srcs
 
 OBJS		:=	$(SRCS:.cpp=.o)
-CXXFLAGS	?=  -Wall -Werror -Wextra -std=c++98 -g $(LIBRARY)
+CXXFLAGS	?=  -g -Wall -Werror -Wextra -std=c++98 $(LIBRARY)
 
-$(NAME): $(OBJS) $(SUBDIRS)
-	$(CXX) $(LIBRARY) -o $(NAME) $(OBJS)
+# Colours
+RED			:= \e[0;91m
+GREEN		:= \e[0;92m
+MAGENTA		:= \e[0;95m
+RESET		:= \e[0;0m
+PREFIX		:= $(MAGENTA)$(NAME)$(RESET) => 
+
+$(NAME): $(OBJS)
+	@echo "$(PREFIX)$(GREEN)Bundling $(RESET)$(NAME)$(GREEN) executable$(RESET)"
+	@$(CXX) $(CXXFLAGS) $(OBJS) $(LIBRARY) -o $@
+
+%.o: %.cpp
+	@echo "$(PREFIX)$(GREEN)Compiling file $(RESET)$< $(GREEN)to $(RESET)$@"
+	@$(CXX) $(CXXFLAGS) $(LIBRARY) -c $< -o $@
 
 all: help $(NAME)
 
 help:
-	xxd -i ./srcs/help/documentation > srcs/help/generateDocumentation.hpp
+	@if command -v xxd > /dev/null; then \
+		echo "$(PREFIX)$(GREEN)xxd generate documentation$(RESET)"; \
+		xxd -i ./srcs/help/documentation > srcs/help/generateDocumentation.hpp; \
+	else \
+		echo "$(PREFIX)$(RED)xxd command is not present, skip this part$(RESET)"; \
+	fi
 
 fclean:
 	$(RM) $(OBJS)
