@@ -15,7 +15,7 @@
 # include "Parse.hpp"
 
 // help
-# include "Help.hpp"
+# include "help.hpp"
 
 // components
 # include "components.hpp"
