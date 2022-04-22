@@ -248,10 +248,8 @@ bool			CGI::setGenerateHeader(Request &, Response &res)
 	std::string	line;
 
 	res.response_fd_buff.clear();
-	
 	while (get_next_line_string(res.response_fd, line, res.response_fd_buff, res.logger))
 	{
-		std::cout << line << std::endl;
 		if (line.empty())
 		{
 			npos += 2;
@@ -292,6 +290,7 @@ int			CGI::exec(Request &req, Response &res)
 			res.code = C_INTERNAL_SERVER_ERROR;
 			std::cout << "Status: 500\r\n";
 		}
+		close(pipeOUT[1]);
 	}
 	else
 	{
@@ -301,7 +300,6 @@ int			CGI::exec(Request &req, Response &res)
 		close(pipeFD[1]);
 		res.response_fd = pipeOUT[0];
 		close(pipeOUT[1]);
-		waitpid(pid, NULL, 0);
 	}
 	dup2(saveFd[0], STDIN_FILENO);
 	dup2(saveFd[1], STDOUT_FILENO);
