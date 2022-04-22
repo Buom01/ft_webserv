@@ -11,7 +11,6 @@
 # include <time.h>
 # include <unistd.h>
 // c++ lib
-# include <algorithm>
 # include <cctype>
 # include <cstdio>
 # include <cstdlib>

@@ -3,23 +3,24 @@
 bool	addResponseHeaders(Request &req, Response &res)
 {
 	Header		&h		= res.headers;
-	off_t		length	= -1;
+	off_t		length	= 0;
 
 	h.set("Server: FT_WebServ");
-	h.add("Connection: close");
 
 	if (res.body.length() > 0)
 		length = static_cast<intmax_t>(res.body.length());
-	else if (res.response_fd)
-		length = fdFileSize(res.response_fd) - res.response_fd_header_size;
+	else if (res.response_fd && res.response_fd)
+		length = fdFileSize(res.response_fd) - res.response_fd_header_size;  // Works on stdin too
 
-	if (length >= 0 && !(req.method & (M_HEAD | M_GET)))
+	if (length >= 0)
 	{
 		std::stringstream	to_str;
-
+		
 		to_str << length;
-		h.add("Content-Length: " + to_str.str());
+		h.set("Content-Length: " + to_str.str());
 	}
+	else
+		req.keep_alive = false;
 
 	if (req.body_read_size)
 	{
@@ -27,6 +28,19 @@ bool	addResponseHeaders(Request &req, Response &res)
 
 		to_str << req.body_read_size;
 		h.set("Content-Length: " + to_str.str());
+	}
+
+	if (req.headers.header("Connection", true) == "close")
+		req.keep_alive = false;
+
+	if (req.keep_alive)
+	{
+		h.set("Connection: keep-alive");
+		h.set("Keep-Alive: timeout=250");
+	}
+	else
+	{
+		h.set("Connection: close");
 	}
 	
 	return (true);
@@ -40,15 +54,16 @@ bool	serializeHeaders(Request &req, Response &res)
 	std::stringstream			startline;
 	std::vector<std::string>	ListHeaders = res.headers.headers();
 	
-	startline << "HTTP/1.1 " << res.code << "\n";
+	res.headers_buff.reserve(120);
+	startline << "HTTP/1.1 " << res.code << "\r\n";
 	res.headers_buff.append(startline.str());
 
 	for (std::vector<std::string>::iterator it = ListHeaders.begin(); it != ListHeaders.end(); ++it)
 	{
 		res.headers_buff.append(*it);
-		res.headers_buff.push_back('\n');
+		res.headers_buff.append("\r\n");
 	}
-	res.headers_buff.push_back('\n');
+	res.headers_buff.append("\r\n");
 
 	std::stringstream	infos;
 	infos << get_elasped_ms(req.start);
@@ -78,7 +93,7 @@ bool	sendHeader(Request &req, Response &res)
 	while (res.headers_buff.length())
 	{
 		write_size	= min(res.send_chunksize, res.headers_buff.length());
-		send_ret = send(res.fd, res.headers_buff.c_str(), write_size, MSG_NOSIGNAL);
+		send_ret = res.logger.logged_send(res.fd, res.headers_buff.c_str(), write_size, MSG_NOSIGNAL);
 
 		if (send_ret > 0)
 			res.headers_buff.erase(0, send_ret);

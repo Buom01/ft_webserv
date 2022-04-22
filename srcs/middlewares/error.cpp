@@ -164,9 +164,10 @@ std::string	getErrorMessage(Response &res)
 	}
 }
 
-Error::Error(Log &logger): _parent(logger), _logger(logger) {}
+Error::Error(Log &logger): _parent(logger)
+{}
 
-Error::Error(options_t opts, Log &logger): _parent(logger), _logger(logger)
+Error::Error(options_t opts, Log &logger): _parent(logger)
 {
 	options = opts;
 }
@@ -178,7 +179,7 @@ void Error::add(int error, std::string page)
 	options.errorpages.insert(std::pair<int, std::string>(error, page));
 }
 
-int	Error::getErrorpageFD(int code)
+int	Error::getErrorpageFD(int code, Log &logger)
 {
 	errorpages_t::const_iterator	it;
 	int								open_ret;
@@ -190,7 +191,7 @@ int	Error::getErrorpageFD(int code)
 	{
 		open_ret = open(it->second.c_str(), O_NONBLOCK | O_RDONLY);
 		if (open_ret == -1)
-			_logger.warn("Failed to open error page: " + it->second);
+			logger.warn("Failed to open error page: " + it->second);
 		return open_ret;
 	}
 }
@@ -227,7 +228,7 @@ bool Error::operator()(Request &req, Response &res)
 				res.response_fd = -1;
 			}
 			res.headers.set("Content-Type: text/html");
-			res.errorpage_fd = getErrorpageFD(res.code);
+			res.errorpage_fd = getErrorpageFD(res.code, res.logger);
 			if (res.errorpage_fd <= 0)
 			{
 				res.body = generateErrorPage(res);

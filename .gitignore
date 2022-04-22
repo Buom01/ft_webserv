@@ -85,3 +85,8 @@ dkms.conf
 
 # Backups
 *.bk*
+
+
+# Uploads
+tests/files/cgi/uploads/*
+demo_website/uploaded/*

@@ -80,19 +80,19 @@ bool	body(Request &req, Response &res)
 		_get_bondary(req);
 		_get_transferEncoding(req, res);
 		req.body_header_parsed = true;
-		if (!req.body_chuncked && req.body_boundary.empty() && req.body_length <= 0)
-			return (req.body_read_is_finished = true);
+	}
+	if (req.body_header_parsed && req.body_boundary.empty() && req.body_length <= 0 && !req.body_chuncked)
+	{
+		return (req.body_read_is_finished = true);
 	}
 	if (!req.await(EPOLLIN))
 		return (false);
 
 	std::string	line("");
-	std::string	newline("");
-	std::string	*newline_ptr	= &newline;
 
 	if (req.body_chuncked == true)
 	{
-		while (get_next_line_string(req.fd, line, newline_ptr, req.buff))
+		while (get_next_line_string(req.fd, line, req.buff, res.logger))
 		{
 			if (!req.body_is_chunk)
 			{
@@ -118,7 +118,7 @@ bool	body(Request &req, Response &res)
 	}
 	else
 	{
-		while (get_next_line_string(req.fd, line, newline_ptr, req.buff))
+		while (get_next_line_string(req.fd, line, req.buff, res.logger))
 		{
 			req.body.append(line);
 			if (!req.body_boundary.empty())
@@ -133,11 +133,11 @@ bool	body(Request &req, Response &res)
 					break;
 				}
 				else
-					req.body.append(newline);
+					req.body.append(CRLF);
 			}
 			else
 			{
-				req.body.append(newline);
+				req.body.append(CRLF);
 				if (req.body.size() >= static_cast<size_t>(req.body_length))
 				{
 					req.body_read_is_finished = true;

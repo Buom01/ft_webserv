@@ -9,7 +9,6 @@ std::string	getErrorMessage(Response &);
 class Error: public AEpoll
 {
 	typedef	AEpoll	_parent;
-	Log		&_logger;
 	public:
 		typedef	std::map<int, std::string>	errorpages_t;
 		typedef struct	options_s
@@ -21,7 +20,7 @@ class Error: public AEpoll
 		Error(options_t, Log &);
 		virtual ~Error();
 		void	add(int, std::string);
-		int	getErrorpageFD(int);
+		int	getErrorpageFD(int, Log &);
 		std::string	generateErrorPage(Response &);
 	public:
 		bool	operator()(Request &, Response &);

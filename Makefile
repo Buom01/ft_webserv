@@ -11,7 +11,7 @@ SRCS		:=	srcs/main.cpp \
 				\
 				srcs/middlewares/body.cpp srcs/middlewares/eject.cpp \
 				srcs/middlewares/error.cpp srcs/middlewares/forbidden.cpp \
-				srcs/middlewares/graceful_shutdown.cpp \
+				srcs/middlewares/keep_alive.cpp \
 				srcs/middlewares/mimetypes.cpp srcs/middlewares/read.cpp \
 				srcs/middlewares/redirect.cpp srcs/middlewares/remover.cpp \
 				srcs/middlewares/upload.cpp srcs/middlewares/write_body.cpp \

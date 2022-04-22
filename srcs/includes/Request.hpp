@@ -24,6 +24,7 @@ class Request
 		chain_state_t		*state;
 		struct timespec		*wait_since;
 		bool				*wait_timeout;
+		bool				keep_alive;
 		std::string			buff;
 		
 		std::string			method_str;
@@ -74,6 +75,7 @@ class Request
 			state(NULL),
 			wait_since(NULL),
 			wait_timeout(NULL),
+			keep_alive(true),
 			buff(""),
 			
 			method_str(""),
@@ -154,19 +156,59 @@ class Request
 		bool	timeout()
 		{
 			return (
-				get_elasped_ns(start) >= (int64_t)30 * 1000000000
+				get_elasped_ns(start) >= (int64_t)255 * 1000000000
 				|| *wait_timeout
 			);
 		}
 
 		bool	closed()
 		{
-			return (events & EPOLLHUP);
+			return (events & (EPOLLHUP | EPOLLRDHUP));
 		}
 
 		bool	finish()
 		{
 			return (closed() || (!alive && timeout()));
+		}
+
+		void	reset()
+		{
+			start = get_time();
+			
+			method_str = "";
+			method = M_UNKNOWN;
+			raw_pathname = "";
+			protocol = "";
+			host = "";
+			hostname = "";
+			port = "";
+			pathname = "";
+			username = "";
+			password = "";
+			querystring = "";
+			trusted_complete_pathname = "/";
+			trusted_pathname = "/";
+			http_version = "";
+			headers.reset();
+			upload_remainingsize = 0;
+			upload_fd = 0;
+			upload_fd_buff = "";
+			upload_filename = "";
+			upload_filename_tmp = "";
+
+			body_header_parsed = false;
+			body_read_is_finished = false;
+			body_chuncked = false;
+
+			body_chunk_size = 0;
+			body_read_size = 0;
+			body_is_chunk = false;
+
+			body_length = 0;
+			body_boundary = "";
+			body_boundary_end = "";
+			body = "";
+			body_size_valid = false;
 		}
 };
 

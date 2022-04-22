@@ -45,6 +45,22 @@ class Response
 
 		virtual ~Response()
 		{}
+
+		void	reset()
+		{
+			error = NULL;
+			used_file = "";
+			code = C_NOT_IMPLEMENTED;
+			headers.reset();
+			headers_buff = "";
+			headers_sent = false;
+			response_fd = 0;
+			response_fd_header_size = 0;
+			response_fd_buff = "";
+			errorpage_fd = 0;
+			body = "";
+			sent = false;
+		}
 };
 
 #endif

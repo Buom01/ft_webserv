@@ -15,8 +15,8 @@ class	Serve
 	bool			_alive;
 
 	public:
-		Log				logger;
-		Serve();
+		Log				&logger;
+		Serve(Log &);
 		virtual ~Serve();
 	private:
 		void			_destroyBind(server_bind_t *);

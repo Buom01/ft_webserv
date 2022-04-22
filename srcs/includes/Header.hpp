@@ -187,6 +187,11 @@ class Header
 			}
 			return temp;
 		}
+
+		void	reset()
+		{
+			headersMap.clear();
+		}
 };
 
 #endif

@@ -21,6 +21,7 @@ int main(int argc, char **argv)
 	Parse					config;
 	Parse::serversVector	servers;
 	Parse::locationsMap		locations;
+	Log						logger;
 
 	std::vector<Redirect *>			redirectMiddlewares;
 	std::vector<EjectBody *>		ejectBodyMiddlewares;
@@ -66,7 +67,10 @@ int main(int argc, char **argv)
 	#pragma endregion Initiale check & Parse configuration file
 
 	#pragma region Start server
-	server							= new Serve();
+
+	logger.options.verbose			= false;
+	
+	server							= new Serve(logger);
 
 	Error			*fallbackError	= new Error(server->logger);
 	Mimetypes		*mimetypes		= new Mimetypes();
@@ -218,6 +222,7 @@ int main(int argc, char **argv)
 
 	server->use(sendFinPacket, F_ALL);
 	server->use(awaitClosed, F_ALL);
+	server->use(awaitNextRequest, F_ALL);
 
 	errorMiddlewares.push_back(fallbackError);
 

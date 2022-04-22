@@ -1,9 +1,10 @@
 #include "Serve.hpp"
 
-Serve::Serve(void):
-	_epoll(logger),
+Serve::Serve(Log &_logger):
+	_epoll(_logger),
 	_response_chain(_epoll),
-	_alive(false)
+	_alive(false),
+	logger(_logger)
 {}
 
 Serve::~Serve()
@@ -40,21 +41,21 @@ in_addr_t	Serve::_ipFromHost(std::string host)
 	{
 		if ((domain = gethostbyname(host.c_str())) == NULL)
 		{
-	error << "\"" << host << "\" is not recognized as a valid IP v4 address or know host";
-	logger.fail(error.str());
-	return (INADDR_NONE);
+			error << "\"" << host << "\" is not recognized as a valid IP v4 address or know host";
+			logger.fail(error.str());
+			return (INADDR_NONE);
 		}
 		if (domain->h_addrtype != AF_INET)
 		{
-	error << "\"" << host << "\" is not IP v4";
-	logger.fail(error.str());
-	return (INADDR_NONE);
+			error << "\"" << host << "\" is not IP v4";
+			logger.fail(error.str());
+			return (INADDR_NONE);
 		}
 		if ((ip = *(reinterpret_cast<in_addr_t *>(domain->h_addr))) == INADDR_NONE)
 		{
-	error << "\"" << host << "\" is can't be resolved as a valid IP v4 address";
-	logger.fail(error.str());
-	return (INADDR_NONE);
+			error << "\"" << host << "\" is can't be resolved as a valid IP v4 address";
+			logger.fail(error.str());
+			return (INADDR_NONE);
 		}
 	}
 	return (ip);
@@ -67,7 +68,7 @@ server_bind_t	*Serve::_hasBind(std::string &host, uint16_t &port)
 	while (it != _binds.end())
 	{
 		if ((*it)->port == port && (*it)->host == host)
-	return (*it);
+			return (*it);
 		++it;
 	}
 	return (NULL);
@@ -80,7 +81,7 @@ server_bind_t	*Serve::_bindForFD(int fd)
 	while (it != _binds.end())
 	{
 		if ((*it)->fd == fd)
-	return (*it);
+			return (*it);
 		++it;
 	}
 	return (NULL);
@@ -90,7 +91,8 @@ server_bind_t	*Serve::bind(std::string host, uint16_t port, std::vector<std::str
 {
 	in_addr_t			ip;
 	server_bind_t		*bind;
-	int					opts	= 1;
+	int					opts_reuse_addr	= 1;
+	int					opts_reuse_port	= 1;
 	std::stringstream	error;
 
 	if ((bind = _hasBind(host, port)) != NULL)
@@ -103,7 +105,8 @@ server_bind_t	*Serve::bind(std::string host, uint16_t port, std::vector<std::str
 	if ((ip = _ipFromHost(host)) == INADDR_NONE)
 		return (NULL);
 	if ((bind->fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1
-		|| setsockopt(bind->fd, SOL_SOCKET, SO_REUSEADDR, &opts, sizeof(opts)) == -1)
+		|| setsockopt(bind->fd, SOL_SOCKET, SO_REUSEADDR, &opts_reuse_addr, sizeof(opts_reuse_addr)) == -1
+		|| setsockopt(bind->fd, SOL_SOCKET, SO_REUSEPORT, &opts_reuse_port, sizeof(opts_reuse_port)) == -1)
 	{
 		logger.fail("Socket creation failed", errno);
 		_destroyBind(bind);
@@ -141,20 +144,20 @@ void	Serve::begin(void)
 	while (it != _binds.end())
 	{
 		bind = *it;
-		if (listen(bind->fd, 1) == -1)
-	logger.fail("Socket failed to listen on " + bind_to_string(bind));
+		if (listen(bind->fd, 128) == -1)
+			logger.fail("Socket failed to listen on " + bind_to_string(bind));
 		else
 		{
-	try
-	{
-		_epoll.add(bind->fd, ET_BIND, NULL);
-		logger.greeting(bind->host, bind->port);
-		_alive = true;
-	}
-	catch (...)
-	{
-		logger.fail("Failed to add bind FD of " + bind_to_string(bind) + " to epoll");
-	}
+			try
+			{
+				_epoll.add(bind->fd, ET_BIND, NULL);
+				logger.greeting(bind->host, bind->port);
+				_alive = true;
+			}
+			catch (...)
+			{
+				logger.fail("Failed to add bind FD of " + bind_to_string(bind) + " to epoll");
+			}
 		}
 		++it;
 	}
@@ -273,7 +276,7 @@ void	Serve::accept(void)
 				else
 				{
 					nothrow_close(connection);
-					logger.warn("Reject connection");
+					logger.warn("New connection rejected");
 				}
 			}
 			else
