@@ -15,7 +15,7 @@ RunningChain::RunningChain(
 	res(connection, logger),
 	events(_events),
 	pos(_pos),
-	state(CS_OTHER),
+	state(CS_WORKING),
 	wait_timeout(false)
 {
 	req.state			= &state;

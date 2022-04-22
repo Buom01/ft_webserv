@@ -7,8 +7,9 @@
 
 typedef enum	chain_state_e
 {
-	CS_OTHER = 0,
-	CS_AWAIT_EVENT
+	CS_WORKING = 0,
+	CS_AWAIT_EVENT,
+	CS_IDLE
 }				chain_state_t;
 
 class Request
@@ -124,7 +125,7 @@ class Request
 		{
 			if (events & _events)
 			{
-				*state = CS_OTHER;
+				*state = CS_WORKING;
 				return (true);
 			}
 			else
@@ -151,6 +152,11 @@ class Request
 		void	unfire(uint32_t _events)
 		{
 			events = events &~ _events;
+		}
+
+		void	idle()
+		{
+			*state	= CS_IDLE;
 		}
 
 		bool	timeout()

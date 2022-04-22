@@ -29,8 +29,14 @@ bool	awaitNextRequest(Request &req, Response &res)
 	{
 		req.reset();
 		res.reset();
-		if (req.buff.empty() && read(req.fd, NULL, 0) == -1)
+
+		// Take care: it may still anything to read through; not usable with EPOLLET
+		if (req.buff.empty())
+		{
 			req.unfire(EPOLLIN);
+			req.idle();
+			return (false);
+		}
 	}
 
 	if (req.timeout())

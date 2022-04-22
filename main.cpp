@@ -217,9 +217,9 @@ int main(int argc, char **argv)
 	server->use(sendBodyFromBuffer, F_ALL);
 	server->use(*sendBodyFromFD, F_ALL);
 
+	server->use(awaitNextRequest, F_ALL);
 	server->use(sendFinPacket, F_ALL);
 	server->use(awaitClosed, F_ALL);
-	server->use(awaitNextRequest, F_ALL);
 
 	errorMiddlewares.push_back(fallbackError);
 
