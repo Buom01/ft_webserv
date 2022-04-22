@@ -9,15 +9,16 @@ SRCS		:=	srcs/main.cpp \
 				srcs/lib/split.cpp srcs/lib/gnl.cpp srcs/lib/file.cpp \
 				srcs/lib/utils.cpp srcs/lib/argv.cpp \
 				\
-				srcs/middlewares/body.cpp srcs/middlewares/eject.cpp \
-				srcs/middlewares/error.cpp srcs/middlewares/forbidden.cpp \
-				srcs/middlewares/keep_alive.cpp \
+				srcs/middlewares/body.cpp srcs/middlewares/Cgi.cpp \
+				srcs/middlewares/eject.cpp srcs/middlewares/error.cpp \
+				srcs/middlewares/forbidden.cpp srcs/middlewares/keep_alive.cpp \
 				srcs/middlewares/mimetypes.cpp srcs/middlewares/read.cpp \
 				srcs/middlewares/redirect.cpp srcs/middlewares/remover.cpp \
 				srcs/middlewares/upload.cpp srcs/middlewares/write_body.cpp \
 				srcs/middlewares/write_headers.cpp \
 				\
-				srcs/serve/Definition.cpp srcs/serve/Chain.cpp srcs/serve/Serve.cpp \
+				srcs/serve/Definition.cpp srcs/serve/Chain.cpp \
+				srcs/serve/Serve.cpp \
 				\
 				srcs/static/Static.cpp
 
