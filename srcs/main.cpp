@@ -14,7 +14,6 @@ void	stop_signal(int)
 int main(int argc, char **argv)
 {
 	signal(SIGINT, stop_signal);
-	std::ios::sync_with_stdio(false);
 
 	Parse					config;
 	Parse::serversVector	servers;
@@ -67,9 +66,6 @@ int main(int argc, char **argv)
 	#pragma endregion Initiale check & Parse configuration file
 
 	#pragma region Start server
-
-	logger.options.verbose			= false;
-	
 	server							= new Serve(logger);
 
 	Error			*fallbackError	= new Error(server->logger);

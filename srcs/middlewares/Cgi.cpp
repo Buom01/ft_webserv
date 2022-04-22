@@ -268,12 +268,14 @@ bool			CGI::setGenerateHeader(Request &, Response &res)
 int			CGI::exec(Request &req, Response &res)
 {
 	char * const * _null = NULL;
-	int 	pipeFD[2], saveFd[2], pipeOUT[2];
+	int 	pipeFD[2], saveFd[3], pipeOUT[2];
+	int 	devNull = open("/dev/null", O_WRONLY);
 	pid_t	pid;
 
 	setHeader(req);
 	saveFd[0] = dup(STDIN_FILENO);
 	saveFd[1] = dup(STDOUT_FILENO);
+	saveFd[2] = dup(STDERR_FILENO);
 	res.code = C_OK;
 	if ((pipe(pipeFD)) == -1 || (pipe(pipeOUT)) == -1)
 		return EXIT_FAILURE;
@@ -285,6 +287,8 @@ int			CGI::exec(Request &req, Response &res)
 		dup2(pipeFD[0], STDIN_FILENO);
 		close(pipeOUT[0]);
 		dup2(pipeOUT[1], STDOUT_FILENO);
+		if (req.logger.options.verbose == false)
+			dup2(devNull, STDERR_FILENO);
 		if (execve(_config.path.c_str(), _null, env.envForCGI()))
 		{
 			res.code = C_INTERNAL_SERVER_ERROR;
@@ -303,8 +307,11 @@ int			CGI::exec(Request &req, Response &res)
 	}
 	dup2(saveFd[0], STDIN_FILENO);
 	dup2(saveFd[1], STDOUT_FILENO);
+	dup2(saveFd[2], STDERR_FILENO);
 	close(saveFd[0]);
 	close(saveFd[1]);
+	close(saveFd[2]);
+	close(devNull);
 	if (pid == 0)
 		exit(EXIT_SUCCESS);
 	return EXIT_SUCCESS;
