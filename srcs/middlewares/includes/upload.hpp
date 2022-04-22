@@ -8,8 +8,6 @@
 class Upload: public AEpoll
 {
 	typedef	AEpoll	_parent;
-	protected:
-		Log		&_logger;
 	public:
 		typedef struct	options_s
 		{

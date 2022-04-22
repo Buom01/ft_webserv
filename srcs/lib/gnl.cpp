@@ -37,7 +37,7 @@ bool	get_next_line_string(int fd, std::string &line, std::string &buff, Log &log
 		else if (read_ret > 0)
 		{
 			buff.append(read_buff, read_ret);
-			// logger.log_read(fd, read_buff, read_ret);
+			// logger.log_flux(fd, read_buff, read_ret, "READ");
 		}
 	}
 	logger.logged_GNL(fd, line + "\r\n");

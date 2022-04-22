@@ -1,9 +1,10 @@
 #include "Serve.hpp"
 
-Serve::Serve(void):
-	_epoll(logger),
+Serve::Serve(Log &_logger):
+	_epoll(_logger),
 	_response_chain(_epoll),
-	_alive(false)
+	_alive(false),
+	logger(_logger)
 {}
 
 Serve::~Serve()

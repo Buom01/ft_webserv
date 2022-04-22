@@ -1,8 +1,7 @@
 #include "upload.hpp"
 
 Upload::Upload(Log &logger, std::string destination, std::string public_root = ""):
-	_parent(logger),
-	_logger(logger)
+	_parent(logger)
 {
 	options.destination = destination;
 	options.public_root = public_root;
@@ -57,7 +56,7 @@ bool	Upload::operator()(Request &req, Response &res)
 		req.upload_fd = open(req.upload_filename_tmp.c_str(), O_NONBLOCK | O_WRONLY | O_CREAT);
 		if (req.upload_fd < 0)
 		{
-			_logger.warn("Failed to open temp upload file " + req.upload_filename_tmp);
+			res.logger.warn("Failed to open temp upload file " + req.upload_filename_tmp);
 			res.code = C_INTERNAL_SERVER_ERROR;
 			return (true);
 		}

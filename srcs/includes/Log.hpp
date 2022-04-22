@@ -18,7 +18,7 @@ class	Log
 				return (COLOR_SUCCESS);
 		}
 
-		void	print_flux(int socket, const char *buffer, size_t length, std::string indicator)
+		void	print_flux(int socket, const char *buffer, size_t length, const char *indicator)
 		{
 			std::stringstream	prefix;
 			std::stringstream	print;
@@ -65,12 +65,18 @@ class	Log
 		Log(void)
 		{
 			std::cout << COLOR_RESET << "Starting server..." << std::endl;
+			options.verbose = false;
 		}
 
-		~Log(void)
+		virtual ~Log(void)
 		{
 			std::cout << "Server stopped." << std::endl;
 		}
+
+		struct	options_s
+		{
+			bool	verbose;
+		}		options;
 
 		void	greeting(std::string address, uint16_t port)
 		{
@@ -98,6 +104,8 @@ class	Log
 
 		void	info(std::string info_str)
 		{
+			if (!options.verbose)
+				return ;
 			std::cout
 				<< COLOR_INFO << "[INFO] " << COLOR_RESET
 				<< info_str << std::endl;
@@ -125,21 +133,23 @@ class	Log
 		{
 			ssize_t	ret = send(socket, buffer, length, flags);
 
-			if (ret > 0)
-				print_flux(socket, buffer, ret, ">>>");
 			if (length == 0)
 				warn("Trying to send a buffer of length 0");
+			if (options.verbose && ret > 0)
+				print_flux(socket, buffer, ret, ">>>");
 			return (ret);
-		}
-
-		void	log_read(int fd, char *buffer, ssize_t ret)
-		{
-			print_flux(fd, buffer, ret, "READ");
 		}
 
 		void	logged_GNL(int socket, std::string line)
 		{
-			print_flux(socket, line.c_str(), line.size(), "<<<");
+			if (options.verbose)
+				print_flux(socket, line.c_str(), line.size(), "<<<");
+		}
+
+		void	log_flux(int fd, char *buffer, ssize_t len, const char *prefix)
+		{
+			if (options.verbose)
+				print_flux(fd, buffer, len, prefix);
 		}
 };
 

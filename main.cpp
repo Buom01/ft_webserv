@@ -18,6 +18,7 @@ int main(int argc, char **argv)
 	Parse					config;
 	Parse::serversVector	servers;
 	Parse::locationsMap		locations;
+	Log						logger;
 
 	std::vector<Redirect *>			redirectMiddlewares;
 	std::vector<EjectBody *>		ejectBodyMiddlewares;
@@ -64,7 +65,9 @@ int main(int argc, char **argv)
 
 	#pragma region Start server
 
-	server							= new Serve();
+	logger.options.verbose			= false;
+	
+	server							= new Serve(logger);
 
 	Error			*fallbackError	= new Error(server->logger);
 	Mimetypes		*mimetypes		= new Mimetypes();
