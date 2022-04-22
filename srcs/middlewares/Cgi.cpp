@@ -245,10 +245,13 @@ void			CGI::setHeader(Request &req)
 bool			CGI::setGenerateHeader(Request &, Response &res)
 {
 	size_t npos(0);
-	std::string	line, buff;
-			
-	while (get_next_line_string(res.response_fd, line, buff, res.logger))
+	std::string	line;
+
+	res.response_fd_buff.clear();
+	
+	while (get_next_line_string(res.response_fd, line, res.response_fd_buff, res.logger))
 	{
+		std::cout << line << std::endl;
 		if (line.empty())
 		{
 			npos += 2;
@@ -260,42 +263,30 @@ bool			CGI::setGenerateHeader(Request &, Response &res)
 			res.headers.set(line);
 		}
 	}
-	lseek(res.response_fd, npos, SEEK_SET);
 	res.response_fd_header_size = npos;
 	return (true);
-}
-
-std::string 	CGI::generateRandomID(size_t length)
-{
-	int charsetLen = std::strlen(CHARSET);
-	std::string ret("");
-
-	srand(time(NULL));
-	for (size_t x = 0; x < length; x++)
-		ret.append(1, CHARSET[(rand() % charsetLen)]);
-    return ret;
 }
 
 int			CGI::exec(Request &req, Response &res)
 {
 	char * const * _null = NULL;
-	int		out = open("/tmp",
-					O_TMPFILE | O_RDWR | O_NONBLOCK,
-					S_IRUSR | S_IWUSR);
-	int 	pipeFD[2], saveFd[2];
+	int 	pipeFD[2], saveFd[2], pipeOUT[2];
 	pid_t	pid;
 
 	setHeader(req);
 	saveFd[0] = dup(STDIN_FILENO);
 	saveFd[1] = dup(STDOUT_FILENO);
 	res.code = C_OK;
-	if ((pipe(pipeFD)) == -1 || (pid = fork()) == -1)
-		return -1;
+	if ((pipe(pipeFD)) == -1 || (pipe(pipeOUT)) == -1)
+		return EXIT_FAILURE;
+	if ((pid = fork()) == -1)
+		return EXIT_FAILURE;
 	else if (pid == 0)
 	{
 		close(pipeFD[1]);
 		dup2(pipeFD[0], STDIN_FILENO);
-		dup2(out, STDOUT_FILENO);
+		close(pipeOUT[0]);
+		dup2(pipeOUT[1], STDOUT_FILENO);
 		if (execve(_config.path.c_str(), _null, env.envForCGI()))
 		{
 			res.code = C_INTERNAL_SERVER_ERROR;
@@ -308,19 +299,17 @@ int			CGI::exec(Request &req, Response &res)
 		if (!req.body.empty())
 			write(pipeFD[1], req.body.c_str(), req.body.size());
 		close(pipeFD[1]);
+		res.response_fd = pipeOUT[0];
+		close(pipeOUT[1]);
 		waitpid(pid, NULL, 0);
-		lseek(out, 0, SEEK_SET);
 	}
 	dup2(saveFd[0], STDIN_FILENO);
 	dup2(saveFd[1], STDOUT_FILENO);
 	close(saveFd[0]);
 	close(saveFd[1]);
 	if (pid == 0)
-	{
-		close(out);
 		exit(EXIT_SUCCESS);
-	}
-	return out;
+	return EXIT_SUCCESS;
 }
 
 bool 			CGI::operator()(Request &req, Response &res)
@@ -344,7 +333,8 @@ bool 			CGI::operator()(Request &req, Response &res)
 	std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), file.extension);
 	if (it == _config.extensions.end() || !isMethod(req))
 		return true;
-	res.response_fd = exec(req, res);
+	if (exec(req, res) == EXIT_FAILURE)
+		return (true);
 	setGenerateHeader(req, res);
 	return true;
 }

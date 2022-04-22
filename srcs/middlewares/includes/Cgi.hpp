@@ -4,7 +4,6 @@
 # define REDIRECT_STATUS "200"
 # define SERVER_PROTOCOL "HTTP/1.1"
 # define GATEWAY_VERSION "CGI/1.1"
-# define CHARSET "_0123456789abcdefABCDEF"
 # include "builtin.hpp"
 # include "lib.hpp"
 # include "IMiddleware.hpp"
@@ -66,7 +65,6 @@ class CGI : public cgiEnv, public IMiddleware
 		std::string correctHeaderFormat(std::string);
 		void		setHeader(Request &);
 		bool		setGenerateHeader(Request &, Response &);
-		std::string generateRandomID(size_t);
 		int			exec(Request &, Response &);
 	public:
 		bool 		operator()(Request &, Response &);

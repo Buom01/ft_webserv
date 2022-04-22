@@ -39,6 +39,7 @@ bool	SendBodyFromFD::operator()(Request &req, Response &res)
 	{
 		if (!res.response_fd_buff.empty())
 		{
+			std::cout << "HELLO" << std::endl;
 			send_ret = res.logger.logged_send(res.fd, res.response_fd_buff.c_str(), res.response_fd_buff.length(), MSG_NOSIGNAL);
 			if (send_ret > 0)
 				res.response_fd_buff.erase(0, send_ret);
