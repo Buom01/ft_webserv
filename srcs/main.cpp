@@ -66,6 +66,10 @@ int main(int argc, char **argv)
 	#pragma endregion Initiale check & Parse configuration file
 
 	#pragma region Start server
+<<<<<<< HEAD
+=======
+
+>>>>>>> Static
 	server							= new Serve(logger);
 
 	Error			*fallbackError	= new Error(server->logger);
@@ -215,10 +219,11 @@ int main(int argc, char **argv)
 	server->use(sendHeader, F_ALL);
 	server->use(sendBodyFromBuffer, F_ALL);
 	server->use(*sendBodyFromFD, F_ALL);
+	server->use(logRequest, F_ALL);
 
+	server->use(awaitNextRequest, F_ALL);
 	server->use(sendFinPacket, F_ALL);
 	server->use(awaitClosed, F_ALL);
-	server->use(awaitNextRequest, F_ALL);
 
 	errorMiddlewares.push_back(fallbackError);
 

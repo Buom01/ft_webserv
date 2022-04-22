@@ -210,8 +210,21 @@ std::string	Error::generateErrorPage(Response &res)
 
 bool Error::operator()(Request &req, Response &res)
 {
+	static char			read_buffer[ERRORPAGE_BUFFER_SIZE];
+	ssize_t				read_ret 			= -1;
+	std::stringstream	code_str;
+
 	if (res.response_fd > 0 || res.body.length() > 0)
 		return (true);
+	if (req.finish())
+	{
+		if (_parent::has(res.errorpage_fd))
+		{
+			_parent::cleanup(res.errorpage_fd);
+			nothrow_close(res.errorpage_fd);
+		}
+		return (true);
+	}
 	if (res.errorpage_fd <= 0)
 	{
 		if (
@@ -235,48 +248,30 @@ bool Error::operator()(Request &req, Response &res)
 				return (true);
 			}
 			else
-			{
 				res.body = "";
-				return (false);
-			}
 		}
-	}
-	else
-	{
-		ssize_t				read_ret 			= -1;
-		char				read_buffer[1024];
-		std::string			errorpage;
-		std::stringstream	code_str;
-
-		if (req.finish())
-		{
-			if (_parent::has(res.errorpage_fd))
-			{
-				_parent::cleanup(res.errorpage_fd);
-				nothrow_close(res.errorpage_fd);
-			}
+		else
 			return (true);
-		}
-		if (!_parent::has(res.errorpage_fd))
-			_parent::setup(res.errorpage_fd, ET_BODY);
-		if (!_parent::await(res.errorpage_fd, EPOLLIN))
-			return (false);
-		while (read_ret != 0 )
-		{
-			read_ret = read(res.errorpage_fd, read_buffer, 1024);
-			if (read_ret == -1)
-			{
-				_parent::clear_events(res.errorpage_fd, EPOLLIN);
-				return (false);
-			}
-			errorpage.append(read_buffer, read_ret);
-		}
-		code_str << res.code;
-		res.body = *replace_all(replace_all(replace_all(&errorpage, "{code}", code_str.str()), "{title}", getErrorTitle(res)), "{message}", getErrorMessage(res));
-		_parent::cleanup(res.errorpage_fd);
-		nothrow_close(res.errorpage_fd);
-		res.errorpage_fd = 0;
-		return (true);
 	}
+	if (!_parent::has(res.errorpage_fd))
+		_parent::setup(res.errorpage_fd, ET_BODY);
+	if (!_parent::await(res.errorpage_fd, EPOLLIN))
+		return (false);
+		
+	while (read_ret != 0 )
+	{
+		read_ret = read(res.errorpage_fd, read_buffer, ERRORPAGE_BUFFER_SIZE);
+		if (read_ret == -1)
+		{
+			_parent::clear_events(res.errorpage_fd, EPOLLIN);
+			return (false);
+		}
+		res.errorpage.append(read_buffer, read_ret);
+	}
+	code_str << res.code;
+	res.body = *replace_all(replace_all(replace_all(&(res.errorpage), "{code}", code_str.str()), "{title}", getErrorTitle(res)), "{message}", getErrorMessage(res));
+	_parent::cleanup(res.errorpage_fd);
+	nothrow_close(res.errorpage_fd);
+	res.errorpage_fd = 0;
 	return (true);
 }

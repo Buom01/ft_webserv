@@ -15,7 +15,7 @@ RunningChain::RunningChain(
 	res(connection, logger),
 	events(_events),
 	pos(_pos),
-	state(CS_OTHER),
+	state(CS_WORKING),
 	wait_timeout(false)
 {
 	req.state			= &state;
@@ -31,7 +31,7 @@ RunningChain::~RunningChain()
 
 bool RunningChain::poll_timeout()
 {
-	if (wait_timeout || get_elasped_ns(wait_since) >= (int64_t)30 * 1000000000)
+	if (wait_timeout || get_elasped_ns(wait_since) >= (int64_t)KEEP_ALIVE * 1000000000)
 	{
 		wait_timeout = true;
 		return (true);

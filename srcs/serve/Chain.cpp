@@ -99,11 +99,7 @@ bool	Chain::_run(RunningChain &instance)
 		}
 		++(instance.pos);
 	}
-	if (instance.req.timeout() && !instance.req.closed() && instance.req.alive)
-		instance.req.logger.warn("Connection was cut up cause of timeout");
-	else if (!instance.res.sent && instance.res.code == C_OK)
-		instance.res.logger.warn("Chain finished without sending data");
-	if (instance.req.keep_alive && !instance.req.finish() && !instance.req.timeout())
+	if (instance.req.keep_alive && !instance.req.finish() && !instance.req.connection_timeout())
 	{
 		instance.pos = _raw_chain.begin();
 		return (false);
@@ -127,7 +123,7 @@ void	Chain::_handle_exception(RunningChain &instance, const std::exception &e)
 	}
 	else
 	{
-		instance.state = CS_OTHER;
+		instance.state = CS_WORKING;
 		_log_error(instance, e);
 		instance.res.error = &e;
 		instance.res.code = C_INTERNAL_SERVER_ERROR;
@@ -231,9 +227,9 @@ RunningChain	*Chain::exec(int connection, server_bind_t *interface, std::string 
 
 bool	Chain::retake(RunningChain *instance, uint32_t events)
 {
-	if (instance->req.fire(events) && instance->state == CS_AWAIT_EVENT)
+	if (instance->req.fire(events) && instance->state != CS_WORKING)
 	{
-		instance->state = CS_OTHER;
+		instance->state = CS_WORKING;
 		if (_exec_instance(*instance))
 		{
 			unsafe_remove_instance(instance);
@@ -249,7 +245,7 @@ void	Chain::retake()
 
 	while (it != _running.end())	
 	{
-		if (((*it)->state == CS_OTHER || (*it)->poll_timeout()) && _exec_instance(**it))
+		if (((*it)->state == CS_WORKING || (*it)->poll_timeout()) && _exec_instance(**it))
 			unsafe_remove_instance(*it);
 		else
 			++it;
@@ -263,5 +259,14 @@ bool	Chain::alive()
 
 void	Chain::stop()
 {
+	running_chains_t::iterator	it	= _running.begin();
+
 	_alive = false;
+
+	while (it != _running.end())
+	{
+		if ((*it)->state == CS_IDLE)
+			(*it)->state = CS_WORKING;
+		++it;
+	}
 }

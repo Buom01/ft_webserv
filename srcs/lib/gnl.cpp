@@ -21,7 +21,7 @@ bool	get_line(std::string &line, std::string &buff)
 
 bool	get_next_line_string(int fd, std::string &line, std::string &buff, Log &logger)
 {
-	char	read_buff[SERVER_BUFFER_SIZE];
+	static char	read_buff[SERVER_BUFFER_SIZE];
 	ssize_t	read_ret						= -1;
 	
 	line.clear();
@@ -30,8 +30,8 @@ bool	get_next_line_string(int fd, std::string &line, std::string &buff, Log &log
 		read_ret = read(fd, read_buff, SERVER_BUFFER_SIZE);
 		if (read_ret <= 0)
 		{
-			if (errno != EAGAIN)
-				logger.warn("Read fail for unexpected reason", errno);
+			// if (read_ret < 0 && errno != EAGAIN)
+			// 	logger.warn("Read fail for unexpected reason", errno);
 			return (false);
 		}
 		else if (read_ret > 0)

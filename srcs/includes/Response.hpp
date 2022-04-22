@@ -21,8 +21,8 @@ class Response
 		int 					response_fd_header_size;
 		std::string				response_fd_buff;
 		int						errorpage_fd;
+		std::string				errorpage;
 		std::string				body;
-		size_t					send_chunksize;
 		bool					sent;
 
 		Response(int connection, Log &_logger) :
@@ -38,8 +38,8 @@ class Response
 			response_fd_header_size(0),
 			response_fd_buff(""),
 			errorpage_fd(0),
+			errorpage(""),
 			body(""),
-			send_chunksize(10240),
 			sent(false)
 		{}
 
@@ -58,6 +58,7 @@ class Response
 			response_fd_header_size = 0;
 			response_fd_buff = "";
 			errorpage_fd = 0;
+			errorpage = "";
 			body = "";
 			sent = false;
 		}

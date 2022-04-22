@@ -7,14 +7,17 @@
 
 typedef enum	chain_state_e
 {
-	CS_OTHER = 0,
-	CS_AWAIT_EVENT
+	CS_WORKING = 0,
+	CS_AWAIT_EVENT,
+	CS_IDLE
 }				chain_state_t;
 
 class Request
 {
 	public:
 		struct timespec		start;
+		struct timespec		generation_start;
+		struct timespec		send_start;
 		server_bind_t		*interface;
 		int					fd;
 		std::string			client_ip;
@@ -66,6 +69,8 @@ class Request
 
 		Request(int connection, server_bind_t *_interface, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
 			start(get_time()),
+			generation_start(get_time()),
+			send_start(get_time()),
 			interface(_interface),
 			fd(connection),
 			client_ip(_client_ip),
@@ -93,7 +98,7 @@ class Request
 			trusted_pathname("/"),
 			http_version(""),
 			headers(),
-			upload_chunksize(10240),
+			upload_chunksize(SERVER_BUFFER_SIZE),
 			upload_remainingsize(0),
 			upload_fd(0),
 			upload_fd_buff(""),
@@ -124,7 +129,7 @@ class Request
 		{
 			if (events & _events)
 			{
-				*state = CS_OTHER;
+				*state = CS_WORKING;
 				return (true);
 			}
 			else
@@ -153,11 +158,24 @@ class Request
 			events = events &~ _events;
 		}
 
+		void	idle()
+		{
+			*state	= CS_IDLE;
+		}
+
+		bool	connection_timeout()
+		{
+			return (
+				get_elasped_ns(start) >= (int64_t)(KEEP_ALIVE + TIMEOUT) * 1000000000
+				|| *wait_timeout
+			);
+		}
+
 		bool	timeout()
 		{
 			return (
-				get_elasped_ns(start) >= (int64_t)255 * 1000000000
-				|| *wait_timeout
+				get_elasped_ns(generation_start) >= (int64_t)(TIMEOUT) * 1000000000
+				|| connection_timeout()
 			);
 		}
 
@@ -168,13 +186,11 @@ class Request
 
 		bool	finish()
 		{
-			return (closed() || (!alive && timeout()));
+			return (closed() || (!alive && timeout()) || connection_timeout());
 		}
 
 		void	reset()
 		{
-			start = get_time();
-			
 			method_str = "";
 			method = M_UNKNOWN;
 			raw_pathname = "";

@@ -33,10 +33,10 @@ bool	addResponseHeaders(Request &req, Response &res)
 	if (req.headers.header("Connection", true) == "close")
 		req.keep_alive = false;
 
-	if (req.keep_alive)
+	if (req.keep_alive && req.alive)
 	{
 		h.set("Connection: keep-alive");
-		h.set("Keep-Alive: timeout=250");
+		h.set(KEEP_ALIVE_HEADER);
 	}
 	else
 	{
@@ -65,18 +65,7 @@ bool	serializeHeaders(Request &req, Response &res)
 	}
 	res.headers_buff.append("\r\n");
 
-	std::stringstream	infos;
-	infos << get_elasped_ms(req.start);
-	infos << "ms";
-	res.logger.log(
-		req.method_str,
-		res.code,
-		req.hostname.size() ? req.hostname : req.interface->ip,
-		req.interface->port,
-		req.trusted_complete_pathname,
-		infos.str()
-	);
-
+	req.send_start = get_time();
 	return (true);
 }
 
@@ -92,7 +81,7 @@ bool	sendHeader(Request &req, Response &res)
 
 	while (res.headers_buff.length())
 	{
-		write_size	= min(res.send_chunksize, res.headers_buff.length());
+		write_size	= min(SERVER_BUFFER_SIZE, res.headers_buff.length());
 		send_ret = res.logger.logged_send(res.fd, res.headers_buff.c_str(), write_size, MSG_NOSIGNAL);
 
 		if (send_ret > 0)

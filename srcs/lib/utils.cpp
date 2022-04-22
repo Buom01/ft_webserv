@@ -35,6 +35,16 @@ float	get_elasped_ms(struct timespec since)
 	return difftimespec_ms(get_time(), since);
 }
 
+int64_t	get_difftime_ns(struct timespec since, struct timespec now)
+{
+	return difftimespec_ns(now, since);
+}
+
+float	get_difftime_ms(struct timespec since, struct timespec now)
+{
+	return difftimespec_ms(now, since);
+}
+
 std::string *replace_all(std::string *str, const std::string& from, const std::string& to)
 {
     size_t	start_pos   = 0;
