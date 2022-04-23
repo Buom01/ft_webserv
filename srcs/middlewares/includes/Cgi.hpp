@@ -51,12 +51,14 @@ class CGI : public cgiEnv, public IMiddleware
 		Parse::s_cgi	_config;
 		std::string		_location;
 		std::string		_index;
+		char 			**_argv;
+		char 			**_envp;
 	public:
-		CGI(Parse::s_cgi, std::string, std::string);
+		CGI(Parse::s_cgi, std::string, std::string, char *, char **);
 		virtual ~CGI();
 	private:
 		std::string toLowerCase(std::string);
-		void		fileExtension(Request &);
+		bool		fileExtension(Request &);
 		bool		isMethod(Request &);
 		int 		stoi(std::string);
 		std::string	itos(int);

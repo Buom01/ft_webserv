@@ -1,12 +1,15 @@
+const process = require('process');
+
 function out(line = '')
 {
 	if (line)
-		console.log(`${line}\r\n`);
+		process.stdout.write(`${line}\r\n`);
 	else
-		console.log('\r\n');
+		process.stdout.write('\r\n');
 }
 
-out('Content-Type: text/html; charset=UTF-8');
+out('Status: 200 OK');
+out('Content-type: text/html; charset=UTF-8');
 out();
 out('<body>');
 out('	<h1>Hello World !</h1>');

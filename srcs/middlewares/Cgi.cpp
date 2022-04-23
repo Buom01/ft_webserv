@@ -62,11 +62,10 @@ bool			cgiEnv::deleteVariable(std::string key)
 char 			**cgiEnv::envForCGI()
 {
 	std::string	tempString;
-	int			x = 0;
+	int			x(0);
 
 	clean();
 	generateEnv = new char *[ENV.size() + 1];
-	x = 0;
 	for (std::vector<s_environment>::iterator it = ENV.begin(); it != ENV.end(); it++)
 	{
 		tempString = (*it).key + "=" + (*it).value;
@@ -80,13 +79,22 @@ char 			**cgiEnv::envForCGI()
 }
 
 
-CGI::CGI(Parse::s_cgi config, std::string location, std::string index):
+CGI::CGI(Parse::s_cgi config, std::string location, std::string index, char *name, char **envp):
 	_config(config),
 	_location(location),
-	_index(index)
-{}
+	_index(index),
+	_envp(envp)
+{
+	_argv = new char*[1];
+	_argv[0] = new char[std::strlen(name) + 1];
+	std::strcpy(_argv[0], name);
+}
 
-CGI::~CGI() {};
+CGI::~CGI()
+{
+	delete [] _argv[0];
+	delete [] _argv;
+};
 
 std::string		CGI::toLowerCase(std::string _string)
 {
@@ -95,21 +103,49 @@ std::string		CGI::toLowerCase(std::string _string)
 	return ret;
 }
 
-void			CGI::fileExtension(Request &req)
+bool			CGI::fileExtension(Request &req)
 {
 	size_t nposIndex(0);
+	std::string temp("");
 
 	file.path_info = req.pathname;
-	file.path = req.pathname;
-	file.path.insert(0, ".");
-	if (file.path == "./")
+	file.path = req.trusted_complete_pathname;
+	nposIndex = file.path.find(_location);
+	if (nposIndex == std::string::npos)
+		return false;
+	
+	temp = file.path.substr(nposIndex, _location.size());
+	if (temp.compare(_location) != 0)
+		return false;
+	
+	if (file.path.at(file.path.size() - 1) != '/')
+	{
+		nposIndex = file.path.find_last_of("/");
+		if (nposIndex == std::string::npos)
+			return false;
+		temp = file.path.substr(nposIndex + 1);
+		if (temp.find_last_of(".") == std::string::npos)
+			file.path.append("/");
+	}
+	if (file.path.at(file.path.size() - 1) == '/')
 		file.path.append(_index);
+
 	nposIndex = file.path.find_last_of("/");
 	if (nposIndex == std::string::npos)
-		return;
+		return false;
 	file.file = file.path.substr(nposIndex + 1);
-	file.extension = file.path.substr(file.path.find_last_of("."));
-	file.path = concatPath(_config.root, file.path);
+	file.extension = file.file.substr(file.file.find_last_of("."));
+	
+	if (_location.compare("/") != 0)
+	{
+		nposIndex = _config.root.find(_location);
+		if (nposIndex == std::string::npos)
+			return false;
+		file.path = concatPath(_config.root.substr(0, nposIndex), file.path.substr(1));
+	}
+	else
+		file.path = concatPath(_config.root, file.path.substr(1));
+	return true;
 }
 
 bool			CGI::isMethod(Request &req)
@@ -245,6 +281,113 @@ void			CGI::setHeader(Request &req)
 bool			CGI::setGenerateHeader(Request &, Response &res)
 {
 	size_t npos(0);
+	std::string	line, buff;
+
+	res.response_fd_buff.clear();
+	lseek(res.response_fd, 0, SEEK_SET);
+	while (get_next_line_string(res.response_fd, line, buff, res.logger))
+	{
+		if (line.empty())
+		{
+			npos += 2;
+			break;
+		}
+		else
+		{
+			npos += line.size() + 2;
+			res.headers.set(line);
+		}
+	}
+	lseek(res.response_fd, npos, SEEK_SET);
+	res.response_fd_header_size = npos;
+	return (true);
+}
+
+int				CGI::exec(Request &req, Response &res)
+{
+	char * const * _null = NULL;
+	bool	setEnvp(false);
+	pid_t	pid;
+	int 	pipeFD[2], saveFd[3];
+	int 	devNull = open("/dev/null", O_WRONLY);
+
+	res.response_fd = open("/tmp", O_TMPFILE | O_RDWR, S_IRUSR | S_IWUSR);
+	setHeader(req);
+
+	saveFd[0] = dup(STDIN_FILENO);
+	saveFd[1] = dup(STDOUT_FILENO);
+	saveFd[2] = dup(STDERR_FILENO);
+	res.code = C_OK;
+	if (req.body.empty()
+		&& file.extension != ".php"
+		&& file.extension != ".perl"
+	)
+		setEnvp = true;
+	if ((pipe(pipeFD)) == -1 || (pid = fork()) == -1)
+		return EXIT_FAILURE;
+	else if (pid == 0)
+	{
+		close(pipeFD[1]);
+		dup2(pipeFD[0], STDIN_FILENO);
+		dup2(res.response_fd, STDOUT_FILENO);
+		if (req.logger.options.verbose == false)
+			dup2(devNull, STDERR_FILENO);
+		if (!setEnvp)
+		{
+			if (execve(_config.path.c_str(), _null, env.envForCGI()))
+			{
+				res.code = C_INTERNAL_SERVER_ERROR;
+				std::cout << "Status: 500\r\n";
+			}
+		}
+		else
+		{
+			if (execve(_config.path.c_str(), _argv, _envp))
+			{
+				res.code = C_INTERNAL_SERVER_ERROR;
+				std::cout << "Status: 500\r\n";
+			}
+		}
+	}
+	else
+	{
+		close(pipeFD[0]);
+		if (setEnvp)
+		{
+			std::ifstream input_file(file.path.c_str(), std::ifstream::in);
+			input_file.exceptions(std::ifstream::badbit);
+			if (!input_file.is_open())
+				throw std::ifstream::failure("Open script file failed");
+			std::string buff(
+				(std::istreambuf_iterator<char>(input_file)),
+				std::istreambuf_iterator<char>()
+			);
+			write(pipeFD[1], buff.c_str(), buff.size());
+		}
+		else
+			write(pipeFD[1], req.body.c_str(), req.body.size());
+		close(pipeFD[1]);
+		waitpid(pid, NULL, 0);
+	}
+	dup2(saveFd[0], STDIN_FILENO);
+	dup2(saveFd[1], STDOUT_FILENO);
+	dup2(saveFd[2], STDERR_FILENO);
+	close(saveFd[0]);
+	close(saveFd[1]);
+	close(saveFd[2]);
+	close(devNull);
+	if (pid == 0)
+	{
+		close(res.response_fd);
+		exit(EXIT_SUCCESS);
+	}
+	return EXIT_SUCCESS;
+}
+
+/*
+bool			CGI::setGenerateHeader(Request &, Response &res)
+{
+	size_t npos(0);
 	std::string	line;
 
 	res.response_fd_buff.clear();
@@ -314,11 +457,11 @@ int			CGI::exec(Request &req, Response &res)
 	if (pid == 0)
 	{
 		close(pipeOUT[1]);
-		close(devNull);
 		exit(EXIT_SUCCESS);
 	}
 	return EXIT_SUCCESS;
 }
+*/
 
 bool 			CGI::operator()(Request &req, Response &res)
 {
@@ -335,12 +478,14 @@ bool 			CGI::operator()(Request &req, Response &res)
 		res.code = C_REQUEST_TIMEOUT;
 		return (true);
 	}
-	fileExtension(req);
-	if (file.path == ".")
+	if (!fileExtension(req) || file.path == ".")
 		return true;
-	std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), file.extension);
-	if (it == _config.extensions.end() || !isMethod(req))
-		return true;
+	if (!file.file.empty())
+	{
+		std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), file.extension);
+		if (it == _config.extensions.end() || !isMethod(req))
+			return true;
+	}
 	if (exec(req, res) == EXIT_FAILURE)
 		return (true);
 	setGenerateHeader(req, res);
