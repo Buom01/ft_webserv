@@ -11,7 +11,7 @@ void	stop_signal(int)
 	stop_requested = true;
 }
 
-int main(int argc, char **argv, char **envp)
+int main(int argc, char **argv)
 {
 	signal(SIGINT, stop_signal);
 
@@ -144,7 +144,7 @@ int main(int argc, char **argv, char **envp)
 
 			if (getCgi.isDefined)
 			{
-				CGI *_cgi	= new CGI(getCgi, location_name, getIndex, argv[0], envp);
+				CGI *_cgi	= new CGI(getCgi, location_name, getIndex);
 
 				server->use(*_cgi, F_NORMAL, method(getCgi.allow), location_name, serverBlockConfig);
 				cgiMiddlewares.push_back(_cgi);

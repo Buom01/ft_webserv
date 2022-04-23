@@ -52,9 +52,8 @@ class CGI : public cgiEnv, public IMiddleware
 		std::string		_location;
 		std::string		_index;
 		char 			**_argv;
-		char 			**_envp;
 	public:
-		CGI(Parse::s_cgi, std::string, std::string, char *, char **);
+		CGI(Parse::s_cgi, std::string, std::string);
 		virtual ~CGI();
 	private:
 		std::string toLowerCase(std::string);

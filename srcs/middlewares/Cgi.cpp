@@ -79,19 +79,22 @@ char 			**cgiEnv::envForCGI()
 }
 
 
-CGI::CGI(Parse::s_cgi config, std::string location, std::string index, char *name, char **envp):
+CGI::CGI(Parse::s_cgi config, std::string location, std::string index):
 	_config(config),
 	_location(location),
-	_index(index),
-	_envp(envp)
+	_index(index)
 {
-	_argv = new char*[1];
-	_argv[0] = new char[std::strlen(name) + 1];
-	std::strcpy(_argv[0], name);
+	_argv = new char * [3];
+	_argv[0] = strdup("./webserv");
+	_argv[1] = NULL;
+	_argv[2] = NULL;
 }
 
 CGI::~CGI()
 {
+	delete [] _argv[2];
+	if (_argv[1] != NULL)
+		delete [] _argv[1];
 	delete [] _argv[0];
 	delete [] _argv;
 };
@@ -230,7 +233,13 @@ std::string 	CGI::correctHeaderFormat(std::string name)
 void			CGI::setHeader(Request &req)
 {
 	Header::_headers mapHeaders = req.headers.map();
-			
+
+	#pragma region argv allocation
+		if (_argv[1] != NULL)
+			delete [] _argv[1];
+		_argv[1] = strdup(file.path.c_str());
+	#pragma endregion argv allocation
+
 	#pragma region Not defined by http headers
 		env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
 		env.addVariable("PATH_INFO", file.path_info);
@@ -305,24 +314,17 @@ bool			CGI::setGenerateHeader(Request &, Response &res)
 
 int				CGI::exec(Request &req, Response &res)
 {
-	char * const * _null = NULL;
-	bool	setEnvp(false);
 	pid_t	pid;
 	int 	pipeFD[2], saveFd[3];
 	int 	devNull = open("/dev/null", O_WRONLY);
 
 	res.response_fd = open("/tmp", O_TMPFILE | O_RDWR, S_IRUSR | S_IWUSR);
+	
 	setHeader(req);
-
 	saveFd[0] = dup(STDIN_FILENO);
 	saveFd[1] = dup(STDOUT_FILENO);
 	saveFd[2] = dup(STDERR_FILENO);
 	res.code = C_OK;
-	if (req.body.empty()
-		&& file.extension != ".php"
-		&& file.extension != ".perl"
-	)
-		setEnvp = true;
 	if ((pipe(pipeFD)) == -1 || (pid = fork()) == -1)
 		return EXIT_FAILURE;
 	else if (pid == 0)
@@ -332,39 +334,16 @@ int				CGI::exec(Request &req, Response &res)
 		dup2(res.response_fd, STDOUT_FILENO);
 		if (req.logger.options.verbose == false)
 			dup2(devNull, STDERR_FILENO);
-		if (!setEnvp)
+		if (execve(_config.path.c_str(), _argv, env.envForCGI()))
 		{
-			if (execve(_config.path.c_str(), _null, env.envForCGI()))
-			{
-				res.code = C_INTERNAL_SERVER_ERROR;
-				std::cout << "Status: 500\r\n";
-			}
-		}
-		else
-		{
-			if (execve(_config.path.c_str(), _argv, _envp))
-			{
-				res.code = C_INTERNAL_SERVER_ERROR;
-				std::cout << "Status: 500\r\n";
-			}
+			res.code = C_INTERNAL_SERVER_ERROR;
+			std::cout << "Status: 500\r\n";
 		}
 	}
 	else
 	{
 		close(pipeFD[0]);
-		if (setEnvp)
-		{
-			std::ifstream input_file(file.path.c_str(), std::ifstream::in);
-			input_file.exceptions(std::ifstream::badbit);
-			if (!input_file.is_open())
-				throw std::ifstream::failure("Open script file failed");
-			std::string buff(
-				(std::istreambuf_iterator<char>(input_file)),
-				std::istreambuf_iterator<char>()
-			);
-			write(pipeFD[1], buff.c_str(), buff.size());
-		}
-		else
+		if (!req.body.empty())
 			write(pipeFD[1], req.body.c_str(), req.body.size());
 		close(pipeFD[1]);
 		waitpid(pid, NULL, 0);
