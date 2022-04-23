@@ -66,10 +66,6 @@ int main(int argc, char **argv)
 	#pragma endregion Initiale check & Parse configuration file
 
 	#pragma region Start server
-<<<<<<< HEAD
-=======
-
->>>>>>> Static
 	server							= new Serve(logger);
 
 	Error			*fallbackError	= new Error(server->logger);
