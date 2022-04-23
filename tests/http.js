@@ -196,7 +196,7 @@ describe('Server', function () {
 		// });
 	});
 	
-	describe('has a working CGI', function () {
+	describe('has a working PHP CGI', function () {
 		it('run php', (done) => {
 			request.agent(endpoint(9200))
 				.get('/info.php')
@@ -218,6 +218,13 @@ describe('Server', function () {
 				.attach('file', path.join(__dirname, './files/static/Bill_Gates_2017_(cropped).jpg'), { contentType: 'image/jpeg'})
 				.expect(200, '<meta charset="UTF-8">POST form<h3>Hello John Doe !</h3>File is an image/jpeg, with an MD5 as : 39bea58f55a6c930aa0b2f8eca3d4512<p>Go to uploads/Bill_Gates_2017_(cropped).jpg for get your file</p><p><a href=\'index.php\'>Go to index</a></p>', done);
 		});
+	describe('has a working PHP CGI', function () {
+		it('run php', (done) => {
+			request.agent(endpoint(9200))
+				.get('/')
+				.expect('Content-Type', "text/html; charset=UTF-8")
+				.expect(200, /\<!DOCTYPE html PUBLIC "-\/\/W3C\/\/DTD XHTML 1.0 Transitional\/\/EN" "DTD\/xhtml1-transitional.dtd">/, done);
+			});
 		/*
 - Chunked : https://github.com/visionmedia/superagent/blob/e196345074f57987c166283c302d06d661744f14/docs/index.md#piping-data
 - Multipart : https://github.com/visionmedia/superagent/blob/e196345074f57987c166283c302d06d661744f14/docs/index.md#multipart

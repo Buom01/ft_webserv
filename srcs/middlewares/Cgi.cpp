@@ -294,7 +294,6 @@ int			CGI::exec(Request &req, Response &res)
 			res.code = C_INTERNAL_SERVER_ERROR;
 			std::cout << "Status: 500\r\n";
 		}
-		close(pipeOUT[1]);
 	}
 	else
 	{
@@ -313,7 +312,11 @@ int			CGI::exec(Request &req, Response &res)
 	close(saveFd[2]);
 	close(devNull);
 	if (pid == 0)
+	{
+		close(pipeOUT[1]);
+		close(devNull);
 		exit(EXIT_SUCCESS);
+	}
 	return EXIT_SUCCESS;
 }
 
