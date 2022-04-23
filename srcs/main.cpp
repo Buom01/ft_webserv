@@ -116,23 +116,12 @@ int main(int argc, char **argv)
 
 		for (Parse::locationsMap::const_reverse_iterator itLoc = (*it).locations.rbegin(); itLoc != (*it).locations.rend(); itLoc++)
 		{
-			Parse::s_allow 						getAllow = config.allow((*itLoc).second);
-			Parse::s_return						getReturn = config._return((*itLoc).second);
 			Parse::s_clientBodyBufferSize		getBodyMaxSize = config.clientBodyBufferSize((*itLoc).second);
 			std::string 						getRoot = config.root((*itLoc).second);
 			std::string							getIndex = config.index((*itLoc).second);
 			Parse::s_cgi						getCgi = config.cgi((*itLoc).second);
 			std::pair<std::string, std::string>	getUpload = config.upload((*itLoc).second);
-			method_t 							methods = method(getAllow);
 			std::string							location_name = (*itLoc).first;
-
-			if (getReturn.code != C_UNKNOWN)
-			{
-				Redirect	*redirect	= new Redirect(getReturn.code, getReturn.url);
-
-				server->use(*redirect, F_NORMAL, methods, location_name, serverBlockConfig);
-				redirectMiddlewares.push_back(redirect);
-			}
 
 			if  (getBodyMaxSize.isDefined)
             {
@@ -183,7 +172,7 @@ int main(int argc, char **argv)
 
 				if (getAutoindex.isDefined)
 					serveStatic->options.directory_listing	= getAutoindex.active;
-				serveStatic->options.root				= getRoot;
+				serveStatic->options.root					= getRoot;
 
 				if (!getIndex.empty())
 				{
@@ -193,6 +182,14 @@ int main(int argc, char **argv)
 
 				server->use(*serveStatic, F_NORMAL, M_ALL, location_name, serverBlockConfig);
 				staticMiddlewares.push_back(serveStatic);
+			}
+
+			if (getReturn.code != C_UNKNOWN)
+			{
+				Redirect	*redirect	= new Redirect(getReturn.code, getReturn.url);
+
+				server->use(*redirect, F_NORMAL, methods, location_name, serverBlockConfig);
+				redirectMiddlewares.push_back(redirect);
 			}
 
 			if (getErrors.size())
