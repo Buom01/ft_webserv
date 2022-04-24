@@ -4,7 +4,7 @@
 # define REDIRECT_STATUS "200"
 # define SERVER_PROTOCOL "HTTP/1.1"
 # define GATEWAY_VERSION "CGI/1.1"
-# define BUFFER_SIZE 4096
+# define BUFFER_SIZE 65536
 # include "builtin.hpp"
 # include "lib.hpp"
 # include "IMiddleware.hpp"
