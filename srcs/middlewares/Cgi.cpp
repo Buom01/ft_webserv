@@ -85,8 +85,11 @@ CGI::CGI(Parse::s_cgi config, std::string location, std::string index, Log &logg
 	_location(location),
 	_index(index)
 {
+	std::string name("./webserv");
+
 	_argv = new char * [3];
-	_argv[0] = strdup("./webserv");
+	_argv[0] = new char[name.size() + 1];
+	_argv[0] = std::strcpy(_argv[0], name.c_str());
 	_argv[1] = NULL;
 	_argv[2] = NULL;
 }
@@ -238,7 +241,8 @@ void			CGI::setHeader(Request &req)
 	#pragma region argv allocation
 		if (_argv[1] != NULL)
 			delete [] _argv[1];
-		_argv[1] = strdup(file.path.c_str());
+		_argv[1] = new char[file.path.size() + 1];
+		_argv[1] = std::strcpy(_argv[1], file.path.c_str());
 	#pragma endregion argv allocation
 
 	#pragma region Not defined by http headers
@@ -390,7 +394,6 @@ bool		CGI::streamData(Request &req, Response &res)
 
 int			CGI::exec(Request &req, Response &)
 {
-	char	*const 	*_null 			= NULL;
 	pid_t			pid;
     int				fdChildIn[2];
 	int				fdChildOut[2];
@@ -421,10 +424,11 @@ int			CGI::exec(Request &req, Response &)
 		setHeader(req);
 		close(fdChildIn[1]);
         close(fdChildOut[0]);
-		if (execve(_config.path.c_str(), _null, env.envForCGI()))
+		if (execve(_config.path.c_str(), _argv, env.envForCGI()))
 		{
 			std::cout << "Status: 500\r\n";
 		}
+		/*
 		close(fdChildIn[0]);
 		close(fdChildOut[1]);
 		close(devNull);
@@ -432,6 +436,7 @@ int			CGI::exec(Request &req, Response &)
 		close(STDOUT_FILENO);
 		close(STDERR_FILENO);
 		exit(EXIT_SUCCESS);
+		*/
 	}
 	else
 	{
