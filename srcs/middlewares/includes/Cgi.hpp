@@ -4,7 +4,7 @@
 # define REDIRECT_STATUS "200"
 # define SERVER_PROTOCOL "HTTP/1.1"
 # define GATEWAY_VERSION "CGI/1.1"
-# define PIPE_BUFFERSIZE 128*1024
+# define PIPE_BUFFERSIZE 65536
 # include "builtin.hpp"
 # include "lib.hpp"
 # include "Log.hpp"
@@ -55,12 +55,13 @@ class CGI : public cgiEnv, public AEpoll
 		Parse::s_cgi	_config;
 		std::string		_location;
 		std::string		_index;
+		char 			**_argv;
 	public:
 		CGI(Parse::s_cgi, std::string, std::string, Log &);
 		virtual ~CGI();
 	private:
 		std::string toLowerCase(std::string);
-		void		fileExtension(Request &);
+		bool		fileExtension(Request &);
 		bool		isMethod(Request &);
 		int 		stoi(std::string);
 		std::string	itos(int);

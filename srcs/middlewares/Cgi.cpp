@@ -62,11 +62,10 @@ bool			cgiEnv::deleteVariable(std::string key)
 char 			**cgiEnv::envForCGI()
 {
 	std::string	tempString;
-	int			x = 0;
+	int			x(0);
 
 	clean();
 	generateEnv = new char *[ENV.size() + 1];
-	x = 0;
 	for (std::vector<s_environment>::iterator it = ENV.begin(); it != ENV.end(); it++)
 	{
 		tempString = (*it).key + "=" + (*it).value;
@@ -85,9 +84,21 @@ CGI::CGI(Parse::s_cgi config, std::string location, std::string index, Log &logg
 	_config(config),
 	_location(location),
 	_index(index)
-{}
+{
+	_argv = new char * [3];
+	_argv[0] = strdup("./webserv");
+	_argv[1] = NULL;
+	_argv[2] = NULL;
+}
 
-CGI::~CGI() {};
+CGI::~CGI()
+{
+	delete [] _argv[2];
+	if (_argv[1] != NULL)
+		delete [] _argv[1];
+	delete [] _argv[0];
+	delete [] _argv;
+};
 
 std::string		CGI::toLowerCase(std::string _string)
 {
@@ -96,21 +107,49 @@ std::string		CGI::toLowerCase(std::string _string)
 	return ret;
 }
 
-void			CGI::fileExtension(Request &req)
+bool			CGI::fileExtension(Request &req)
 {
 	size_t nposIndex(0);
+	std::string temp("");
 
 	file.path_info = req.pathname;
-	file.path = req.pathname;
-	file.path.insert(0, ".");
-	if (file.path == "./")
+	file.path = req.trusted_complete_pathname;
+	nposIndex = file.path.find(_location);
+	if (nposIndex == std::string::npos)
+		return false;
+	
+	temp = file.path.substr(nposIndex, _location.size());
+	if (temp.compare(_location) != 0)
+		return false;
+	
+	if (file.path.at(file.path.size() - 1) != '/')
+	{
+		nposIndex = file.path.find_last_of("/");
+		if (nposIndex == std::string::npos)
+			return false;
+		temp = file.path.substr(nposIndex + 1);
+		if (temp.find_last_of(".") == std::string::npos)
+			file.path.append("/");
+	}
+	if (file.path.at(file.path.size() - 1) == '/')
 		file.path.append(_index);
+
 	nposIndex = file.path.find_last_of("/");
 	if (nposIndex == std::string::npos)
-		return;
+		return false;
 	file.file = file.path.substr(nposIndex + 1);
-	file.extension = file.path.substr(file.path.find_last_of("."));
-	file.path = concatPath(_config.root, file.path);
+	file.extension = file.file.substr(file.file.find_last_of("."));
+	
+	if (_location.compare("/") != 0)
+	{
+		nposIndex = _config.root.find(_location);
+		if (nposIndex == std::string::npos)
+			return false;
+		file.path = concatPath(_config.root.substr(0, nposIndex), file.path.substr(1));
+	}
+	else
+		file.path = concatPath(_config.root, file.path.substr(1));
+	return true;
 }
 
 bool			CGI::isMethod(Request &req)
@@ -195,7 +234,13 @@ std::string 	CGI::correctHeaderFormat(std::string name)
 void			CGI::setHeader(Request &req)
 {
 	Header::_headers mapHeaders = req.headers.map();
-			
+
+	#pragma region argv allocation
+		if (_argv[1] != NULL)
+			delete [] _argv[1];
+		_argv[1] = strdup(file.path.c_str());
+	#pragma endregion argv allocation
+
 	#pragma region Not defined by http headers
 		env.addVariable("GATEWAY_INTERFACE", GATEWAY_VERSION);
 		env.addVariable("PATH_INFO", file.path_info);
@@ -368,8 +413,11 @@ int			CGI::exec(Request &req, Response &)
 	}
 	else if (pid == 0)
 	{
+		int	devNull = open("/dev/null", O_WRONLY);
 		dup2(fdChildIn[0], STDIN_FILENO);
 		dup2(fdChildOut[1], STDOUT_FILENO);
+		if (req.logger.options.verbose == false)
+			dup2(devNull, STDERR_FILENO);
 		setHeader(req);
 		close(fdChildIn[1]);
         close(fdChildOut[0]);
@@ -379,8 +427,10 @@ int			CGI::exec(Request &req, Response &)
 		}
 		close(fdChildIn[0]);
 		close(fdChildOut[1]);
+		close(devNull);
 		close(STDIN_FILENO);
 		close(STDOUT_FILENO);
+		close(STDERR_FILENO);
 		exit(EXIT_SUCCESS);
 	}
 	else
@@ -422,14 +472,14 @@ bool 			CGI::operator()(Request &req, Response &res)
 
 	if (!req.cgi_childpid)
 	{
-		// if (!fileExtension(req) || file.path == ".")
-		// 	return (true);
-		fileExtension(req);
-		if (file.path == ".")
+		if (!fileExtension(req) || file.path == ".")
 			return (true);
-		std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), file.extension);
-		if (it == _config.extensions.end() || !isMethod(req))
-			return (true);
+		if (!file.file.empty())
+		{
+			std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), file.extension);
+			if (it == _config.extensions.end() || !isMethod(req))
+				return true;
+		}
 
 		if (exec(req, res) == EXIT_SUCCESS)
 			return (streamData(req, res));
