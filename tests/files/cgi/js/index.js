@@ -9,16 +9,15 @@ const rl = readline.createInterface({
 function out(line = '')
 {
 	if (line)
-		process.stdout.write(`${line}\r\n`);
+		process.stdout.write(`${line}\n`);
 	else
-		process.stdout.write('\r\n');
+		process.stdout.write('\n');
 }
 const argv = process.argv;
 const env = process.env;
 
-out('Status: 200 OK');
-out('Content-type: text/html; charset=UTF-8');
-out();
+process.stdout.write('Content-type: text/html; charset=UTF-8\r\n');
+process.stdout.write('\r\n');
 out('<body>');
 out('	<h1>Hello World !</h1>');
 out('	<h3>From Node.js</h3>');

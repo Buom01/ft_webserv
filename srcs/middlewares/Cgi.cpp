@@ -287,6 +287,7 @@ void			CGI::setHeader(Request &req)
 	#pragma endregion HTTP_*
 }
 
+/*
 bool			CGI::setGenerateHeader(Request &, Response &res)
 {
 	size_t npos(0);
@@ -362,6 +363,98 @@ int				CGI::exec(Request &req, Response &res)
 	}
 	return EXIT_SUCCESS;
 }
+*/
+
+void			CGI::setGenerateBody(Response &res, int fd)
+{
+	ssize_t ret(-1);
+	char buf[BUFFER_SIZE];
+
+	while (ret != 0)
+	{
+		ret = read(fd, buf, BUFFER_SIZE);
+		if (ret > 0)
+			res.body.append(buf, ret);
+		else
+			break;
+	}
+}
+
+bool			CGI::setGenerateHeader(Request &, Response &res)
+{
+	std::stringstream ss;
+	std::string line("");
+	size_t 	headerSize(0);
+			
+	ss.str(res.body);
+	while (getline(ss, line))
+	{
+		if ((line.empty() || line.compare("\r") == 0))
+		{
+			if (!line.empty())
+				headerSize += 1;
+			break;
+		}
+		headerSize += line.size();
+		headerSize += (*line.rbegin() == '\r') ? 2 : 1;
+		res.headers.set(line);
+	}
+	return (true);
+}
+
+int			CGI::exec(Request &req, Response &res)
+{
+	int 	pipeFD[2], saveFd[3], pipeOUT[2];
+	int 	devNull = open("/dev/null", O_WRONLY);
+	pid_t	pid;
+
+	setHeader(req);
+	saveFd[0] = dup(STDIN_FILENO);
+	saveFd[1] = dup(STDOUT_FILENO);
+	saveFd[2] = dup(STDERR_FILENO);
+	res.code = C_OK;
+	if ((pipe(pipeFD)) == -1 || (pipe(pipeOUT)) == -1)
+		return EXIT_FAILURE;
+	if ((pid = fork()) == -1)
+		return EXIT_FAILURE;
+	else if (pid == 0)
+	{
+		close(pipeFD[1]);
+		dup2(pipeFD[0], STDIN_FILENO);
+		close(pipeOUT[0]);
+		dup2(pipeOUT[1], STDOUT_FILENO);
+		if (req.logger.options.verbose == false)
+			dup2(devNull, STDERR_FILENO);
+		if (execve(_config.path.c_str(), _argv, env.envForCGI()))
+		{
+			res.code = C_INTERNAL_SERVER_ERROR;
+			std::cout << "Status: 500\r\n";
+		}
+	}
+	else
+	{
+		close(pipeFD[0]);
+		if (!req.body.empty())
+			write(pipeFD[1], req.body.c_str(), req.body.size());
+		close(pipeFD[1]);
+		close(pipeOUT[1]);
+		setGenerateBody(res, pipeOUT[0]);
+		close(pipeOUT[0]);
+	}
+	dup2(saveFd[0], STDIN_FILENO);
+	dup2(saveFd[1], STDOUT_FILENO);
+	dup2(saveFd[2], STDERR_FILENO);
+	close(saveFd[0]);
+	close(saveFd[1]);
+	close(saveFd[2]);
+	close(devNull);
+	if (pid == 0)
+	{
+		close(pipeOUT[1]);
+		exit(EXIT_SUCCESS);
+	}
+	return EXIT_SUCCESS;
+}
 
 /*
 bool			CGI::setGenerateHeader(Request &, Response &res)
@@ -389,7 +482,6 @@ bool			CGI::setGenerateHeader(Request &, Response &res)
 
 int			CGI::exec(Request &req, Response &res)
 {
-	char * const * _null = NULL;
 	int 	pipeFD[2], saveFd[3], pipeOUT[2];
 	int 	devNull = open("/dev/null", O_WRONLY);
 	pid_t	pid;
@@ -411,7 +503,7 @@ int			CGI::exec(Request &req, Response &res)
 		dup2(pipeOUT[1], STDOUT_FILENO);
 		if (req.logger.options.verbose == false)
 			dup2(devNull, STDERR_FILENO);
-		if (execve(_config.path.c_str(), _null, env.envForCGI()))
+		if (execve(_config.path.c_str(), _argv, env.envForCGI()))
 		{
 			res.code = C_INTERNAL_SERVER_ERROR;
 			std::cout << "Status: 500\r\n";

@@ -4,6 +4,7 @@
 # define REDIRECT_STATUS "200"
 # define SERVER_PROTOCOL "HTTP/1.1"
 # define GATEWAY_VERSION "CGI/1.1"
+# define BUFFER_SIZE 4096
 # include "builtin.hpp"
 # include "lib.hpp"
 # include "IMiddleware.hpp"
@@ -65,6 +66,7 @@ class CGI : public cgiEnv, public IMiddleware
 		std::string sval(std::string, std::string);
 		std::string correctHeaderFormat(std::string);
 		void		setHeader(Request &);
+		void		setGenerateBody(Response &, int);
 		bool		setGenerateHeader(Request &, Response &);
 		int			exec(Request &, Response &);
 	public:
