@@ -66,7 +66,6 @@ class CGI : public cgiEnv, public IMiddleware
 		std::string sval(std::string, std::string);
 		std::string correctHeaderFormat(std::string);
 		void		setHeader(Request &);
-		void		setGenerateBody(Response &, int);
 		bool		setGenerateHeader(Request &, Response &);
 		int			exec(Request &, Response &);
 	public:
