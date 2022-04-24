@@ -31,7 +31,7 @@ bool	SendBodyFromFD::operator()(Request &req, Response &res)
 	if (!req.await(EPOLLOUT))
 		return (false);
 	if (!_parent::has(res.response_fd))
-		_parent::setup(res.response_fd, ET_BODY, NULL, EPOLLIN, EPOLLIN);
+		_parent::setup(res.response_fd, ET_BODY, NULL, EPOLLIN);
 	if (!_parent::await(res.response_fd, EPOLLIN))
 		return (false);
 	

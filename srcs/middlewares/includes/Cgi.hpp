@@ -4,9 +4,11 @@
 # define REDIRECT_STATUS "200"
 # define SERVER_PROTOCOL "HTTP/1.1"
 # define GATEWAY_VERSION "CGI/1.1"
+# define PIPE_BUFFERSIZE 128*1024
 # include "builtin.hpp"
 # include "lib.hpp"
-# include "IMiddleware.hpp"
+# include "Log.hpp"
+# include "AEpoll.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
 
@@ -43,8 +45,10 @@ class cgiEnv
 		char 			**envForCGI();
 };
 
-class CGI : public cgiEnv, public IMiddleware
+class CGI : public cgiEnv, public AEpoll
 {
+	typedef	AEpoll	_parent;
+
 	private:
 		cgiEnv			env;
 		s_file 			file;
@@ -52,7 +56,7 @@ class CGI : public cgiEnv, public IMiddleware
 		std::string		_location;
 		std::string		_index;
 	public:
-		CGI(Parse::s_cgi, std::string, std::string);
+		CGI(Parse::s_cgi, std::string, std::string, Log &);
 		virtual ~CGI();
 	private:
 		std::string toLowerCase(std::string);
@@ -64,7 +68,8 @@ class CGI : public cgiEnv, public IMiddleware
 		std::string sval(std::string, std::string);
 		std::string correctHeaderFormat(std::string);
 		void		setHeader(Request &);
-		bool		setGenerateHeader(Request &, Response &);
+		bool		cleanup(Request &req, Response &);
+		bool		streamData(Request &req, Response &res);
 		int			exec(Request &, Response &);
 	public:
 		bool 		operator()(Request &, Response &);

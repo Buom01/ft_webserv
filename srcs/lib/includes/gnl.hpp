@@ -7,6 +7,6 @@
 
 size_t	get_line_end(std::string &);
 bool	get_line(std::string &, std::string *, std::string &, bool);
-bool	get_next_line_string(int, std::string &, std::string &, Log &);
+bool	get_next_line_string(int, std::string &, std::string &, Log &, bool = false);
 
 #endif

@@ -146,7 +146,9 @@ bool	body(Request &req, Response &res)
 			}
 		}
 	}
-	if (!req.body_read_is_finished)
+	if (req.body_read_is_finished)
+		req.generation_start = get_time();
+	else
 		req.unfire(EPOLLIN);
 	return (req.body_read_is_finished);
 }

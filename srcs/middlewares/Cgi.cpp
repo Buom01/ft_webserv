@@ -80,7 +80,8 @@ char 			**cgiEnv::envForCGI()
 }
 
 
-CGI::CGI(Parse::s_cgi config, std::string location, std::string index):
+CGI::CGI(Parse::s_cgi config, std::string location, std::string index, Log &logger):
+	_parent(logger),
 	_config(config),
 	_location(location),
 	_index(index)
@@ -242,104 +243,202 @@ void			CGI::setHeader(Request &req)
 	#pragma endregion HTTP_*
 }
 
-bool			CGI::setGenerateHeader(Request &, Response &res)
+bool		CGI::cleanup(Request &req, Response &)
 {
-	size_t npos(0);
-	std::string	line;
-
-	res.response_fd_buff.clear();
-	while (get_next_line_string(res.response_fd, line, res.response_fd_buff, res.logger))
+	if (req.cgi_childin)
 	{
-		if (line.empty())
-		{
-			npos += 2;
-			break;
-		}
-		else
-		{
-			npos += line.size() + 2;
-			res.headers.set(line);
-		}
+		if (_parent::has(req.cgi_childin))
+			_parent::cleanup(req.cgi_childin);
+		nothrow_close(req.cgi_childin);
 	}
-	res.response_fd_header_size = npos;
+	if (req.cgi_childout)
+	{
+		if (_parent::has(req.cgi_childout))
+			_parent::cleanup(req.cgi_childout);
+		nothrow_close(req.cgi_childout);
+	}
 	return (true);
 }
 
-int			CGI::exec(Request &req, Response &res)
+bool		CGI::streamData(Request &req, Response &res)
 {
-	char * const * _null = NULL;
-	int 	pipeFD[2], saveFd[3], pipeOUT[2];
-	int 	devNull = open("/dev/null", O_WRONLY);
-	pid_t	pid;
+	bool		can_write				= req.cgi_childin && !req.body.empty() && _parent::await(req.cgi_childin, EPOLLOUT);
+	bool		can_read				= _parent::await(req.cgi_childout, EPOLLIN);
+	ssize_t		write_ret				= -1;
+	ssize_t		read_ret				= -1;
+	static char	buff[PIPE_BUFFERSIZE];
+	std::string	line;
 
-	setHeader(req);
-	saveFd[0] = dup(STDIN_FILENO);
-	saveFd[1] = dup(STDOUT_FILENO);
-	saveFd[2] = dup(STDERR_FILENO);
-	res.code = C_OK;
-	if ((pipe(pipeFD)) == -1 || (pipe(pipeOUT)) == -1)
-		return EXIT_FAILURE;
+	req.cgi_finish			= _parent::await(req.cgi_childout, EPOLLRDHUP | EPOLLHUP);
+
+	while (can_write || can_read)
+	{
+		if (can_write)
+		{
+			write_ret = write(req.cgi_childin, req.body.c_str(), req.body.size());
+			can_write = (write_ret > 0);
+			if (can_write)
+				req.body.erase(0, write_ret);
+			else
+				_parent::clear_events(req.cgi_childin, EPOLLOUT);
+			if (req.body.empty())
+			{
+				if (_parent::has(req.cgi_childin))
+					_parent::cleanup(req.cgi_childin);
+				nothrow_close(req.cgi_childin);
+				req.cgi_childin = 0;
+			}
+		}
+		if (can_read)
+		{
+			if (!req.cgi_gotheaders)
+			{
+				while (!req.cgi_gotheaders && can_read)
+				{
+					can_read = get_next_line_string(req.cgi_childout, line, req.cgi_buff, res.logger);
+					if (can_read)
+					{
+						if (line.empty())
+						{
+							res.body.append(req.cgi_buff.c_str(), req.cgi_buff.size());
+							req.cgi_gotheaders = true;
+						}
+						else
+							res.headers.set(line);
+					}
+				}
+			}
+			else
+			{
+				read_ret = read(req.cgi_childout, buff, PIPE_BUFFERSIZE);
+				can_read = (read_ret > 0);
+				if (can_read)
+					res.body.append(buff, read_ret);
+				else
+					_parent::clear_events(req.cgi_childout, EPOLLIN);
+				if (read_ret == 0)
+					req.cgi_finish = true;
+			}
+		}
+	}
+
+	if (req.cgi_finish)
+	{
+		std::string	statusCode = res.headers.header("Status", true);
+		
+		res.code = C_OK;
+		if (statusCode != "")
+		{
+			std::stringstream	statusCodeStream(statusCode);
+			int					code;
+			
+			statusCodeStream >> code;
+
+			res.code = static_cast<http_code_t>(code);
+			res.headers.remove("Status");
+		}
+		cleanup(req, res);
+		return (true);
+	}
+	return (false);
+}
+
+int			CGI::exec(Request &req, Response &)
+{
+	char	*const 	*_null 			= NULL;
+	pid_t			pid;
+    int				fdChildIn[2];
+	int				fdChildOut[2];
+
+	if (pipe(fdChildIn) == -1)
+		return (EXIT_FAILURE);
+	else if (pipe(fdChildOut) == -1)
+	{
+		close(fdChildIn[0]);
+		close(fdChildIn[1]);
+		return (EXIT_FAILURE);
+	}
 	if ((pid = fork()) == -1)
-		return EXIT_FAILURE;
+	{
+		close(fdChildIn[0]);
+		close(fdChildIn[1]);
+		close(fdChildOut[0]);
+		close(fdChildOut[1]);
+		return (EXIT_FAILURE);
+	}
 	else if (pid == 0)
 	{
-		close(pipeFD[1]);
-		dup2(pipeFD[0], STDIN_FILENO);
-		close(pipeOUT[0]);
-		dup2(pipeOUT[1], STDOUT_FILENO);
-		if (req.logger.options.verbose == false)
-			dup2(devNull, STDERR_FILENO);
+		dup2(fdChildIn[0], STDIN_FILENO);
+		dup2(fdChildOut[1], STDOUT_FILENO);
+		setHeader(req);
+		close(fdChildIn[1]);
+        close(fdChildOut[0]);
 		if (execve(_config.path.c_str(), _null, env.envForCGI()))
 		{
-			res.code = C_INTERNAL_SERVER_ERROR;
 			std::cout << "Status: 500\r\n";
 		}
-		close(pipeOUT[1]);
+		close(fdChildIn[0]);
+		close(fdChildOut[1]);
+		close(STDIN_FILENO);
+		close(STDOUT_FILENO);
+		exit(EXIT_SUCCESS);
 	}
 	else
 	{
-		close(pipeFD[0]);
-		if (!req.body.empty())
-			write(pipeFD[1], req.body.c_str(), req.body.size());
-		close(pipeFD[1]);
-		res.response_fd = pipeOUT[0];
-		close(pipeOUT[1]);
+		close(fdChildIn[0]);
+		close(fdChildOut[1]);
+		fcntl(fdChildIn[1], F_SETFL, O_NONBLOCK);
+		fcntl(fdChildOut[0], F_SETFL, O_NONBLOCK);
+
+		req.cgi_childpid	= pid;
+		req.cgi_childin		= fdChildIn[1];
+		req.cgi_childout	= fdChildOut[0];
+
+		_parent::setup(req.cgi_childout, ET_CGI, NULL, EPOLLIN);
+		if (req.body.empty())
+		{
+			nothrow_close(req.cgi_childin);
+			req.cgi_childin = 0;
+		}
+		else
+			_parent::setup(req.cgi_childin, ET_CGI, NULL, EPOLLOUT);
 	}
-	dup2(saveFd[0], STDIN_FILENO);
-	dup2(saveFd[1], STDOUT_FILENO);
-	dup2(saveFd[2], STDERR_FILENO);
-	close(saveFd[0]);
-	close(saveFd[1]);
-	close(saveFd[2]);
-	close(devNull);
-	if (pid == 0)
-		exit(EXIT_SUCCESS);
 	return EXIT_SUCCESS;
 }
 
 bool 			CGI::operator()(Request &req, Response &res)
 {
-	std::string empty("");
-
 	if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
 		return (true);
-	if (res.response_fd > 0 || res.body.length() > 0)
+	if (res.response_fd > 0 || (res.body.length() > 0 && !req.cgi_childpid))
 		return (true);
-	if (req.finish())
+	if (req.finish() && cleanup(req, res))
 		return (true);
-	if (req.timeout())
+	if (req.timeout() && cleanup(req, res))
 	{
 		res.code = C_REQUEST_TIMEOUT;
 		return (true);
 	}
-	fileExtension(req);
-	if (file.path == ".")
-		return true;
-	std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), file.extension);
-	if (it == _config.extensions.end() || !isMethod(req))
-		return true;
-	if (exec(req, res) == EXIT_FAILURE)
-		return (true);
-	setGenerateHeader(req, res);
-	return true;
+
+	if (!req.cgi_childpid)
+	{
+		// if (!fileExtension(req) || file.path == ".")
+		// 	return (true);
+		fileExtension(req);
+		if (file.path == ".")
+			return (true);
+		std::vector<std::string>::iterator it = std::find(_config.extensions.begin(), _config.extensions.end(), file.extension);
+		if (it == _config.extensions.end() || !isMethod(req))
+			return (true);
+
+		if (exec(req, res) == EXIT_SUCCESS)
+			return (streamData(req, res));
+		else
+		{
+			res.code = C_INTERNAL_SERVER_ERROR;
+			return (true);
+		}
+	}
+	else
+		return (streamData(req, res));
 }

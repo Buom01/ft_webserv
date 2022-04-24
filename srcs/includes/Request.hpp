@@ -45,12 +45,20 @@ class Request
 		std::string			trusted_pathname;
 		std::string			http_version;
 		Header				headers;
+
 		size_t				upload_chunksize;
 		size_t				upload_remainingsize;
 		int					upload_fd;
 		std::string			upload_fd_buff;
 		std::string			upload_filename;
 		std::string			upload_filename_tmp;
+
+		int					cgi_childin;
+		int					cgi_childout;
+		pid_t				cgi_childpid;
+		bool				cgi_gotheaders;
+		std::string			cgi_buff;
+		bool				cgi_finish;
 
 		bool				body_header_parsed;
 		bool				body_read_is_finished;
@@ -98,12 +106,20 @@ class Request
 			trusted_pathname("/"),
 			http_version(""),
 			headers(),
+
 			upload_chunksize(SERVER_BUFFER_SIZE),
 			upload_remainingsize(0),
 			upload_fd(0),
 			upload_fd_buff(""),
 			upload_filename(""),
 			upload_filename_tmp(""),
+
+			cgi_childin(0),
+			cgi_childout(0),
+			cgi_childpid(0),
+			cgi_gotheaders(false),
+			cgi_buff(""),
+			cgi_finish(false),
 
 			body_header_parsed(false),
 			body_read_is_finished(false),
@@ -206,11 +222,19 @@ class Request
 			trusted_pathname = "/";
 			http_version = "";
 			headers.reset();
+
 			upload_remainingsize = 0;
 			upload_fd = 0;
 			upload_fd_buff = "";
 			upload_filename = "";
 			upload_filename_tmp = "";
+
+			cgi_childin = 0;
+			cgi_childout = 0;
+			cgi_childpid = 0;
+			cgi_gotheaders = false;
+			cgi_buff = "";
+			cgi_finish = false;
 
 			body_header_parsed = false;
 			body_read_is_finished = false;

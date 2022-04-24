@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 
 			if (getCgi.isDefined)
 			{
-				CGI *_cgi	= new CGI(getCgi, location_name, getIndex);
+				CGI *_cgi	= new CGI(getCgi, location_name, getIndex, logger);
 
 				server->use(*_cgi, F_NORMAL, method(getCgi.allow), location_name, serverBlockConfig);
 				cgiMiddlewares.push_back(_cgi);
