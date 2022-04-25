@@ -37,7 +37,7 @@ bool	Static::serveDirectory(
 
 void	Static::serveFile(Response &res, const std::string &path)
 {
-	int	fd = open(path.c_str(), O_NONBLOCK | O_RDONLY);
+	int	fd = open(path.c_str(), O_NONBLOCK | O_RDONLY | O_CLOEXEC);
 
 	if (fd > 0)
 	{
@@ -46,7 +46,10 @@ void	Static::serveFile(Response &res, const std::string &path)
 		res.used_file = path;
 	}
 	else
+	{
 		res.code = C_FORBIDDEN;
+		res.logger.warn("Failed to open file", errno);
+	}
 }
 
 std::string Static::getIndex(const std::string &path, const options_t &options)

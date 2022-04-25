@@ -189,7 +189,7 @@ int	Error::getErrorpageFD(int code, Log &logger)
 		return (-1);
 	else
 	{
-		open_ret = open(it->second.c_str(), O_NONBLOCK | O_RDONLY);
+		open_ret = open(it->second.c_str(), O_NONBLOCK | O_RDONLY | O_CLOEXEC);
 		if (open_ret == -1)
 			logger.warn("Failed to open error page: " + it->second);
 		return open_ret;

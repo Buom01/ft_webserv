@@ -53,7 +53,7 @@ bool	Upload::operator()(Request &req, Response &res)
 		req.upload_filename_tmp = req.upload_filename + ".tmp";
 		if (fileExists(req.upload_filename_tmp))
 			remove(req.upload_filename_tmp.c_str());
-		req.upload_fd = open(req.upload_filename_tmp.c_str(), O_NONBLOCK | O_WRONLY | O_CREAT);
+		req.upload_fd = open(req.upload_filename_tmp.c_str(), O_NONBLOCK | O_WRONLY | O_CREAT | O_CLOEXEC);
 		if (req.upload_fd < 0)
 		{
 			res.logger.warn("Failed to open temp upload file " + req.upload_filename_tmp);

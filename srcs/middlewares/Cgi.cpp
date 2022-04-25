@@ -320,54 +320,52 @@ bool		CGI::streamData(Request &req, Response &res)
 
 	req.cgi_finish			= _parent::await(req.cgi_childout, EPOLLRDHUP | EPOLLHUP);
 
-	while (can_write || can_read)
+
+	if (can_write)
 	{
+		write_ret = write(req.cgi_childin, req.body.c_str(), min(req.body.size(), PIPE_BUFFERSIZE));
+		can_write = (write_ret > 0);
 		if (can_write)
+			req.body.erase(0, write_ret);
+		else
+			_parent::clear_events(req.cgi_childin, EPOLLOUT);
+		if (req.body.empty())
 		{
-			write_ret = write(req.cgi_childin, req.body.c_str(), req.body.size());
-			can_write = (write_ret > 0);
-			if (can_write)
-				req.body.erase(0, write_ret);
-			else
-				_parent::clear_events(req.cgi_childin, EPOLLOUT);
-			if (req.body.empty())
-			{
-				if (_parent::has(req.cgi_childin))
-					_parent::cleanup(req.cgi_childin);
-				nothrow_close(req.cgi_childin);
-				req.cgi_childin = 0;
-			}
+			if (_parent::has(req.cgi_childin))
+				_parent::cleanup(req.cgi_childin);
+			nothrow_close(req.cgi_childin);
+			req.cgi_childin = 0;
 		}
-		if (can_read)
+	}
+	if (can_read)
+	{
+		if (!req.cgi_gotheaders)
 		{
-			if (!req.cgi_gotheaders)
+			while (!req.cgi_gotheaders && can_read)
 			{
-				while (!req.cgi_gotheaders && can_read)
+				can_read = get_next_line_string(req.cgi_childout, line, req.cgi_buff, res.logger);
+				if (can_read)
 				{
-					can_read = get_next_line_string(req.cgi_childout, line, req.cgi_buff, res.logger);
-					if (can_read)
+					if (line.empty())
 					{
-						if (line.empty())
-						{
-							res.body.append(req.cgi_buff.c_str(), req.cgi_buff.size());
-							req.cgi_gotheaders = true;
-						}
-						else
-							res.headers.set(line);
+						res.body.append(req.cgi_buff.c_str(), req.cgi_buff.size());
+						req.cgi_gotheaders = true;
 					}
+					else
+						res.headers.set(line);
 				}
 			}
+		}
+		if (req.cgi_gotheaders)
+		{
+			read_ret = read(req.cgi_childout, buff, PIPE_BUFFERSIZE);
+			can_read = (read_ret > 0);
+			if (can_read)
+				res.body.append(buff, read_ret);
 			else
-			{
-				read_ret = read(req.cgi_childout, buff, PIPE_BUFFERSIZE);
-				can_read = (read_ret > 0);
-				if (can_read)
-					res.body.append(buff, read_ret);
-				else
-					_parent::clear_events(req.cgi_childout, EPOLLIN);
-				if (read_ret == 0)
-					req.cgi_finish = true;
-			}
+				_parent::clear_events(req.cgi_childout, EPOLLIN);
+			if (read_ret == 0)
+				req.cgi_finish = true;
 		}
 	}
 
@@ -392,7 +390,7 @@ bool		CGI::streamData(Request &req, Response &res)
 	return (false);
 }
 
-int			CGI::exec(Request &req, Response &)
+int			CGI::exec(Request &req)
 {
 	pid_t			pid;
     int				fdChildIn[2];
@@ -406,6 +404,10 @@ int			CGI::exec(Request &req, Response &)
 		close(fdChildIn[1]);
 		return (EXIT_FAILURE);
 	}
+	fcntl(fdChildIn[0], F_SETPIPE_SZ, PIPE_BUFFERSIZE);
+	fcntl(fdChildIn[1], F_SETPIPE_SZ, PIPE_BUFFERSIZE);
+	fcntl(fdChildOut[0], F_SETPIPE_SZ, PIPE_BUFFERSIZE);
+	fcntl(fdChildOut[1], F_SETPIPE_SZ, PIPE_BUFFERSIZE);
 	if ((pid = fork()) == -1)
 	{
 		close(fdChildIn[0]);
@@ -486,7 +488,7 @@ bool 			CGI::operator()(Request &req, Response &res)
 				return true;
 		}
 
-		if (exec(req, res) == EXIT_SUCCESS)
+		if (exec(req) == EXIT_SUCCESS)
 			return (streamData(req, res));
 		else
 		{

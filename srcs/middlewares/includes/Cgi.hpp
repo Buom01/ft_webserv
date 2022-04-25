@@ -4,7 +4,7 @@
 # define REDIRECT_STATUS "200"
 # define SERVER_PROTOCOL "HTTP/1.1"
 # define GATEWAY_VERSION "CGI/1.1"
-# define PIPE_BUFFERSIZE 65536
+# define PIPE_BUFFERSIZE 1024*1024*2
 # include "builtin.hpp"
 # include "lib.hpp"
 # include "Log.hpp"
@@ -71,7 +71,7 @@ class CGI : public cgiEnv, public AEpoll
 		void		setHeader(Request &);
 		bool		cleanup(Request &req, Response &);
 		bool		streamData(Request &req, Response &res);
-		int			exec(Request &, Response &);
+		int			exec(Request &);
 	public:
 		bool 		operator()(Request &, Response &);
 };
