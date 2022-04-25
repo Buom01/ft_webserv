@@ -115,7 +115,7 @@ typedef enum http_code_e
 # define ERRORPAGE_BUFFER_SIZE 10240
 # define MAX_EVENTS 10
 
-# define TIMEOUT 45
+# define TIMEOUT 60
 # define KEEP_ALIVE 255
 # define KEEP_ALIVE_HEADER "Keep-Alive: timeout=250"
 
