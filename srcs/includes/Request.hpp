@@ -53,12 +53,9 @@ class Request
 		std::string			upload_filename;
 		std::string			upload_filename_tmp;
 
-		int					cgi_childin;
-		int					cgi_childout;
 		pid_t				cgi_childpid;
 		bool				cgi_gotheaders;
 		std::string			cgi_buff;
-		bool				cgi_finish;
 
 		bool				body_header_parsed;
 		bool				body_read_is_finished;
@@ -114,12 +111,9 @@ class Request
 			upload_filename(""),
 			upload_filename_tmp(""),
 
-			cgi_childin(0),
-			cgi_childout(0),
 			cgi_childpid(0),
 			cgi_gotheaders(false),
 			cgi_buff(""),
-			cgi_finish(false),
 
 			body_header_parsed(false),
 			body_read_is_finished(false),
@@ -229,12 +223,9 @@ class Request
 			upload_filename = "";
 			upload_filename_tmp = "";
 
-			cgi_childin = 0;
-			cgi_childout = 0;
 			cgi_childpid = 0;
 			cgi_gotheaders = false;
 			cgi_buff = "";
-			cgi_finish = false;
 
 			body_header_parsed = false;
 			body_read_is_finished = false;

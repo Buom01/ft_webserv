@@ -292,141 +292,50 @@ void			CGI::setHeader(Request &req)
 	#pragma endregion HTTP_*
 }
 
-bool		CGI::cleanup(Request &req, Response &)
+bool		CGI::readHeaders(Request &req, Response &res)
 {
-	if (req.cgi_childin)
+	res.code = C_OK;
+	waitpid(req.cgi_childpid, NULL, 0);
 	{
-		if (_parent::has(req.cgi_childin))
-			_parent::cleanup(req.cgi_childin);
-		nothrow_close(req.cgi_childin);
-	}
-	if (req.cgi_childout)
-	{
-		if (_parent::has(req.cgi_childout))
-			_parent::cleanup(req.cgi_childout);
-		nothrow_close(req.cgi_childout);
+		char buff[1024];
+		ssize_t	read_ret;
+		read_ret = read(res.response_fd, buff, 1024);
+		std::cout << "Read " << read_ret << " - " << buff << std::endl;
 	}
 	return (true);
 }
 
-bool		CGI::streamData(Request &req, Response &res)
+int			CGI::exec(Request &req, Response &res)
 {
-	bool		can_write				= req.cgi_childin && !req.body.empty() && _parent::await(req.cgi_childin, EPOLLOUT);
-	bool		can_read				= _parent::await(req.cgi_childout, EPOLLIN);
-	ssize_t		write_ret				= -1;
-	ssize_t		read_ret				= -1;
-	static char	buff[PIPE_BUFFERSIZE];
-	std::string	line;
-
-	req.cgi_finish			= _parent::await(req.cgi_childout, EPOLLRDHUP | EPOLLHUP);
-
-
-	if (can_write)
-	{
-		write_ret = write(req.cgi_childin, req.body.c_str(), min(req.body.size(), PIPE_BUFFERSIZE));
-		can_write = (write_ret > 0);
-		if (can_write)
-			req.body.erase(0, write_ret);
-		else
-			_parent::clear_events(req.cgi_childin, EPOLLOUT);
-		if (req.body.empty())
-		{
-			if (_parent::has(req.cgi_childin))
-				_parent::cleanup(req.cgi_childin);
-			nothrow_close(req.cgi_childin);
-			req.cgi_childin = 0;
-		}
-	}
-	if (can_read)
-	{
-		if (!req.cgi_gotheaders)
-		{
-			while (!req.cgi_gotheaders && can_read)
-			{
-				can_read = get_next_line_string(req.cgi_childout, line, req.cgi_buff, res.logger, true);
-				if (can_read)
-				{
-					if (line.empty())
-					{
-						res.body.append(req.cgi_buff.c_str(), req.cgi_buff.size());
-						req.cgi_gotheaders = true;
-					}
-					else
-						res.headers.set(line);
-				}
-			}
-		}
-		if (req.cgi_gotheaders)
-		{
-			read_ret = read(req.cgi_childout, buff, PIPE_BUFFERSIZE);
-			can_read = (read_ret > 0);
-			if (can_read)
-				res.body.append(buff, read_ret);
-			else
-				_parent::clear_events(req.cgi_childout, EPOLLIN);
-			if (read_ret == 0)
-				req.cgi_finish = true;
-		}
-	}
-
-	if (req.cgi_finish)
-	{
-		std::string	statusCode = res.headers.header("Status", true);
-		
-		res.code = C_OK;
-		if (statusCode != "")
-		{
-			std::stringstream	statusCodeStream(statusCode);
-			int					code;
-			
-			statusCodeStream >> code;
-
-			res.code = static_cast<http_code_t>(code);
-			res.headers.remove("Status");
-		}
-		cleanup(req, res);
-		return (true);
-	}
-	return (false);
-}
-
-int			CGI::exec(Request &req)
-{
-	char* const* _null = NULL;
 	pid_t			pid;
-    int				fdChildIn[2];
-	int				fdChildOut[2];
+	int				fdIn	= open("/tmp", O_TMPFILE | O_RDWR, S_IRUSR | S_IWUSR);
+	char* const*	_null	= NULL;
+	res.response_fd			= open("/tmp", O_TMPFILE | O_RDWR | O_NONBLOCK, S_IRUSR | S_IWUSR);
 
-	if (pipe(fdChildIn) == -1)
-		return (EXIT_FAILURE);
-	else if (pipe(fdChildOut) == -1)
+	if (res.response_fd == -1 || fdIn == -1)
 	{
-		close(fdChildIn[0]);
-		close(fdChildIn[1]);
+		if (res.response_fd > 0)
+			nothrow_close(res.response_fd);
+		if (fdIn > 0)
+			nothrow_close(fdIn);
+		
 		return (EXIT_FAILURE);
 	}
-	fcntl(fdChildIn[0], F_SETPIPE_SZ, PIPE_BUFFERSIZE);
-	fcntl(fdChildIn[1], F_SETPIPE_SZ, PIPE_BUFFERSIZE);
-	fcntl(fdChildOut[0], F_SETPIPE_SZ, PIPE_BUFFERSIZE);
-	fcntl(fdChildOut[1], F_SETPIPE_SZ, PIPE_BUFFERSIZE);
+
 	if ((pid = fork()) == -1)
-	{
-		close(fdChildIn[0]);
-		close(fdChildIn[1]);
-		close(fdChildOut[0]);
-		close(fdChildOut[1]);
 		return (EXIT_FAILURE);
-	}
 	else if (pid == 0)
 	{
-		int	devNull = open("/dev/null", O_WRONLY | O_NONBLOCK, S_IWUSR);
-		dup2(fdChildIn[0], STDIN_FILENO);
-		dup2(fdChildOut[1], STDOUT_FILENO);
+
+		dup2(fdIn, STDIN_FILENO);
+		dup2(res.response_fd, STDOUT_FILENO);
+        close(res.response_fd);
 		if (req.logger.options.verbose == false)
-			dup2(devNull, STDERR_FILENO);
+			dup2(open("/dev/null", O_WRONLY, S_IWUSR), STDERR_FILENO);
 		setHeader(req);
-		close(fdChildIn[1]);
-        close(fdChildOut[0]);
+		write(fdIn, res.body.c_str(), res.body.size());
+		lseek(fdIn, 0, SEEK_SET);
+		close(fdIn);
 		if (execve(
 			_config.path.c_str(),
 			((_config.passArgv == true) ? _argv : _null),
@@ -434,34 +343,13 @@ int			CGI::exec(Request &req)
 		)
 		{
 			std::cout << "Status: 500\r\n" << std::flush;
-			close(fdChildIn[0]);
-			close(fdChildOut[1]);
-			close(devNull);
-			close(STDIN_FILENO);
-			close(STDOUT_FILENO);
-			close(STDERR_FILENO);
-			exit(EXIT_SUCCESS);
+			exit(EXIT_FAILURE);
 		}
 	}
 	else
 	{
-		close(fdChildIn[0]);
-		close(fdChildOut[1]);
-		fcntl(fdChildIn[1], F_SETFL, O_NONBLOCK);
-		fcntl(fdChildOut[0], F_SETFL, O_NONBLOCK);
-
+		close(fdIn);
 		req.cgi_childpid	= pid;
-		req.cgi_childin		= fdChildIn[1];
-		req.cgi_childout	= fdChildOut[0];
-
-		_parent::setup(req.cgi_childout, ET_CGI, NULL, EPOLLIN);
-		if (req.body.empty())
-		{
-			nothrow_close(req.cgi_childin);
-			req.cgi_childin = 0;
-		}
-		else
-			_parent::setup(req.cgi_childin, ET_CGI, NULL, EPOLLOUT);
 	}
 	return EXIT_SUCCESS;
 }
@@ -470,11 +358,11 @@ bool 			CGI::operator()(Request &req, Response &res)
 {
 	if (res.code != C_NOT_IMPLEMENTED && res.code != C_NOT_FOUND)
 		return (true);
-	if (res.response_fd > 0 || (res.body.length() > 0 && !req.cgi_childpid))
+	if ((res.response_fd > 0 || res.body.length() > 0) && !req.cgi_childpid)
 		return (true);
-	if (req.finish() && cleanup(req, res))
+	if (req.finish())
 		return (true);
-	if (req.timeout() && cleanup(req, res))
+	if (req.timeout())
 	{
 		res.code = C_REQUEST_TIMEOUT;
 		return (true);
@@ -491,8 +379,8 @@ bool 			CGI::operator()(Request &req, Response &res)
 				return true;
 		}
 
-		if (exec(req) == EXIT_SUCCESS)
-			return (streamData(req, res));
+		if (exec(req, res) == EXIT_SUCCESS)
+			return (readHeaders(req, res));
 		else
 		{
 			res.code = C_INTERNAL_SERVER_ERROR;
@@ -500,5 +388,5 @@ bool 			CGI::operator()(Request &req, Response &res)
 		}
 	}
 	else
-		return (streamData(req, res));
+		return (readHeaders(req, res));
 }

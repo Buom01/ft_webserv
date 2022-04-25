@@ -69,9 +69,8 @@ class CGI : public cgiEnv, public AEpoll
 		std::string sval(std::string, std::string);
 		std::string correctHeaderFormat(std::string);
 		void		setHeader(Request &);
-		bool		cleanup(Request &req, Response &);
-		bool		streamData(Request &req, Response &res);
-		int			exec(Request &);
+		bool		readHeaders(Request &, Response &);
+		int			exec(Request &, Response &);
 	public:
 		bool 		operator()(Request &, Response &);
 };
