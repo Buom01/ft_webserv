@@ -22,7 +22,7 @@ class Static: public IMiddleware
 		virtual ~Static(void);
 	protected:
 		bool		serveDirectory(Response &, const std::string &, const std::string &);
-		void		serveFile(Response &, const std::string &);
+		bool		serveFile(Response &, const std::string &);
 		std::string getIndex(const std::string &, const options_t &);
 		void		redirect(Response &, std::string);
 	public:

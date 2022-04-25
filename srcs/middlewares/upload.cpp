@@ -56,9 +56,14 @@ bool	Upload::operator()(Request &req, Response &res)
 		req.upload_fd = open(req.upload_filename_tmp.c_str(), O_NONBLOCK | O_WRONLY | O_CREAT | O_CLOEXEC);
 		if (req.upload_fd < 0)
 		{
-			res.logger.warn("Failed to open temp upload file " + req.upload_filename_tmp);
-			res.code = C_INTERNAL_SERVER_ERROR;
-			return (true);
+			if (errno == EAGAIN)
+				return (false);
+			else
+			{
+				res.logger.warn("Failed to open temp upload file " + req.upload_filename_tmp);
+				res.code = C_INTERNAL_SERVER_ERROR;
+				return (true);
+			}
 		}
 	}
 	if (!_parent::has(req.upload_fd))
