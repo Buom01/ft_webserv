@@ -84,6 +84,12 @@
       ┌────────────────────────────────────────────────────────────────────────┐
       │ \e[93mcgi\e[0m \e[34m[file_extension, ...]\e[0m \e[32mpath_to_executable\e[0m \e[96m[accepted_method, ...]\e[0m;   │
       └────────────────────────────────────────────────────────────────────────┘
+    ➤  \e[93m cgi_argv \e[0m
+      Allows to pass on argv the file to execute in addition to the environment
+      variables. By default a cgi following the standards does not need it.
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93mcgi_argv\e[0m \e[32m(on|off)\e[0m;                                                     │
+      └────────────────────────────────────────────────────────────────────────┘
     ➤  \e[93m client_body_buffer_size \e[0m
       Sets body size for reading client request body. This can be very useful
       on machines with very limited memory resources (in bit).

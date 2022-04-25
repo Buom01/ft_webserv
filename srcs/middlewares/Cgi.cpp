@@ -392,6 +392,7 @@ bool		CGI::streamData(Request &req, Response &res)
 
 int			CGI::exec(Request &req)
 {
+	char* const* _null = NULL;
 	pid_t			pid;
     int				fdChildIn[2];
 	int				fdChildOut[2];
@@ -418,7 +419,7 @@ int			CGI::exec(Request &req)
 	}
 	else if (pid == 0)
 	{
-		int	devNull = open("/dev/null", O_WRONLY);
+		int	devNull = open("/dev/null", O_WRONLY | O_NONBLOCK, S_IWUSR);
 		dup2(fdChildIn[0], STDIN_FILENO);
 		dup2(fdChildOut[1], STDOUT_FILENO);
 		if (req.logger.options.verbose == false)
@@ -426,19 +427,21 @@ int			CGI::exec(Request &req)
 		setHeader(req);
 		close(fdChildIn[1]);
         close(fdChildOut[0]);
-		if (execve(_config.path.c_str(), _argv, env.envForCGI()))
+		if (execve(
+			_config.path.c_str(),
+			((_config.passArgv == true) ? _argv : _null),
+			env.envForCGI())
+		)
 		{
 			std::cout << "Status: 500\r\n";
+			close(fdChildIn[0]);
+			close(fdChildOut[1]);
+			close(devNull);
+			close(STDIN_FILENO);
+			close(STDOUT_FILENO);
+			close(STDERR_FILENO);
+			exit(EXIT_SUCCESS);
 		}
-		/*
-		close(fdChildIn[0]);
-		close(fdChildOut[1]);
-		close(devNull);
-		close(STDIN_FILENO);
-		close(STDOUT_FILENO);
-		close(STDERR_FILENO);
-		exit(EXIT_SUCCESS);
-		*/
 	}
 	else
 	{
