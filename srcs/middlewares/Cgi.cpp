@@ -343,7 +343,7 @@ bool		CGI::streamData(Request &req, Response &res)
 		{
 			while (!req.cgi_gotheaders && can_read)
 			{
-				can_read = get_next_line_string(req.cgi_childout, line, req.cgi_buff, res.logger);
+				can_read = get_next_line_string(req.cgi_childout, line, req.cgi_buff, res.logger, true);
 				if (can_read)
 				{
 					if (line.empty())
@@ -433,7 +433,7 @@ int			CGI::exec(Request &req)
 			env.envForCGI())
 		)
 		{
-			std::cout << "Status: 500\r\n";
+			std::cout << "Status: 500\r\n" << std::flush;
 			close(fdChildIn[0]);
 			close(fdChildOut[1]);
 			close(devNull);
