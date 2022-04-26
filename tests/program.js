@@ -44,7 +44,7 @@ const exec = (file, args, cwd, timeout, killSignal) => (
 describe('Program', function () {
 	describe('has a working Makefile', function () {
 		it('should compile', function () {
-			this.timeout(15000);
+			this.timeout(25000);
 			command("make", "..");
 			if (!exists("../webserv"))
 				throw "../webserv were not created";
@@ -58,13 +58,13 @@ describe('Program', function () {
 				throw "../webserv were not removed";
 		});
 		it('should (re)compile', function () {
-			this.timeout(15000);
+			this.timeout(25000);
 			command("make re", "..");
 			if (!exists("../webserv"))
 				throw "../webserv were not created";
 		});
 		it('should not relink', function () {
-			this.timeout(15000);
+			this.timeout(25000);
 			command("make", "..");
 			command("make -q", "..");
 		});
