@@ -2,6 +2,7 @@ const request = require('supertest');
 const crypto = require("crypto");
 const assert = require('assert');
 const path = require('path');
+const {readFileSync} = require('fs');
 
 const endpoint = (port) => (
 	`http://127.0.0.1:${port}`
@@ -185,15 +186,65 @@ describe('Server', function () {
 				.get('/my-route-to-serve-with-both/')
 				.expect(200, 'My plain text file\nWith a simple newline ;)', done);
 		});
-		// it('can accept to download file and decide where to save', function (done) {
-		// 	// remove old file
-		// 	// download it
-		// 	// test it
+		
+		it('can accept uploaded file and decide where to save', function (done) {
+			const req = request(endpoint(9103))
+				.put('/test.jpg')
+				.send(readFileSync('./files/static/Bill_Gates_2017_(cropped).jpg'))
+				.expect(201, '', done);
+		});
+		it('serve uploaded file', function (done) {
+			request(endpoint(9103))
+				.get('/test.jpg')
+				.expect(200)
+				.end((err, response) => {
+					if (err) return done(err);
+					assert.equal(
+						crypto.createHash('md5').update(response.body).digest('hex'),
+						'39bea58f55a6c930aa0b2f8eca3d4512'
+					);
+					done();
+				})
+		});
+		it('can remove an uploaded file', function (done) {
+			request(endpoint(9103))
+				.delete('/test.jpg')
+				.expect(204, '', done);
+		});
+		it('cannot access removed file anymore', function (done) {
+			request(endpoint(9103))
+				.get('/test.jpg')
+				.expect(404, /404/, done);
+		});
+		
+		it('can accept chunked file', function (done) {
+			const req = request(endpoint(9103))
+				.put('/plain.txt')
+				.set('Transfer-Encoding', 'chunked')
+				.set('Content-Type', "plain/text")
+				.send("Testfile\n\r\n")
+				.send("Testfile\n\r\n")
+				.send("Testfile\n\r\n")
+				.send("Testfile\n\r\n")
+				.expect(201, '', done);
+		});
+		it('serve uploaded chunked file', function (done) {
+			request(endpoint(9103))
+				.get('/plain.txt')
+				.expect(200, "Testfile\n\r\nTestfile\n\r\nTestfile\n\r\nTestfile\n\r\n", done)
+		});
+		it('can remove an uploaded chunked file', function (done) {
+			request(endpoint(9103))
+				.delete('/plain.txt')
+				.expect(204, '', done);
+		});
+		it('cannot access removed chunked file anymore', function (done) {
+			request(endpoint(9103))
+				.get('/plain.txt')
+				.expect(404, /404/, done);
+		});
 
-		// 	// dont forget to do gitignore
-		// });
-		// it('can accept to download chunked file', function (done) {
-		// });
+
 	});
 	
 	describe('has a working PHP CGI', function () {
