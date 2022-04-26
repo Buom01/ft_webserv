@@ -310,7 +310,7 @@ bool			CGI::readHeaders(Request &, Response &res)
 	size_t		npos(0);
 	std::string	line;
 
-	if (res.response_fd_header_size > 0)
+	if (res.response_fd_header_parse == true)
 		return (true);
 	res.code = C_OK;
 	res.response_fd_buff.clear();
@@ -328,6 +328,7 @@ bool			CGI::readHeaders(Request &, Response &res)
 		}
 	}
 	res.response_fd_header_size = npos;
+	res.response_fd_header_parse = true;
 	return (true);
 }
 
@@ -335,10 +336,9 @@ bool			CGI::readHeaders(Request &, Response &res)
 int			CGI::exec(Request &req, Response &res)
 {
 	char* const*	_null	= NULL;
-	int 			/*pipeFd[2], */fdIn = open("/tmp", O_TMPFILE | O_RDWR, S_IRUSR | S_IWUSR);
+	int 			pipeFd[2], fdIn = open("/tmp", O_TMPFILE | O_RDWR, S_IRUSR | S_IWUSR);
 	pid_t			pid;
 
-	res.response_fd = open("/tmp", O_TMPFILE | O_RDWR, S_IRUSR | S_IWUSR);
 	if (fdIn == -1)
 	{
 		if (res.response_fd > 0)
@@ -348,41 +348,41 @@ int			CGI::exec(Request &req, Response &res)
 		
 		return (EXIT_FAILURE);
 	}
-	if (/*(pipe(pipeFd)) == -1 || */(pid = fork()) == -1)
+	if ((pipe(pipeFd)) == -1 || (pid = fork()) == -1)
 		return (EXIT_FAILURE);
 	else if (pid == 0)
 	{
 		setHeader(req);
 		write(fdIn, req.body.c_str(), static_cast<int>(req.body.size()));
 		lseek(fdIn, 0, SEEK_SET);
-		//close(pipeFd[0]);
-		dup2(fdIn, STDIN_FILENO);
-		dup2(res.response_fd, STDOUT_FILENO);
-		//dup2(pipeFd[1], STDOUT_FILENO);
 		
+		dup2(fdIn, STDIN_FILENO);
+		dup2(pipeFd[1], STDOUT_FILENO);
 		if (req.logger.options.verbose == false)
 			dup2(open("/dev/null", O_WRONLY, S_IWUSR), STDERR_FILENO);
 		
-		if (execve(
+		close(fdIn);
+		close(pipeFd[0]);
+		close(pipeFd[1]);
+		
+		execve(
 			_config.path.c_str(),
 			((_config.passArgv == true) ? _argv : _null),
-			env.envForCGI())
-		)
-		{
-			std::cout << "Status: 500\r\n" << std::flush;
-			//close(pipeFd[1]);
-			exit(EXIT_FAILURE);
-		}
+			env.envForCGI()
+		);
+		
+		std::cout << "Status: 500\r\n" << std::flush;
+		close(res.response_fd);
+		close(pipeFd[0]);
+		exit(EXIT_FAILURE);
 	}
 	else
 	{
 		req.cgi_childpid = pid;
-		waitpid(pid, NULL, 0);
-		lseek(res.response_fd, 0, SEEK_SET);
-		//res.response_fd = pipeFd[0];
-		//close(pipeFd[1]);
+		res.response_fd = pipeFd[0];
+		close(pipeFd[1]);
+		close(fdIn);
 	}
-	close(fdIn);
 	return EXIT_SUCCESS;
 }
 
@@ -410,6 +410,7 @@ bool 			CGI::operator()(Request &req, Response &res)
 			if (it == _config.extensions.end() || !isMethod(req))
 				return true;
 		}
+
 		if (exec(req, res) == EXIT_SUCCESS)
 			return (readHeaders(req, res));
 		else
@@ -419,5 +420,5 @@ bool 			CGI::operator()(Request &req, Response &res)
 		}
 	}
 	else
-		return (true);
+		return (readHeaders(req, res));
 }

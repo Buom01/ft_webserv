@@ -18,6 +18,7 @@ class Response
 		std::string				headers_buff;
 		bool					headers_sent;
 		int						response_fd;
+		bool					response_fd_header_parse;
 		int 					response_fd_header_size;
 		std::string				response_fd_buff;
 		int						errorpage_fd;
@@ -35,6 +36,7 @@ class Response
 			headers_buff(""),
 			headers_sent(false),
 			response_fd(0),
+			response_fd_header_parse(false),
 			response_fd_header_size(0),
 			response_fd_buff(""),
 			errorpage_fd(0),
