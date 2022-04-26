@@ -291,7 +291,7 @@ void			CGI::setHeader(Request &req)
 	}
 	#pragma endregion HTTP_*
 }
-
+/*
 bool		CGI::readHeaders(Request &req, Response &res)
 {
 	res.code = C_OK;
@@ -304,15 +304,39 @@ bool		CGI::readHeaders(Request &req, Response &res)
 	}
 	return (true);
 }
+*/
+bool			CGI::readHeaders(Request &, Response &res)
+{
+	size_t		npos(0);
+	std::string	line;
+
+	res.code = C_OK;
+	res.response_fd_buff.clear();
+	while (get_next_line_string(res.response_fd, line, res.response_fd_buff, res.logger))
+	{
+		if (line.empty())
+		{
+			npos += 2;
+			break;
+		}
+		else
+		{
+			npos += line.size() + 2;
+			res.headers.set(line);
+		}
+	}
+	res.response_fd_header_size = npos;
+	return (true);
+}
+
 
 int			CGI::exec(Request &req, Response &res)
 {
-	pid_t			pid;
-	int				fdIn	= open("/tmp", O_TMPFILE | O_RDWR, S_IRUSR | S_IWUSR);
 	char* const*	_null	= NULL;
-	res.response_fd			= open("/tmp", O_TMPFILE | O_RDWR | O_NONBLOCK, S_IRUSR | S_IWUSR);
+	int 			pipeFd[2], fdIn = open("/tmp", O_TMPFILE | O_RDWR, S_IRUSR | S_IWUSR);
+	pid_t			pid;
 
-	if (res.response_fd == -1 || fdIn == -1)
+	if (fdIn == -1)
 	{
 		if (res.response_fd > 0)
 			nothrow_close(res.response_fd);
@@ -321,21 +345,19 @@ int			CGI::exec(Request &req, Response &res)
 		
 		return (EXIT_FAILURE);
 	}
-
-	if ((pid = fork()) == -1)
+	if ((pipe(pipeFd)) == -1 || (pid = fork()) == -1)
 		return (EXIT_FAILURE);
 	else if (pid == 0)
 	{
-
+		setHeader(req);
+		write(fdIn, req.body.c_str(), static_cast<int>(req.body.size()));
+		lseek(fdIn, 0, SEEK_SET);
+		
+		close(pipeFd[0]);
 		dup2(fdIn, STDIN_FILENO);
-		dup2(res.response_fd, STDOUT_FILENO);
-        close(res.response_fd);
+		dup2(pipeFd[1], STDOUT_FILENO);
 		if (req.logger.options.verbose == false)
 			dup2(open("/dev/null", O_WRONLY, S_IWUSR), STDERR_FILENO);
-		setHeader(req);
-		write(fdIn, res.body.c_str(), res.body.size());
-		lseek(fdIn, 0, SEEK_SET);
-		close(fdIn);
 		if (execve(
 			_config.path.c_str(),
 			((_config.passArgv == true) ? _argv : _null),
@@ -343,13 +365,17 @@ int			CGI::exec(Request &req, Response &res)
 		)
 		{
 			std::cout << "Status: 500\r\n" << std::flush;
+			close(pipeFd[1]);
+			close(fdIn);
 			exit(EXIT_FAILURE);
 		}
 	}
 	else
 	{
+		req.cgi_childpid = pid;
+		res.response_fd = pipeFd[0];
+		close(pipeFd[1]);
 		close(fdIn);
-		req.cgi_childpid	= pid;
 	}
 	return EXIT_SUCCESS;
 }
@@ -378,7 +404,6 @@ bool 			CGI::operator()(Request &req, Response &res)
 			if (it == _config.extensions.end() || !isMethod(req))
 				return true;
 		}
-
 		if (exec(req, res) == EXIT_SUCCESS)
 			return (readHeaders(req, res));
 		else
