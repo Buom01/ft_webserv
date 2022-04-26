@@ -27,7 +27,7 @@ static struct s_defineRegex
 	{ "return", "^[ \t]*return[ \t]+([a-zA-Z0-9_.\\/]+)[ \t]+(.*);[ \t]*$", true },
 	{ "root", "^[ \t]*root[ \t]+(\\.?\\/.*);[ \t]*$", true },
 	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);[ \t]*$", true },
-	{ "upload", "^[ \t]*upload[ \t]+(\\.?\\/[-a-zA-Z0-9_\\/._]+)([ \t]+([\\/.][-a-zA-Z0-9_\\/._]+))?;[ \t]*$", true}
+	{ "upload", "^[ \t]*upload[ \t]+(\\.?\\/[-a-zA-Z0-9_\\/._]+)([ \t]+([\\/.][-a-zA-Z0-9_\\/._]*))?;[ \t]*$", true}
 };
 
 struct ParseTypedef
