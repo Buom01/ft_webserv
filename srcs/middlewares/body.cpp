@@ -118,6 +118,11 @@ bool	body(Request &req, Response &res)
 				req.body_read_size += line.size();
 				if (req.body_read_size >= req.body_chunk_size)
 					req.body_is_chunk = false;
+				else
+				{
+					req.body.append("\r\n");
+					req.body_read_size += 2;
+				}
 			}
 		}
 	}
