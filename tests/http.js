@@ -2,6 +2,7 @@ const request = require('supertest');
 const crypto = require("crypto");
 const assert = require('assert');
 const path = require('path');
+const {readFileSync} = require('fs');
 
 const endpoint = (port) => (
 	`http://127.0.0.1:${port}`
@@ -185,18 +186,88 @@ describe('Server', function () {
 				.get('/my-route-to-serve-with-both/')
 				.expect(200, 'My plain text file\nWith a simple newline ;)', done);
 		});
-		// it('can accept to download file and decide where to save', function (done) {
-		// 	// remove old file
-		// 	// download it
-		// 	// test it
-
-		// 	// dont forget to do gitignore
-		// });
-		// it('can accept to download chunked file', function (done) {
-		// });
+		
+		it('can accept uploaded file and decide where to save', function (done) {
+			const req = request(endpoint(9103))
+				.put('/test.jpg')
+				.send(readFileSync('./files/static/Bill_Gates_2017_(cropped).jpg'))
+				.expect(201, '', done);
+		});
+		it('serve uploaded file', function (done) {
+			request(endpoint(9103))
+				.get('/test.jpg')
+				.expect(200)
+				.end((err, response) => {
+					if (err) return done(err);
+					assert.equal(
+						crypto.createHash('md5').update(response.body).digest('hex'),
+						'39bea58f55a6c930aa0b2f8eca3d4512'
+					);
+					done();
+				})
+		});
+		it('can remove an uploaded file', function (done) {
+			request(endpoint(9103))
+				.delete('/test.jpg')
+				.expect(204, '', done);
+		});
+		it('cannot access removed file anymore', function (done) {
+			request(endpoint(9103))
+				.get('/test.jpg')
+				.expect(404, /404/, done);
+		});
+		
+		it('can accept chunked file', function (done) {
+			const req = request(endpoint(9103))
+				.put('/plain.txt')
+				.set('Transfer-Encoding', 'chunked')
+				.set('Content-Type', "plain/text")
+				.send("Testfile\n\r\n")
+				.send("Testfile\n\r\n")
+				.send("Testfile\n\r\n")
+				.send("Testfile\n\r\n")
+				.expect(201, '', done);
+		});
+		it('serve uploaded chunked file', function (done) {
+			request(endpoint(9103))
+				.get('/plain.txt')
+				.expect(200, "Testfile\n\r\nTestfile\n\r\nTestfile\n\r\nTestfile\n\r\n", done)
+		});
+		it('can remove an uploaded chunked file', function (done) {
+			request(endpoint(9103))
+				.delete('/plain.txt')
+				.expect(204, '', done);
+		});
+		it('cannot access removed chunked file anymore', function (done) {
+			request(endpoint(9103))
+				.get('/plain.txt')
+				.expect(404, /404/, done);
+		});
+		
+		it('can send body of 99 when limit is 100 bytes', function (done) {
+			const req = request(endpoint(9104))
+				.put('/test1')
+				.set('Content-Type', "plain/text")
+				.send("qwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuio")
+				.expect(201, '', done);
+		});
+		it('can send body of 100 when limit is 100 bytes', function (done) {
+			const req = request(endpoint(9104))
+				.put('/test2')
+				.set('Content-Type', "plain/text")
+				.send("qwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiop")
+				.expect(201, done);
+		});
+		it('cannot send body of 101 when limit is 100 bytes', function (done) {
+			const req = request(endpoint(9104))
+				.put('/test3')
+				.set('Content-Type', "plain/text")
+				.send("qwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopq")
+				.expect(413, done);
+		});
 	});
-
-	describe('has a working CGI', function () {
+	
+	describe('has a working PHP CGI', function () {
 		it('run php', (done) => {
 			request.agent(endpoint(9200))
 				.get('/info.php')
@@ -218,6 +289,14 @@ describe('Server', function () {
 				.attach('file', path.join(__dirname, './files/static/Bill_Gates_2017_(cropped).jpg'), { contentType: 'image/jpeg'})
 				.expect(200, '<meta charset="UTF-8">POST form<h3>Hello John Doe !</h3>File is an image/jpeg, with an MD5 as : 39bea58f55a6c930aa0b2f8eca3d4512<p>Go to uploads/Bill_Gates_2017_(cropped).jpg for get your file</p><p><a href=\'index.php\'>Go to index</a></p>', done);
 		});
+	});
+	describe('has a working PHP CGI', function () {
+		it('run php', (done) => {
+			request.agent(endpoint(9200))
+				.get('/')
+				.expect('Content-Type', "text/html; charset=UTF-8")
+				.expect(200, /\<!DOCTYPE html PUBLIC "-\/\/W3C\/\/DTD XHTML 1.0 Transitional\/\/EN" "DTD\/xhtml1-transitional.dtd">/, done);
+			});
 		/*
 - Chunked : https://github.com/visionmedia/superagent/blob/e196345074f57987c166283c302d06d661744f14/docs/index.md#piping-data
 - Multipart : https://github.com/visionmedia/superagent/blob/e196345074f57987c166283c302d06d661744f14/docs/index.md#multipart

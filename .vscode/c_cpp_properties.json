@@ -3,13 +3,14 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**",
+                "${workspaceFolder}/srcs/*",
+                "${workspaceFolder}/srcs/components/includes/*",
+                "${workspaceFolder}/srcs/help/*",
                 "${workspaceFolder}/srcs/includes/*",
-                "${workspaceFolder}/srcs/includes/parse/*",
-                "${workspaceFolder}/srcs/log/*",
-                "${workspaceFolder}/srcs/middlewares/*",
-                "${workspaceFolder}/srcs/serve/*",
-                "${workspaceFolder}/srcs/static/*"
+                "${workspaceFolder}/srcs/lib/includes/*",
+                "${workspaceFolder}/srcs/middlewares/includes/*",
+                "${workspaceFolder}/srcs/serve/includes/*",
+                "${workspaceFolder}/srcs/static/includes/*"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang++",

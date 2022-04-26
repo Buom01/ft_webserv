@@ -3,7 +3,7 @@
 bool	sendFinPacket(Request &req, Response &)
 {
 	if (req.closed() || !req.alive || !req.keep_alive)
-		shutdown(req.fd, SHUT_RDWR);
+		shutdown(req.fd, SHUT_WR);
 	return (true);
 }
 
@@ -39,7 +39,7 @@ bool	awaitNextRequest(Request &req, Response &res)
 		}
 	}
 
-	if (req.timeout())
+	if (req.connection_timeout())
 		return (true);
 	
 	if (!req.await(EPOLLIN))

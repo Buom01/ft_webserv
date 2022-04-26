@@ -92,7 +92,6 @@ server_bind_t	*Serve::bind(std::string host, uint16_t port, std::vector<std::str
 	in_addr_t			ip;
 	server_bind_t		*bind;
 	int					opts_reuse_addr	= 1;
-	int					opts_reuse_port	= 1;
 	std::stringstream	error;
 
 	if ((bind = _hasBind(host, port)) != NULL)
@@ -104,9 +103,8 @@ server_bind_t	*Serve::bind(std::string host, uint16_t port, std::vector<std::str
 	bind = new server_bind_t();
 	if ((ip = _ipFromHost(host)) == INADDR_NONE)
 		return (NULL);
-	if ((bind->fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1
-		|| setsockopt(bind->fd, SOL_SOCKET, SO_REUSEADDR, &opts_reuse_addr, sizeof(opts_reuse_addr)) == -1
-		|| setsockopt(bind->fd, SOL_SOCKET, SO_REUSEPORT, &opts_reuse_port, sizeof(opts_reuse_port)) == -1)
+	if ((bind->fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0)) == -1
+		|| setsockopt(bind->fd, SOL_SOCKET, SO_REUSEADDR, &opts_reuse_addr, sizeof(opts_reuse_addr)) == -1)
 	{
 		logger.fail("Socket creation failed", errno);
 		_destroyBind(bind);
@@ -251,7 +249,7 @@ void	Serve::accept(void)
 
 			if (connection >= 0)
 			{
-				if (_alive && fcntl(connection, F_SETFL, O_NONBLOCK) != -1)
+				if (_alive && fcntl(connection, F_SETFL, O_NONBLOCK | O_CLOEXEC) != -1)
 				{
 					try
 					{

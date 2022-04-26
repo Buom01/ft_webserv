@@ -9,8 +9,8 @@ bool	addResponseHeaders(Request &req, Response &res)
 
 	if (res.body.length() > 0)
 		length = static_cast<intmax_t>(res.body.length());
-	else if (res.response_fd && res.response_fd)
-		length = fdFileSize(res.response_fd) - res.response_fd_header_size;  // Works on stdin too
+	else if (res.response_fd)
+		length = fdFileSize(res.response_fd) - res.response_fd_header_size;
 
 	if (length >= 0)
 	{
@@ -36,7 +36,7 @@ bool	addResponseHeaders(Request &req, Response &res)
 	if (req.keep_alive && req.alive)
 	{
 		h.set("Connection: keep-alive");
-		h.set("Keep-Alive: timeout=250");
+		h.set(KEEP_ALIVE_HEADER);
 	}
 	else
 	{
@@ -65,18 +65,7 @@ bool	serializeHeaders(Request &req, Response &res)
 	}
 	res.headers_buff.append("\r\n");
 
-	std::stringstream	infos;
-	infos << get_elasped_ms(req.start);
-	infos << "ms";
-	res.logger.log(
-		req.method_str,
-		res.code,
-		req.hostname.size() ? req.hostname : req.interface->ip,
-		req.interface->port,
-		req.trusted_complete_pathname,
-		infos.str()
-	);
-
+	req.send_start = get_time();
 	return (true);
 }
 

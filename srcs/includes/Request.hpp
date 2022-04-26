@@ -16,6 +16,8 @@ class Request
 {
 	public:
 		struct timespec		start;
+		struct timespec		generation_start;
+		struct timespec		send_start;
 		server_bind_t		*interface;
 		int					fd;
 		std::string			client_ip;
@@ -43,12 +45,15 @@ class Request
 		std::string			trusted_pathname;
 		std::string			http_version;
 		Header				headers;
+
 		size_t				upload_chunksize;
 		size_t				upload_remainingsize;
 		int					upload_fd;
 		std::string			upload_fd_buff;
 		std::string			upload_filename;
 		std::string			upload_filename_tmp;
+
+		pid_t				cgi_childpid;
 
 		bool				body_header_parsed;
 		bool				body_read_is_finished;
@@ -67,6 +72,8 @@ class Request
 
 		Request(int connection, server_bind_t *_interface, std::string &_client_ip, uint32_t _events, bool &_alive, Log &_logger) :
 			start(get_time()),
+			generation_start(get_time()),
+			send_start(get_time()),
 			interface(_interface),
 			fd(connection),
 			client_ip(_client_ip),
@@ -94,12 +101,15 @@ class Request
 			trusted_pathname("/"),
 			http_version(""),
 			headers(),
+
 			upload_chunksize(SERVER_BUFFER_SIZE),
 			upload_remainingsize(0),
 			upload_fd(0),
 			upload_fd_buff(""),
 			upload_filename(""),
 			upload_filename_tmp(""),
+
+			cgi_childpid(0),
 
 			body_header_parsed(false),
 			body_read_is_finished(false),
@@ -114,9 +124,7 @@ class Request
 			body_boundary_end(""),
 			body(""),
 			body_size_valid(false)
-		{
-			buff.reserve(SERVER_BUFFER_SIZE);
-		}
+		{}
 
 		virtual ~Request()
 		{}
@@ -159,11 +167,19 @@ class Request
 			*state	= CS_IDLE;
 		}
 
+		bool	connection_timeout()
+		{
+			return (
+				get_elasped_ns(start) >= (int64_t)(KEEP_ALIVE + TIMEOUT) * 1000000000
+				|| *wait_timeout
+			);
+		}
+
 		bool	timeout()
 		{
 			return (
-				get_elasped_ns(start) >= (int64_t)255 * 1000000000
-				|| *wait_timeout
+				get_elasped_ns(generation_start) >= (int64_t)(TIMEOUT) * 1000000000
+				|| connection_timeout()
 			);
 		}
 
@@ -174,13 +190,11 @@ class Request
 
 		bool	finish()
 		{
-			return (closed() || (!alive && timeout()));
+			return (closed() || (!alive && timeout()) || connection_timeout());
 		}
 
 		void	reset()
 		{
-			start = get_time();
-			
 			method_str = "";
 			method = M_UNKNOWN;
 			raw_pathname = "";
@@ -196,11 +210,14 @@ class Request
 			trusted_pathname = "/";
 			http_version = "";
 			headers.reset();
+
 			upload_remainingsize = 0;
 			upload_fd = 0;
 			upload_fd_buff = "";
 			upload_filename = "";
 			upload_filename_tmp = "";
+
+			cgi_childpid = 0;
 
 			body_header_parsed = false;
 			body_read_is_finished = false;

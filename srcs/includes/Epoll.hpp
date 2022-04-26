@@ -10,7 +10,8 @@ typedef enum	event_type_s
 	ET_BIND = 0,
 	ET_CONNECTION,
 	ET_BODY,
-	ET_FILE
+	ET_FILE,
+	ET_CGI
 }				event_type_t;
 
 typedef struct	event_data_s

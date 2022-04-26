@@ -31,9 +31,15 @@ bool	SendBodyFromFD::operator()(Request &req, Response &res)
 	if (!req.await(EPOLLOUT))
 		return (false);
 	if (!_parent::has(res.response_fd))
-		_parent::setup(res.response_fd, ET_BODY);
+		_parent::setup(res.response_fd, ET_BODY, NULL, EPOLLIN, EPOLLIN);  // Don't forget to revert that
+		//_parent::setup(res.response_fd, ET_BODY, NULL, EPOLLIN);
 	if (!_parent::await(res.response_fd, EPOLLIN))
-		return (false);
+	{
+		if (_parent::await(res.response_fd, EPOLLRDHUP | EPOLLHUP))
+			read_ret = 0;
+		else
+			return (false);
+	}
 	
 	while (read_ret != 0 || send_ret != 0)
 	{
@@ -51,13 +57,16 @@ bool	SendBodyFromFD::operator()(Request &req, Response &res)
 		else
 			send_ret = 0;
 
-		read_ret = read(res.response_fd, read_buffer, SERVER_BUFFER_SIZE);
-		if (read_ret == -1)
+		if (read_ret != 0)
 		{
-			_parent::clear_events(res.response_fd, EPOLLIN);
-			return (false);
+			read_ret = read(res.response_fd, read_buffer, SERVER_BUFFER_SIZE);
+			if (read_ret == -1)
+			{
+				_parent::clear_events(res.response_fd, EPOLLIN);
+				return (false);
+			}
+			res.response_fd_buff.append(read_buffer, read_ret);
 		}
-		res.response_fd_buff.append(read_buffer, read_ret);
 	}
 
 	res.sent = true;

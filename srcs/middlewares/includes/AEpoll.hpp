@@ -45,9 +45,9 @@ class AEpoll: public IMiddleware
 			return (_epoll.has(fd));
 		}
 
-		void	setup(int fd, event_type_t type, void *data = NULL, uint32_t events = EPOLLIN)
+		void	setup(int fd, event_type_t type, void *data = NULL, uint32_t events = EPOLLIN, uint32_t pre_events = 0)
 		{
-			if (_registred.insert(std::make_pair(fd, 0)).second)
+			if (_registred.insert(std::make_pair(fd, pre_events)).second)
 				_epoll.add(fd, type, data, events);
 		}
 

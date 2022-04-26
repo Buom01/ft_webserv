@@ -7,13 +7,12 @@ bool	parseStartLine(Request &req, Response &res)
 
 	if (req.finish() || req.closed())
 		return (true);
-	if (req.timeout())
+	if (req.connection_timeout())
 	{
 		std::stringstream	warn;
 		
-		warn << "Timeout while reading StartLine on FD: " << req.fd;
+		warn << "Connection timeout while reading StartLine on FD: " << req.fd;
 		res.logger.warn(warn.str());
-		req.keep_alive = false;
 		return (true);
 	}
 	if (!req.await(EPOLLIN))
@@ -29,7 +28,7 @@ bool	parseStartLine(Request &req, Response &res)
 		res.logger.warn("Empty line before StartLine: Did you miss to read end of the previous request ?");
 		return (false);
 	}
-
+	req.start = get_time();
 	regex.exec(line, "^([A-Z]{3,10})\\ ([^\\ ]+)\\ HTTP\\/([0-9\\.]{3,6})$", GLOBAL_FLAG);
 	if (regex.size() != 3)
 	{
@@ -125,7 +124,7 @@ bool	parseRequestHeaders(Request &req, Response &res)
 
 	if (req.finish())
 		return (true);
-	if (req.timeout())
+	if (req.connection_timeout())
 	{
 		res.code = C_REQUEST_TIMEOUT;
 		return (true);
@@ -138,6 +137,7 @@ bool	parseRequestHeaders(Request &req, Response &res)
 		if (!line.length())
 		{
 			fulfillHostFromHeader(req, res);
+			req.generation_start = get_time();
 			return (true);
 		}
 		else

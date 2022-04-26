@@ -10,6 +10,7 @@
 # include <sys/wait.h>
 # include <time.h>
 # include <unistd.h>
+# include <fcntl.h>
 // c++ lib
 # include <cctype>
 # include <cstdio>

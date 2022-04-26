@@ -1,6 +1,6 @@
 #ifndef __PARSE_HPP
 # define __PARSE_HPP
-# define REGEX_SIZE 14
+# define REGEX_SIZE 15
 # define NO_KEY "NO_KEY"
 # include "builtin.hpp"
 # include "lib.hpp"
@@ -19,6 +19,7 @@ static struct s_defineRegex
 	{ "allow", "^[ \t]*allow[ \t]+(.*);[ \t]*$", true },
 	{ "autoindex", "^[ \t]*autoindex[ \t]+([a-zA-Z0-9_.\\/\\ ]*);[ \t]*$", true },
 	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)[ \t](\\.?\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);[ \t]*$", true },
+	{ "cgi_argv", "^[ \t]*cgi_argv[ \t]+([a-zA-Z0-9_.\\/\\ ]*);[ \t]*$", true },
 	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);[ \t]*$", true },
 	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\.?\\/.*);[ \t]*$", false },
 	{ "index", "^[ \t]*index[ \t]+(.*);[ \t]*$", true },
@@ -26,7 +27,7 @@ static struct s_defineRegex
 	{ "return", "^[ \t]*return[ \t]+([a-zA-Z0-9_.\\/]+)[ \t]+(.*);[ \t]*$", true },
 	{ "root", "^[ \t]*root[ \t]+(\\.?\\/.*);[ \t]*$", true },
 	{ "server_name", "^[ \t]*server_name[ \t]+([-a-zA-Z0-9. \t]*);[ \t]*$", true },
-	{ "upload", "^[ \t]*upload[ \t]+(\\.?\\/[-a-zA-Z0-9_\\/._]+)([ \t]+([\\/.][-a-zA-Z0-9_\\/._]+))?;[ \t]*$", true}
+	{ "upload", "^[ \t]*upload[ \t]+(\\.?\\/[-a-zA-Z0-9_\\/._]+)([ \t]+([\\/.][-a-zA-Z0-9_\\/._]*))?;[ \t]*$", true}
 };
 
 struct ParseTypedef
@@ -46,6 +47,7 @@ struct ParseTypedef
 	struct s_cgi
 	{
 		bool						isDefined;
+		bool						passArgv;
 		std::vector<std::string>	extensions;
 		std::string 				root;
 		std::string					path;
@@ -576,6 +578,7 @@ class Parse : public ParseTypedef
 			s_cgi cgi;
 			std::string err = "rule 'cgi': ";
 			
+			cgi.passArgv = false;
 			cgi.isDefined = true;
 			if (get.size() == 1 && get[0] == NO_KEY)
 			{
@@ -615,6 +618,31 @@ class Parse : public ParseTypedef
 			cgi.allow.ALL = false;
 			_allow(get[2], "rule 'cgi': flag ", &cgi.allow);
 			return cgi;
+		}
+
+		s_cgi &cgi_argv(optionsMap vec, s_cgi &cgiConf)
+		{
+			stringVector get = findKey("cgi_argv", vec);
+			std::string err = "rule 'cgi_argv': ";
+
+			cgiConf.passArgv = false;
+			if (!get.empty() && get[0] != NO_KEY)
+			{
+				std::string temp = trim(get[0]);
+				if (get.size() > 1)
+				{
+					err += "there can be only one argument";
+					throw IncorrectConfig(err);
+				}
+				if (temp != "on" && temp != "off")
+				{
+					err += "the argument can only be 'on' or 'off', not ";
+					err.append(temp);
+					throw IncorrectConfig(err);
+				}
+				cgiConf.passArgv = (temp == "off") ? false : true;
+			}
+			return cgiConf;
 		}
 
 	private:

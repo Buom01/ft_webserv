@@ -35,9 +35,9 @@ bool	Static::serveDirectory(
 	return (true);
 }
 
-void	Static::serveFile(Response &res, const std::string &path)
+bool	Static::serveFile(Response &res, const std::string &path)
 {
-	int	fd = open(path.c_str(), O_NONBLOCK | O_RDONLY);
+	int	fd = open(path.c_str(), O_NONBLOCK | O_RDONLY | O_CLOEXEC);
 
 	if (fd > 0)
 	{
@@ -45,8 +45,14 @@ void	Static::serveFile(Response &res, const std::string &path)
 		res.code = C_OK;
 		res.used_file = path;
 	}
+	else if (errno == EAGAIN)
+		return (false);
 	else
+	{
 		res.code = C_FORBIDDEN;
+		res.logger.warn("Failed to open file", errno);
+	}
+	return (true);
 }
 
 std::string Static::getIndex(const std::string &path, const options_t &options)
@@ -92,7 +98,7 @@ bool	Static::operator()(Request &req, Response &res)
 			std::string index = getIndex(path, options);
 
 			if (index.size() > 0)
-				serveFile(res, index);
+				return (serveFile(res, index));
 			else if (options.directory_listing)
 			{
 				if (!serveDirectory(res, path, req.trusted_pathname))
@@ -107,7 +113,7 @@ bool	Static::operator()(Request &req, Response &res)
 	else if (directoryExists(path + "/") && getIndex(path + "/", options).size())
 		redirect(res, req.pathname + "/");
 	else if (fileExists(path))
-		serveFile(res, path);
+		return (serveFile(res, path));
 	else
 		res.code = C_NOT_FOUND;
 	return (true);

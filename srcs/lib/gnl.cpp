@@ -19,7 +19,7 @@ bool	get_line(std::string &line, std::string &buff)
 		return (false);
 }
 
-bool	get_next_line_string(int fd, std::string &line, std::string &buff, Log &logger)
+bool	get_next_line_string(int fd, std::string &line, std::string &buff, Log &logger, bool silent)
 {
 	static char	read_buff[SERVER_BUFFER_SIZE];
 	ssize_t	read_ret						= -1;
@@ -30,7 +30,7 @@ bool	get_next_line_string(int fd, std::string &line, std::string &buff, Log &log
 		read_ret = read(fd, read_buff, SERVER_BUFFER_SIZE);
 		if (read_ret <= 0)
 		{
-			// if (errno != EAGAIN)
+			// if (read_ret < 0 && errno != EAGAIN)
 			// 	logger.warn("Read fail for unexpected reason", errno);
 			return (false);
 		}
@@ -40,6 +40,7 @@ bool	get_next_line_string(int fd, std::string &line, std::string &buff, Log &log
 			// logger.log_flux(fd, read_buff, read_ret, "READ");
 		}
 	}
-	logger.logged_GNL(fd, line + "\r\n");
+	if (!silent)
+		logger.logged_GNL(fd, line + "\r\n");
 	return (true);
 }

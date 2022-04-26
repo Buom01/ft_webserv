@@ -4,10 +4,20 @@
 ╚═════════════════════════════════════════════════════════════════════ © 2022 ═╝
 
 \e[94m〉 Command format\e[0m
-  - \e[92mwebserv \e[36m[configuration_file]\e[0m
-    Start software
-  - \e[92mwebserv \e[36m[--help|-h]\e[0m
-    Print help
+  ➤  \e[92mwebserv \e[36m[--help|-h]\e[0m \e[36m[--verbose|-v]\e[0m \e[36m[configuration_file]\e[0m
+    \e[4mExplanation:\e[0m
+    - \e[36m[--help|-h]\e[0m
+      Print help (what you are currently seeing).
+    - \e[36m[--verbose|-v]\e[0m
+      Makes logs much more detailed in their outputs.
+      Be careful, the writing of data is greedy in resource, that can slow down
+      the server in case of very big data to write.
+    - \e[36m[configuration_file]\e[0m
+      Relative or absolute link to your configuration file.
+      This file must be located in the root of the folder containing your
+      files and must have the extension \e[1m\e[93m.conf\e[0m.
+      If no file is given as an argument, the program will look for a file
+      named \e[1m\e[93mdefault.conf\e[0m in the same folder where it is executed.
 
 \e[94m〉 File configuration format\e[0m
   The format of a configuration file is freely inspired by the NGINX format.
@@ -17,13 +27,27 @@
   In case of an unrecognized command in the configuration file, the system will
   only send you information about the offending line, but will not consider it
   as a critical error.
+  
   However, in case of a critical error (invalid ip, a incorrect http code, ...),
   the software indicate the error and will stop before launching the server.
-    
+
+  - \e[31m\e[4mFormat of configuration command\e[0m
+
+    The format of command is very precise and follow a precise formatting:
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93m[command_name]\e[0m \e[95m[arguments_list]\e[0m \e[96m;\e[0m                                      │
+      └────────────────────────────────────────────────────────────────────────┘
+    In order:
+      - \e[36mcommand_name\e[0m:    the name of the rule you want to write.
+      - \e[36marguments_list\e[0m:  the arguments of this one (their definition
+                         is specified below).
+      - \e[36msemicolon\e[0m:       a command is necessarily closed by the
+                         presence of a semicolon.
+
   - \e[31m\e[4mDefinition rules\e[0m
 
     ➤  \e[93mserver\e[0m
-      To create a server, you just have to create a block server. You can
+      To create a server, you just have to create a server block. You can
       create as many servers as you need.
       ┌────────────────────────────────────────────────────────────────────────┐
       │ server {                                                               │
@@ -60,6 +84,12 @@
       ┌────────────────────────────────────────────────────────────────────────┐
       │ \e[93mcgi\e[0m \e[34m[file_extension, ...]\e[0m \e[32mpath_to_executable\e[0m \e[96m[accepted_method, ...]\e[0m;   │
       └────────────────────────────────────────────────────────────────────────┘
+    ➤  \e[93m cgi_argv \e[0m
+      Allows to pass on argv the file to execute in addition to the environment
+      variables. By default a cgi following the standards does not need it.
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │ \e[93mcgi_argv\e[0m \e[32m(on|off)\e[0m;                                                     │
+      └────────────────────────────────────────────────────────────────────────┘
     ➤  \e[93m client_body_buffer_size \e[0m
       Sets body size for reading client request body. This can be very useful
       on machines with very limited memory resources (in bit).
@@ -69,8 +99,8 @@
     ➤  \e[93m error_page \e[0m
       Allows you to define custom error pages. Accepts all http error
       codes, as well as autocompletion. For example:
-      - all \e[95m400\e[0m codes = \e[96m\e[1m4xx\e[0m
-      - (\e[95m210\e[0m, \e[95m220\e[0m, \e[95m...\e[0m , \e[95m290\e[0m) codes = \e[96m\e[1m2x0\e[0m
+      - all \e[95m400\e[0m codes               => \e[96m\e[1m4xx\e[0m
+      - (\e[95m210\e[0m, \e[95m220\e[0m, \e[95m...\e[0m , \e[95m290\e[0m) codes => \e[96m\e[1m2x0\e[0m
       ┌────────────────────────────────────────────────────────────────────────┐
       │ \e[93merror_page\e[0m \e[34m[http_code, ...]\e[0m \e[32mpath_to_file\e[0m;                              │
       └────────────────────────────────────────────────────────────────────────┘
@@ -103,7 +133,7 @@
       This characters is not allowed in a name:
         ╔═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╗
         ║ ; ║ : ║ ” ║ , ║ ‘ ║ ? ║ ! ║ @ ║ # ║ ~ ║ ` ║ % ║ ^ ║ & ║ * ║ ( ║ ) ║
-        ╟───╫───╫───╫───╫───╫───╫───╫───╫───╫───╫───╬═══╩═══╩═══╩═══╩═══╩═══╝
+        ╠═══╬═══╬═══╬═══╬═══╬═══╬═══╬═══╬═══╬═══╬═══╬═══╩═══╩═══╩═══╩═══╩═══╝
         ║ [ ║ ] ║ { ║ } ║ | ║ / ║ \ ║ _ ║ = ║ + ║   ║
         ╚═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╝
       ┌────────────────────────────────────────────────────────────────────────┐

@@ -99,11 +99,7 @@ bool	Chain::_run(RunningChain &instance)
 		}
 		++(instance.pos);
 	}
-	if (instance.req.timeout() && !instance.req.closed() && instance.req.alive)
-		instance.req.logger.warn("Connection was cut up cause of timeout");
-	else if (!instance.res.sent && instance.res.code == C_OK)
-		instance.res.logger.warn("Chain finished without sending data");
-	if (instance.req.keep_alive && !instance.req.finish() && !instance.req.timeout())
+	if (instance.req.keep_alive && !instance.req.finish() && !instance.req.connection_timeout())
 	{
 		instance.pos = _raw_chain.begin();
 		return (false);
