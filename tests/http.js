@@ -243,8 +243,28 @@ describe('Server', function () {
 				.get('/plain.txt')
 				.expect(404, /404/, done);
 		});
-
-
+		
+		it('can send body of 99 when limit is 100 bytes', function (done) {
+			const req = request(endpoint(9104))
+				.put('/test1')
+				.set('Content-Type', "plain/text")
+				.send("qwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuio")
+				.expect(201, '', done);
+		});
+		it('can send body of 100 when limit is 100 bytes', function (done) {
+			const req = request(endpoint(9104))
+				.put('/test2')
+				.set('Content-Type', "plain/text")
+				.send("qwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiop")
+				.expect(201, done);
+		});
+		it('cannot send body of 101 when limit is 100 bytes', function (done) {
+			const req = request(endpoint(9104))
+				.put('/test3')
+				.set('Content-Type', "plain/text")
+				.send("qwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopqwertyuiopq")
+				.expect(413, done);
+		});
 	});
 	
 	describe('has a working PHP CGI', function () {
