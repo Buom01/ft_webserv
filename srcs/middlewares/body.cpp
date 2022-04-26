@@ -79,6 +79,11 @@ bool	body(Request &req, Response &res)
 		_get_contentlength(req);
 		_get_bondary(req);
 		_get_transferEncoding(req, res);
+		if (!req.body_chuncked && req.body_boundary.empty())
+		{
+			req.body.append(req.buff);
+			req.buff.clear();
+		}
 		req.body_header_parsed = true;
 	}
 	if (req.body_header_parsed && req.body_boundary.empty() && req.body_length <= 0 && !req.body_chuncked)
@@ -118,31 +123,39 @@ bool	body(Request &req, Response &res)
 	}
 	else
 	{
-		while (get_next_line_string(req.fd, line, req.buff, res.logger))
+		if (!req.body_boundary.empty())
 		{
-			req.body.append(line);
-			if (!req.body_boundary.empty())
+			while (get_next_line_string(req.fd, line, req.buff, res.logger))
 			{
-				if (
-					(line.size() >= req.body_boundary.size()
-					&& line.size() <= req.body_boundary.size() + 2)
-					&& line.substr(line.size() - req.body_boundary.size(), req.body_boundary.size()) == req.body_boundary
-				)
+				req.body.append(line);
+				if (!req.body_boundary.empty())
 				{
-					req.body_read_is_finished = true;
-					break;
+					if (
+						(line.size() >= req.body_boundary.size()
+						&& line.size() <= req.body_boundary.size() + 2)
+						&& line.substr(line.size() - req.body_boundary.size(), req.body_boundary.size()) == req.body_boundary
+					)
+					{
+						req.body_read_is_finished = true;
+						break;
+					}
+					else
+						req.body.append(CRLF);
 				}
-				else
-					req.body.append(CRLF);
 			}
-			else
+		}
+		else
+		{
+			static char	buff[SERVER_BUFFER_SIZE];
+			ssize_t		read_ret					= 1;
+			
+			while (read_ret > 0 && !req.body_read_is_finished)
 			{
-				req.body.append(CRLF);
+				read_ret = read(req.fd, buff, SERVER_BUFFER_SIZE);
+				if (read_ret > 0)
+					req.body.append(buff, SERVER_BUFFER_SIZE);
 				if (req.body.size() >= static_cast<size_t>(req.body_length))
-				{
 					req.body_read_is_finished = true;
-					break;
-				}
 			}
 		}
 	}
