@@ -336,9 +336,10 @@ bool			CGI::readHeaders(Request &, Response &res)
 int			CGI::exec(Request &req, Response &res)
 {
 	char* const*	_null	= NULL;
-	int 			pipeFd[2], fdIn = open("/tmp", O_TMPFILE | O_RDWR, S_IRUSR | S_IWUSR);
 	pid_t			pid;
+	int 			pipeFd[2], fdIn;
 
+	fdIn = open("/tmp", O_TMPFILE | O_RDWR | O_EXCL | O_NONBLOCK, S_IRUSR | S_IWUSR);
 	if (fdIn == -1)
 	{
 		if (res.response_fd > 0)
