@@ -41,33 +41,33 @@ bool	SendBodyFromFD::operator()(Request &req, Response &res)
 			return (false);
 	}
 	
-	if (!res.response_fd_buff.empty())
+	while (read_ret != 0 || send_ret != 0)
 	{
-		send_ret = res.logger.logged_send(res.fd, res.response_fd_buff.c_str(), res.response_fd_buff.length(), MSG_NOSIGNAL);
-		if (send_ret > 0)
-			res.response_fd_buff.erase(0, send_ret);
-		if (res.response_fd_buff.length())
+		if (!res.response_fd_buff.empty())
 		{
-			req.unfire(EPOLLOUT);
-			return (false);
+			send_ret = res.logger.logged_send(res.fd, res.response_fd_buff.c_str(), res.response_fd_buff.length(), MSG_NOSIGNAL);
+			if (send_ret > 0)
+				res.response_fd_buff.erase(0, send_ret);
+			if (res.response_fd_buff.length())
+			{
+				req.unfire(EPOLLOUT);
+				return (false);
+			}
+		}
+		else
+			send_ret = 0;
+
+		if (read_ret != 0)
+		{
+			read_ret = read(res.response_fd, read_buffer, SERVER_BUFFER_SIZE);
+			if (read_ret == -1)
+			{
+				_parent::clear_events(res.response_fd, EPOLLIN);
+				return (false);
+			}
+			res.response_fd_buff.append(read_buffer, read_ret);
 		}
 	}
-	else
-		send_ret = 0;
-
-	if (read_ret != 0)
-	{
-		read_ret = read(res.response_fd, read_buffer, SERVER_BUFFER_SIZE);
-		if (read_ret == -1)
-		{
-			_parent::clear_events(res.response_fd, EPOLLIN);
-			return (false);
-		}
-		res.response_fd_buff.append(read_buffer, read_ret);
-	}
-
-	if (read_ret != 0 || send_ret != 0)
-		return (false);
 
 	res.sent = true;
 	_parent::cleanup(res.response_fd);
