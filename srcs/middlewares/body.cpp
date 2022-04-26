@@ -153,7 +153,7 @@ bool	body(Request &req, Response &res)
 			{
 				read_ret = read(req.fd, buff, SERVER_BUFFER_SIZE);
 				if (read_ret > 0)
-					req.body.append(buff, SERVER_BUFFER_SIZE);
+					req.body.append(buff, read_ret);
 				if (req.body.size() >= static_cast<size_t>(req.body_length))
 					req.body_read_is_finished = true;
 			}
