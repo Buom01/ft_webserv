@@ -54,8 +54,6 @@ class Request
 		std::string			upload_filename_tmp;
 
 		pid_t				cgi_childpid;
-		bool				cgi_gotheaders;
-		std::string			cgi_buff;
 
 		bool				body_header_parsed;
 		bool				body_read_is_finished;
@@ -112,8 +110,6 @@ class Request
 			upload_filename_tmp(""),
 
 			cgi_childpid(0),
-			cgi_gotheaders(false),
-			cgi_buff(""),
 
 			body_header_parsed(false),
 			body_read_is_finished(false),
@@ -128,9 +124,7 @@ class Request
 			body_boundary_end(""),
 			body(""),
 			body_size_valid(false)
-		{
-			buff.reserve(SERVER_BUFFER_SIZE);
-		}
+		{}
 
 		virtual ~Request()
 		{}
@@ -224,8 +218,6 @@ class Request
 			upload_filename_tmp = "";
 
 			cgi_childpid = 0;
-			cgi_gotheaders = false;
-			cgi_buff = "";
 
 			body_header_parsed = false;
 			body_read_is_finished = false;
