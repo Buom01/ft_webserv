@@ -218,6 +218,7 @@ describe('Server', function () {
 				.attach('file', path.join(__dirname, './files/static/Bill_Gates_2017_(cropped).jpg'), { contentType: 'image/jpeg'})
 				.expect(200, '<meta charset="UTF-8">POST form<h3>Hello John Doe !</h3>File is an image/jpeg, with an MD5 as : 39bea58f55a6c930aa0b2f8eca3d4512<p>Go to uploads/Bill_Gates_2017_(cropped).jpg for get your file</p><p><a href=\'index.php\'>Go to index</a></p>', done);
 		});
+	});
 	describe('has a working PHP CGI', function () {
 		it('run php', (done) => {
 			request.agent(endpoint(9200))
