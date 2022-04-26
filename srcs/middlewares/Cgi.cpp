@@ -310,6 +310,8 @@ bool			CGI::readHeaders(Request &, Response &res)
 	size_t		npos(0);
 	std::string	line;
 
+	if (res.response_fd_header_size > 0)
+		return (true);
 	res.code = C_OK;
 	res.response_fd_buff.clear();
 	while (get_next_line_string(res.response_fd, line, res.response_fd_buff, res.logger))
@@ -333,9 +335,10 @@ bool			CGI::readHeaders(Request &, Response &res)
 int			CGI::exec(Request &req, Response &res)
 {
 	char* const*	_null	= NULL;
-	int 			pipeFd[2], fdIn = open("/tmp", O_TMPFILE | O_RDWR, S_IRUSR | S_IWUSR);
+	int 			/*pipeFd[2], */fdIn = open("/tmp", O_TMPFILE | O_RDWR, S_IRUSR | S_IWUSR);
 	pid_t			pid;
 
+	res.response_fd = open("/tmp", O_TMPFILE | O_RDWR, S_IRUSR | S_IWUSR);
 	if (fdIn == -1)
 	{
 		if (res.response_fd > 0)
@@ -345,19 +348,21 @@ int			CGI::exec(Request &req, Response &res)
 		
 		return (EXIT_FAILURE);
 	}
-	if ((pipe(pipeFd)) == -1 || (pid = fork()) == -1)
+	if (/*(pipe(pipeFd)) == -1 || */(pid = fork()) == -1)
 		return (EXIT_FAILURE);
 	else if (pid == 0)
 	{
 		setHeader(req);
 		write(fdIn, req.body.c_str(), static_cast<int>(req.body.size()));
 		lseek(fdIn, 0, SEEK_SET);
-		
-		close(pipeFd[0]);
+		//close(pipeFd[0]);
 		dup2(fdIn, STDIN_FILENO);
-		dup2(pipeFd[1], STDOUT_FILENO);
+		dup2(res.response_fd, STDOUT_FILENO);
+		//dup2(pipeFd[1], STDOUT_FILENO);
+		
 		if (req.logger.options.verbose == false)
 			dup2(open("/dev/null", O_WRONLY, S_IWUSR), STDERR_FILENO);
+		
 		if (execve(
 			_config.path.c_str(),
 			((_config.passArgv == true) ? _argv : _null),
@@ -365,18 +370,19 @@ int			CGI::exec(Request &req, Response &res)
 		)
 		{
 			std::cout << "Status: 500\r\n" << std::flush;
-			close(pipeFd[1]);
-			close(fdIn);
+			//close(pipeFd[1]);
 			exit(EXIT_FAILURE);
 		}
 	}
 	else
 	{
 		req.cgi_childpid = pid;
-		res.response_fd = pipeFd[0];
-		close(pipeFd[1]);
-		close(fdIn);
+		waitpid(pid, NULL, 0);
+		lseek(res.response_fd, 0, SEEK_SET);
+		//res.response_fd = pipeFd[0];
+		//close(pipeFd[1]);
 	}
+	close(fdIn);
 	return EXIT_SUCCESS;
 }
 
@@ -413,5 +419,5 @@ bool 			CGI::operator()(Request &req, Response &res)
 		}
 	}
 	else
-		return (readHeaders(req, res));
+		return (true);
 }
