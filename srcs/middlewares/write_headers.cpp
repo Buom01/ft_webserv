@@ -9,8 +9,8 @@ bool	addResponseHeaders(Request &req, Response &res)
 
 	if (res.body.length() > 0)
 		length = static_cast<intmax_t>(res.body.length());
-	else if (res.response_fd && res.response_fd)
-		length = fdFileSize(res.response_fd) - res.response_fd_header_size;  // Works on stdin too
+	else if (res.response_fd)
+		length = fdFileSize(res.response_fd) - res.response_fd_header_size;
 
 	if (length >= 0)
 	{
