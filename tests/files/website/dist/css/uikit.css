@@ -363,7 +363,7 @@ blockquote {
   font-size: 1.25rem;
   line-height: 1.5;
   font-style: italic;
-  color: #333;
+  color: #f2c1a9;
 }
 /* Add margin if adjacent element */
 * + blockquote {
