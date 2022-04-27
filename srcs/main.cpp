@@ -85,6 +85,7 @@ int main(int argc, char **argv)
 		Parse::mapListens		listen 				= config.listen((*it).options);
 		Parse::stringVector		hostnames        	= config.serverName((*it).options);
 		Parse::mapErrors		getErrors			= config.errorPage((*it).options);
+		method_t				heritedMethods		= M_ALL;
 		server_bind_t			*bound;
 
 		serverBlockConfig.hostnames.insert(hostnames.begin(), hostnames.end());
@@ -149,13 +150,15 @@ int main(int argc, char **argv)
 			std::string							getIndex = config.index((*itLoc).second);
 			Parse::s_cgi						getCgi = config.cgi((*itLoc).second);
 			std::pair<std::string, std::string>	getUpload = config.upload((*itLoc).second);
-			method_t 							methods = method(getAllow);
 			std::string							location_name = (*itLoc).first;
 
 			if (getAllow.isDefined)
-				server->use(forbidden_method, F_ALL, static_cast<method_t>(~(methods)), location_name, serverBlockConfig);
+				heritedMethods = method(getAllow);
 
-			if (getUpload.first.length() && (methods & M_PUT))
+			if (getAllow.isDefined)
+				server->use(forbidden_method, F_ALL, static_cast<method_t>(~(heritedMethods)), location_name, serverBlockConfig);
+
+			if (getUpload.first.length() && (heritedMethods & M_PUT))
 			{
 				Upload	*upload		= new Upload(server->logger, getUpload.first, getUpload.second);
 				Remover	*remover	= new Remover(getUpload.first, getUpload.second);
@@ -188,7 +191,7 @@ int main(int argc, char **argv)
 			{
 				Redirect	*redirect	= new Redirect(getReturn.code, getReturn.url);
 
-				server->use(*redirect, F_NORMAL, methods, location_name, serverBlockConfig);
+				server->use(*redirect, F_NORMAL, heritedMethods, location_name, serverBlockConfig);
 				redirectMiddlewares.push_back(redirect);
 			}
 
