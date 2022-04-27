@@ -5,6 +5,6 @@ server_pid=$!
 
 sleep 1
 
-yarn mocha http
+npx mocha http
 
 kill $server_pid &
