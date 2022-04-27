@@ -740,7 +740,7 @@ class Parse : public ParseTypedef
 				return ret;
 			Regex.exec(get[0], "([-a-zA-Z0-9_.]+)", GLOBAL_FLAG);
 			if (Regex.size() > 1)
-				throw IncorrectConfig("rule 'allow': only one file definition is allowed");
+				throw IncorrectConfig("rule 'index': only one file definition is allowed");
 			return Regex.match()[0].occurence;
 		}
 
