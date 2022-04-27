@@ -6,10 +6,10 @@
     "supertest": "6.2.2"
   },
   "scripts": {
-    "start:program": "mocha program",
-    "start:http": "sh http.sh",
-    "start:network": "sh network.sh",
-    "start:benchmark": "./siege.sh",
+    "program": "mocha program",
+    "http": "sh http.sh",
+    "network": "sh network.sh",
+    "benchmark": "./siege.sh",
     "all": "npm run start:program && npm run start:http && npm run start:network && npm run start:benchmark"
   }
 }
