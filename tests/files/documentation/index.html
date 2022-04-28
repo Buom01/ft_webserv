@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="keywords" content="minecraft, mapcraft, software, documentation">
+		<meta name="author" content="Clément Bertrand">
+		<meta name="description" content="Mapcraft documentation contains all the necessary information to use the software, but also to develop your own plugins">
+		<link rel="canonical" href="https://documentation.mapcraft.app">
+		<meta property="og:title" content="Official Mapcraft documentation" />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://documentation.mapcraft.app" />
+		<meta property="og:image" content="https://documentation.mapcraft.app/srcs/img/logo.png" />
+		<title>Official Mapcraft documentation</title>
+		<link defer rel="stylesheet" href="srcs/css/EasyDoc.min.css">
+		<script defer type="text/javascript" src="srcs/js/EasyDoc.min.js"></script>
+	</head>
+	<body>
+		<header class="easyDoc-sidenav">
+			<div class="easyDoc-sidenav-icon">
+				<span>☰</span>
+			</div>
+			<div class="easyDoc-sidenav-menu">
+				<div class="easyDoc-sidenav-top">
+					<img class="easyDoc-sidenav-img" alt="menu_logo">
+					<select class="easyDoc-sidenav-select"></select>
+					<hr>
+				</div>
+				<div class="easyDoc-sidenav-list"></div>
+			</div>
+		</header>
+		<div class="easyDoc-article">
+			<div class="easyDoc-loader">
+				<div>
+					<div class="easyDoc-loader-bounce1"></div>
+					<div class="easyDoc-loader-bounce2"></div>
+				</div>
+			</div>
+			<article class="easyDoc-article-content"></article>
+		</div>
+		<div class="easyDoc-modal">
+			<span>&times;</span>
+			<img/>
+		</div>
+	</body>
+	<script>
+		window.addEventListener('load', () => launchEasyDoc('srcs/config.json'));
+	</script>
+</html>

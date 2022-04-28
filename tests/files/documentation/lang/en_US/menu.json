@@ -1,0 +1,36 @@
+{
+    "Home" : ["Home", "home.md"],
+    "Start": ["Startup", "start-page.md"],
+    "Application": ["Application", "app.md"],
+    "SUBMENU": {
+        "Advancement": ["Advancement", "plugins/advancement.md"],
+        "Cutscene": ["Cutscene", "plugins/cutscene.md"],
+        "Music": ["Music", "plugins/music.md"],
+        "Options": ["Options", "plugins/options.md"],
+        "Recipe": ["Recipe", "plugins/recipe.md"],
+        "Trigger": ["Trigger", "plugins/trigger.md"],
+        "Utility": ["Utility", "plugins/utility.md"]
+    },
+    "Datapack": ["Datapack", "datapack/datapack.md"],
+    "SUBMENU_DATAPACK": {
+        "InstantTp": ["Instant teleportation", "datapack/instant_tp.md"],
+        "Math": ["Mathematics", "datapack/math.md"],
+        "Player": ["Player", "datapack/player.md"],
+        "TargetedBlock": ["Target block", "datapack/targeted_block.md"]
+    },
+    "API": ["Mapcraft API", "api/main.md"],
+    "SUBMENU_API": {
+        "Getting started": ["Getting started", "api/getting_started.md"],
+        "Mapcraft": ["Mapcraft", "api/mapcraft.md"],
+        "MCdatabase": ["MCdatabase", "api/mcdatabase.md"],
+        "MCeditor": ["MCeditor", "api/mceditor.md"],
+        "MCfs": ["MCfs", "api/mcfs.md"],
+        "MCipc": ["MCipc", "api/mcipc.md"],
+        "MCplugin": ["MCplugin", "api/mcplugin.md"],
+        "MCsearch": ["MCsearch", "api/mcsearch.md"],
+        "MCshell": ["MCshell", "api/mcshell.md"],
+        "MCtemplate": ["MCtemplate", "api/mctemplate.md"],
+        "MCutilities": ["MCutilities", "api/mcutilities.md"],
+        "MCworkInProgress": ["MCworkInProgress", "api/mcwork.md"]
+    }
+}

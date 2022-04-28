@@ -1,0 +1,14 @@
+{
+    "title_page" : "Mapcraft documentation",
+    "favicon" : "srcs/img/favicon.png",
+    "logo" : "srcs/img/logo.png",
+    "main_home" : ["home.md", 1],
+    "directory" : {
+        "document" : "lang"
+    },
+    "lang" : {
+        "default" : "en_US",
+        "en_US" : "English",
+        "fr_FR" : "Français"
+    }
+}

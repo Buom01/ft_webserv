@@ -1,0 +1,36 @@
+{
+    "Home" : ["Accueil", "home.md"],
+    "Start": ["Démarrage", "start-page.md"],
+    "Application": ["Application", "app.md"],
+    "SUBMENU": {
+        "Advancement": ["Progrès", "plugins/advancement.md"],
+        "Cutscene": ["Cinématique", "plugins/cutscene.md"],
+        "Music": ["Musique", "plugins/music.md"],
+        "Options": ["Options", "plugins/options.md"],
+        "Recipe": ["Recette", "plugins/recipe.md"],
+        "Trigger": ["Zone de détection", "plugins/trigger.md"],
+        "Utility": ["Utilitaire", "plugins/utility.md"]
+    },
+    "Datapack": ["Datapack", "datapack/datapack.md"],
+    "SUBMENU_DATAPACK": {
+        "InstantTp": ["Téléportation instantanée", "datapack/instant_tp.md"],
+        "Math": ["Mathématique", "datapack/math.md"],
+        "Player": ["Joueur", "datapack/player.md"],
+        "TargetedBlock": ["Bloc visée", "datapack/targeted_block.md"]
+    },
+    "API": ["Mapcraft API", "api/main.md"],
+    "SUBMENU_API": {
+        "Getting started": ["Pour commencer", "api/getting_started.md"],
+        "Mapcraft": ["Mapcraft", "api/mapcraft.md"],
+        "MCdatabase": ["MCdatabase", "api/mcdatabase.md"],
+        "MCeditor": ["MCeditor", "api/mceditor.md"],
+        "MCfs": ["MCfs", "api/mcfs.md"],
+        "MCipc": ["MCipc", "api/mcipc.md"],
+        "MCplugin": ["MCplugin", "api/mcplugin.md"],
+        "MCsearch": ["MCsearch", "api/mcsearch.md"],
+        "MCshell": ["MCshell", "api/mcshell.md"],
+        "MCtemplate": ["MCtemplate", "api/mctemplate.md"],
+        "MCutilities": ["MCutilities", "api/mcutilities.md"],
+        "MCworkInProgress": ["MCworkInProgress", "api/mcwork.md"]
+    }
+}
