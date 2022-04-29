@@ -21,7 +21,7 @@ static struct s_defineRegex
 	{ "cgi", "^[ \t]*cgi[ \t]+([a-zA-Z0-9_. \t]*)[ \t](\\.?\\/[-a-zA-Z0-9_\\/._]*)[ \t]*(.*);[ \t]*$", true },
 	{ "cgi_argv", "^[ \t]*cgi_argv[ \t]+([a-zA-Z0-9_.\\/\\ ]*);[ \t]*$", true },
 	{ "client_body_buffer_size", "^[ \t]*client_body_buffer_size[ \t]+(-?[0-9]+)(b|k|m|g);[ \t]*$", true },
-	{ "error_page", "^[ \t]*error_page[ \t]+([0-9x \t]*)(\\.?\\/.*);[ \t]*$", false },
+	{ "error_page", "^[ \t]*error_page[ \t]+([0-9]|x)([0-9]|x)([0-9]|x)[ \t]+(\\.?\\/.*);[ \t]*$", false },
 	{ "index", "^[ \t]*index[ \t]+(.*);[ \t]*$", true },
 	{ "listen", "^[ \t]*listen[ \t]+(.+);[ \t]*$", false },
 	{ "return", "^[ \t]*return[ \t]+([a-zA-Z0-9_.\\/]+)[ \t]+(.*);[ \t]*$", true },
@@ -710,16 +710,14 @@ class Parse : public ParseTypedef
 			{
 				for (std::vector<stringVector>::iterator page = errorsList.begin(); page != errorsList.end(); page++)
 				{
-					correctPath = concatPath(configDirectory, trim((*page)[1]));
-					Regex.exec((*page)[0], "(-?[0-9x]+)", GLOBAL_FLAG);
-					for (size_t x = 0; x < Regex.size(); x++)
+					correctPath = concatPath(configDirectory, trim((*page)[3]));
+					for (size_t x = 0; x < 3; x++)
 					{
-						expand.exec(Regex.match()[x].occurence, "^([0-9]|x)([0-9]|x)([0-9]|x)$", GLOBAL_FLAG);
-						hundred	= (expand.match()[0].occurence != "x") ? std::atoi(expand.match()[0].occurence.c_str()) : -1;
-						ten 	= (expand.match()[1].occurence != "x") ? std::atoi(expand.match()[1].occurence.c_str()) : -1;
-						unit 	= (expand.match()[2].occurence != "x") ? std::atoi(expand.match()[2].occurence.c_str()) : -1;
+						hundred	= ((*page)[0] != "x") ? std::atoi((*page)[0].c_str()) : -1;
+						ten 	= ((*page)[1] != "x") ? std::atoi((*page)[1].c_str()) : -1;
+						unit 	= ((*page)[2] != "x") ? std::atoi((*page)[2].c_str()) : -1;
 						if (hundred != -1 && ten != -1 && unit != -1)
-							errors.insert(std::pair<int,std::string>(std::atoi(Regex.match()[x].occurence.c_str()), correctPath));
+							errors.insert(std::pair<int,std::string>(generate(std::atoi((*page)[0].c_str()), std::atoi((*page)[1].c_str()), std::atoi((*page)[2].c_str())), correctPath));
 						else
 							for (int one = (hundred == -1) ? 1 : hundred; one <= ((hundred == -1) ? 5 : hundred); one++)
 								for (int two = (ten == -1) ? 0 : ten; two <= ((ten == -1) ? 9 : ten); two++)
