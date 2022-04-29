@@ -597,3 +597,12 @@ input:checked + .uk-switch-span:before {
 	color: inherit;
 	margin: 0 0.5em;
 }
+
+/* Alert */
+.uk-alert {
+	position: relative;
+	margin-bottom: 20px;
+	padding: 15px 29px 15px 15px;
+	background: #373737;
+	color: #fff;
+}

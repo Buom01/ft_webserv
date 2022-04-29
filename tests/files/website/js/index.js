@@ -77,10 +77,17 @@ mod.echo('<h2>GET method</h2>');
 mod.echo('<form action="form_get.js" method="get">');
 mod.echo('	<p>First name : <input class="uk-input" type="text" name="first_name" /></p>');
 mod.echo('	<p>Last name : <input class="uk-input" type="text" name="last_name" /></p>');
-mod.echo('	<input type="submit" class="uk-button uk-button-primary" value="Send POST form" />');
+mod.echo('	<input type="submit" class="uk-button uk-button-primary" value="Send GET form" />');
 mod.echo('</form>');
 mod.echo('<hr/>');
 mod.echo('<h2>POST method</h2>');
+
+mod.echo('<div uk-alert>');
+mod.echo('	<h3>Notice</h3>');
+mod.echo('	<p>The file post works on text files, but very badly on binary files (like images or pdf). This is due to the complexity of the encodings and of the way Node stores the data. Therefore, this form is only present for demonstration purposes, but the files created are very often corrupted (and if you want more details on why, don\'t hesitate to ask)</p>');
+mod.echo('</div>');
+
+
 mod.echo('<form action="form_post.js" method="post" enctype="multipart/form-data">');
 mod.echo('	<p>First name : <input class="uk-input" type="text" name="first_name" /></p>');
 mod.echo('	<p>Last name : <input class="uk-input" type="text" name="last_name" /></p>');

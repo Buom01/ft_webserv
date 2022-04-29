@@ -47,8 +47,10 @@ class bodyParseClass
 			const __vars = _get.split('&');
 			for (const __var of __vars)
 			{
-				const el = __var.split("=");
-				env['__GET'][el[0].replace('+', ' ')] = el[1].replace('+', ' ');
+				let el = __var.split("=");
+				el[0] = el[0].replace(/\+/g, ' ');
+				el[1] = el[1].replace(/\+/g, ' ');
+				env['__GET'][decodeURI(el[0])] = decodeURI(el[1]);
 			}
 		}
 		for (const el in this.args.POST)
