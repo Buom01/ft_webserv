@@ -3,17 +3,21 @@ const fs = require('fs');
 const mime = require('./mimetypes');
 const path = require('path');
 const process = require('process');
+const readline = require('./n-readlines');
+const { exit } = require('process');
 
 let argv = process.argv;
-let env = process.env;
+let env = {};
 
 class bodyParseClass
 {
 	constructor(contentType = String, body = String)
 	{
+		this.tmpFile = path.join(`/tmp/${crypto.randomUUID()}`);
+		fs.writeFileSync(this.tmpFile, body);
 		this.contentType = contentType.split(';');
-		this.body = body.split(/\r?\n/);
 		this.args = {
+			GET: {},
 			POST: {},
 			FILE: {},
 		};
@@ -31,19 +35,40 @@ class bodyParseClass
 			case 'multipart/form-data':
 				this.multipart();
 				break;
-			case 'default':
-				this.plaintext();
-				break;
 		}
-		env.$_POST = this.args.POST;
-		env.$_FILE = this.args.FILE;
+		for (const _var in process.env)
+			env[_var] = process.env[_var];
+		env['__GET'] = {};
+		env['__POST'] = {};
+		env['__FILES'] = {};
+		const _get = process.env['QUERY_STRING'];
+		if (_get.length)
+		{
+			const __vars = _get.split('&');
+			for (const __var of __vars)
+			{
+				const el = __var.split("=");
+				env['__GET'][el[0].replace('+', ' ')] = el[1].replace('+', ' ');
+			}
+		}
+		for (const el in this.args.POST)
+			env['__POST'][el] = this.args.POST[el];
+		for (const el in this.args.FILE)
+			env['__FILES'][el] = this.args.FILE[el];
+		fs.rm(this.tmpFile, (e) => {
+			if (e)
+				throw e;
+		});
 		return false;
 	}
 
 	urlencoded()
 	{
-		for (const line of this.body)
+		const stream = new readline(this.tmpFile);
+		let line;
+		while (line = stream.next())
 		{
+			line = line.toString('utf-8');
 			const split = line.split('&');
 			for (const arg of split)
 			{
@@ -59,53 +84,57 @@ class bodyParseClass
 			isContent: Boolean(false),
 			isBody: Boolean(false),
 			separator: Boolean(false),
-			name: String(''),
-			filename: String(''),
+			name: undefined,
+			filename: undefined,
 			fileBody: [],
+			fileCharset: String(''),
+			fileExtension: String(''),
+			fileBuffer: String(''),
 		};
 		const boundaryRegex = /^\s*boundary=([^\s]*)\s*$/gm;
 		const limit = '--' + boundaryRegex.exec(this.contentType[1])[1];
 		const end = limit + '--';
-		for (const line of this.body)
+		const stream = new readline(this.tmpFile);
+		let line;
+		while (line = stream.next())
 		{
-			if (line === limit || line === end)
+			const lineTest = line.toString('utf-8');
+			if (lineTest.trim() === limit || lineTest.trim() === end)
 			{
-				if (info.filename)
+				if (info.filename !== undefined)
 				{
-					const _path = `/tmp/${crypto.randomUUID()}`;
-					info.fileBody.shift();
-					try
-					{
-						fs.writeFileSync(_path, info.fileBody.join('\n'), { encoding: 'utf-8', flag: 'w' });
-					}
-					catch (err)
-					{
-						console.error(err);
-					}
+					const _path = path.join(`/tmp/${crypto.randomUUID()}${(info.fileExtension) ? `.${info.fileExtension}` : ''}`);
+					const buffer = new Buffer.from(info.fileBuffer);
+					const fd = fs.openSync(_path, 'w');
+					fs.writeSync(fd, buffer);
 					this.args.FILE[info.name] = {
 						name: info.filename,
 						type: mime.lookup(path.extname(info.filename)),
 						size: fs.statSync(_path).size,
 						tmp_name: _path,
-					};
+					}
+					info.fileBuffer = '';
 				}
-				else if (info.name)
+				else if (info.name !== undefined)
 				{
 					this.args.POST[info.name] = info.fileBody.toString();
+					info.fileBody = [];
 				}
 				info.isContent = true;
 				info.isBody = false;
-				if (line === end)
+				if (lineTest.trim() === end)
 					break;
 			}
 			else if (info.isContent === true && info.isBody === false)
 			{
-				const split = line.split(';');
+				const split = lineTest.trim().split(';');
 				
-				info.name = '';
-				info.filename = '';
+				info.name = undefined;
+				info.filename = undefined;
 				info.isBody = true;
 				info.fileBody = [];
+				info.fileBuffer = '';
+				info.fileCharset = 'utf-8';
 				info.separator = true;
 				for (const el of split)
 				{
@@ -117,20 +146,29 @@ class bodyParseClass
 				}
 			}
 			else if (info.isContent === true && info.isBody === true && info.separator === false)
-				info.fileBody.push(line);
+			{
+				if (info.filename !== undefined)
+					info.fileBuffer += line;
+				else
+					info.fileBody.push(lineTest);
+			}
 			else if (info.isContent === true && info.isBody === true && info.separator === true)
+			{
+				if (info.filename !== undefined && lineTest.length > 1)
+				{
+					const check = /^content-type:[ \t]*(.*)[ \t]*/gm.exec(lineTest.trim().toLowerCase());
+					if (check)
+					{
+						info.fileCharset =  mime.charset(check[1]);
+						if (info.fileCharset === false)
+							info.fileCharset = 'ansi';
+						info.fileExtension = mime.extension(check[1]);
+					}
+					continue;
+				}
 				info.separator = false;
+			}
 		}
-	}
-
-	plaintext()
-	{
-		return;
-	}
-
-	getArgs()
-	{
-		return this.args;
 	}
 }
 
@@ -157,9 +195,11 @@ const init = () =>
 			break;
 		data += buf.toString('utf8', 0, ret);
 	}
-	const init = new bodyParseClass(env['CONTENT_TYPE'], data);
+	const init = new bodyParseClass(process.env['CONTENT_TYPE'], data);
 	init.start();
 }; init();
+
+//console.error(env);
 
 const echo = (str) => process.stdout.write(`${str}\n`);
 

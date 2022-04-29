@@ -60,9 +60,11 @@ mod.echo('	</thead>');
 mod.echo('	<tbody>');
 for (const arg in mod.env)
 {
+	if (arg === '__GET' || arg === '__POST' || arg === '__FILES')
+		continue;
 	mod.echo('		<tr>');
 	mod.echo(`			<td>${arg}</td>`);
-	mod.echo(`			<td>${(!mod.env[arg].length) ? 'null' : mod.env[arg]}</td>`);
+	mod.echo(`			<td>${mod.env[arg]}</td>`);
 	mod.echo('		</tr>');
 }
 mod.echo('	</tbody>');
@@ -70,12 +72,26 @@ mod.echo('</table>');
 mod.echo('<hr/>');
 //#endregion env
 
-mod.echo('<h2>STDIN content</h2>');
-mod.echo('<pre>');
-mod.echo('	<code id="stdin">');
-
-mod.echo('	</code>');
-mod.echo('</pre>');
+//#region form
+mod.echo('<h2>GET method</h2>');
+mod.echo('<form action="form_get.js" method="get">');
+mod.echo('	<p>First name : <input class="uk-input" type="text" name="first_name" /></p>');
+mod.echo('	<p>Last name : <input class="uk-input" type="text" name="last_name" /></p>');
+mod.echo('	<input type="submit" class="uk-button uk-button-primary" value="Send POST form" />');
+mod.echo('</form>');
 mod.echo('<hr/>');
+mod.echo('<h2>POST method</h2>');
+mod.echo('<form action="form_post.js" method="post" enctype="multipart/form-data">');
+mod.echo('	<p>First name : <input class="uk-input" type="text" name="first_name" /></p>');
+mod.echo('	<p>Last name : <input class="uk-input" type="text" name="last_name" /></p>');
+mod.echo('	<div class="uk-margin">');
+mod.echo('		<div uk-form-custom>');
+mod.echo('			<input type="file" name="file"/>');
+mod.echo('			<button class="uk-button uk-button-default" type="button" tabindex="-1">Select file 🗏</button>');
+mod.echo('		</div>');
+mod.echo('	</div>');
+mod.echo('	<input type="submit" class="uk-button uk-button-primary" value="Send POST form" />');
+mod.echo('</form>');
+//#endregion form
 
 mod.end();
