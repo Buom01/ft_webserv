@@ -1,4 +1,3 @@
-const path = require('path');
 const mod = require('../dist/js/modules/module');
 
 mod.start();
@@ -70,5 +69,13 @@ mod.echo('	</tbody>');
 mod.echo('</table>');
 mod.echo('<hr/>');
 //#endregion env
+
+mod.echo('<h2>STDIN content</h2>');
+mod.echo('<pre>');
+mod.echo('	<code id="stdin">');
+
+mod.echo('	</code>');
+mod.echo('</pre>');
+mod.echo('<hr/>');
 
 mod.end();
