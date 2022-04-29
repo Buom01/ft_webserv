@@ -56,7 +56,11 @@ class bodyParseClass
 		for (const el in this.args.POST)
 			env['__POST'][el] = this.args.POST[el];
 		for (const el in this.args.FILE)
+		{
+			if (!this.args.FILE[el].name.length)
+				continue;
 			env['__FILES'][el] = this.args.FILE[el];
+		}
 		fs.rm(this.tmpFile, (e) => {
 			if (e)
 				throw e;
@@ -109,12 +113,15 @@ class bodyParseClass
 					const buffer = new Buffer.from(info.fileBuffer);
 					const fd = fs.openSync(_path, 'w');
 					fs.writeSync(fd, buffer);
+					let ext = mime.lookup(path.extname(info.filename));
+					if (ext === false)
+						ext = path.extname(info.filename);
 					this.args.FILE[info.name] = {
 						name: info.filename,
-						type: mime.lookup(path.extname(info.filename)),
+						type: ext,
 						size: fs.statSync(_path).size,
 						tmp_name: _path,
-					}
+					};
 					info.fileBuffer = '';
 				}
 				else if (info.name !== undefined)
