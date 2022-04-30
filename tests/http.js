@@ -2,7 +2,22 @@ const request = require('supertest');
 const crypto = require("crypto");
 const assert = require('assert');
 const path = require('path');
-const {readFileSync} = require('fs');
+const fs = require('fs');
+const process = require('process');
+
+const check = () =>
+{
+	let option = (process.argv[3]) ? process.argv[3] : undefined;
+	if (option !== 'static'
+		&& option !== 'config'
+		&& option !== 'block'
+		&& option !== 'php'
+		&& option !== 'node'
+	)
+	option = undefined;
+	return option;
+};
+const option = check();
 
 const endpoint = (port) => (
 	`http://127.0.0.1:${port}`
@@ -17,6 +32,7 @@ function getSimpleStatic(callback, port, root = '/', agent = request(endpoint(po
 }
 
 describe('Server', function () {
+if (option === undefined || option === 'static')
 	describe('serve static files', function () {
 		it('serve simple text file', function (done) {
 			request(endpoint(9002))
@@ -56,7 +72,7 @@ describe('Server', function () {
 				);
 		});
 	});
-
+if (option === undefined || option === 'config')
 	describe('is configurable', function () {
 		it('run on multiple ports', function (done) {
 			getSimpleStatic(() => {
@@ -120,7 +136,7 @@ describe('Server', function () {
 				.expect(403, '<html><body><h1>This is a simple error page wich can be a template</h1></body></html>', done);
 		});
 	});
-
+if (option === undefined || option === 'block')
 	describe('is per-location block configurable', function () {
 		it('can define which methods are allowed, GET only', function (done) {
 			request(endpoint(9100))
@@ -190,7 +206,7 @@ describe('Server', function () {
 		it('can accept uploaded file and decide where to save', function (done) {
 			const req = request(endpoint(9103))
 				.put('/test.jpg')
-				.send(readFileSync('./files/static/Bill_Gates_2017_(cropped).jpg'))
+				.send(fs.readFileSync('./files/static/Bill_Gates_2017_(cropped).jpg'))
 				.expect(201, '', done);
 		});
 		it('serve uploaded file', function (done) {
@@ -266,9 +282,9 @@ describe('Server', function () {
 				.expect(413, done);
 		});
 	});
-	
+if (option === undefined || option === 'php')
 	describe('has a working PHP CGI', function () {
-		it('run php', (done) => {
+		it('get php info', (done) => {
 			request.agent(endpoint(9200))
 				.get('/info.php')
 				.expect('Content-Type', "text/html; charset=UTF-8")
@@ -281,7 +297,7 @@ describe('Server', function () {
 				.query({last_name: 'Doe'})
 				.expect(200, '<meta charset="UTF-8">GET form<h3>Hello John Doe !</h3><p><a href=\'index.php\'>Go to index</a></p>', done);
 		});
-		it('send POST request', (done) => {
+		it('send POST request with multipart/form-data', (done) => {
 			request.agent(endpoint(9200))
 				.post('/form_post.php')
 				.field('first_name', 'John')
@@ -290,18 +306,30 @@ describe('Server', function () {
 				.expect(200, '<meta charset="UTF-8">POST form<h3>Hello John Doe !</h3>File is an image/jpeg, with an MD5 as : 39bea58f55a6c930aa0b2f8eca3d4512<p>Go to uploads/Bill_Gates_2017_(cropped).jpg for get your file</p><p><a href=\'index.php\'>Go to index</a></p>', done);
 		});
 	});
-
-	describe('has a working PHP CGI', function () {
-		it('run php', (done) => {
-			request.agent(endpoint(9200))
-				.get('/')
-				.expect('Content-Type', "text/html; charset=UTF-8")
-				.expect(200, /\<!DOCTYPE html PUBLIC "-\/\/W3C\/\/DTD XHTML 1.0 Transitional\/\/EN" "DTD\/xhtml1-transitional.dtd">/, done);
-			});
+if (option === undefined || option === 'node')
+	describe('has a working NodeJS CGI', function () {
 		/*
-- Chunked : https://github.com/visionmedia/superagent/blob/e196345074f57987c166283c302d06d661744f14/docs/index.md#piping-data
-- Multipart : https://github.com/visionmedia/superagent/blob/e196345074f57987c166283c302d06d661744f14/docs/index.md#multipart
+		it('get NodeJs info', (done) => {
+			request.agent(endpoint(9200))
+				.get('/js/info.js')
+				.expect('Content-Type', "text/html; charset=UTF-8")
+				.expect(200, /<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'">\n<\/head>\n/, done);
+		});
+		it('send GET request', (done) => {
+			request.agent(endpoint(9200))
+				.get('/js/form_get.js')
+				.query({first_name: 'John'})
+				.query({last_name: 'Doe'})
+				.expect(200, '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta http-equiv="Content-Security-Policy" content="default-src \'self\' \'unsafe-inline\' \'unsafe-eval\'">\n</head>\n<body>\n<h1>GET node</h1>\n<h3>Hello John Doe !</h3>\n<p><a href=\'index.js\'>Go to index</a></p>\n</body>\n</html>\n', done);
+		});
 		*/
+		it('send POST request', (done) => {
+			request.agent(endpoint(9200))
+				.post('/js/form_post.js')
+				.field('first_name', 'John')
+				.field('last_name', 'Doe')
+				.attach('file', path.join(__dirname, '../Makefile'), { contentType: 'text/plain'})
+				.expect(200, '<meta charset="UTF-8">POST form<h3>Hello John Doe !</h3>File is an text/plain, with an MD5 as : 39bea58f55a6c930aa0b2f8eca3d4512<p>Go to uploads/random.txt for get your file</p><p><a href=\'index.js\'>Go to index</a></p>', done);
+		});
 	});
-
 });

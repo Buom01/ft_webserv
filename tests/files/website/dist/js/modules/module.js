@@ -1,10 +1,8 @@
 const crypto = require('crypto');
 const fs = require('fs');
-const mime = require('./mimetypes');
 const path = require('path');
 const process = require('process');
-const readline = require('./n-readlines');
-const { exit } = require('process');
+const mime = require('./mimetypes');
 
 let argv = process.argv;
 let env = {};
@@ -13,8 +11,8 @@ class bodyParseClass
 {
 	constructor(contentType = String, body = String)
 	{
-		this.tmpFile = path.join(`/tmp/${crypto.randomUUID()}`);
-		fs.writeFileSync(this.tmpFile, body);
+		this.rawData = body;
+		this.body = body.split(/(?<=\r\n)/g);
 		this.contentType = contentType.split(';');
 		this.args = {
 			GET: {},
@@ -61,21 +59,14 @@ class bodyParseClass
 				continue;
 			env['__FILES'][el] = this.args.FILE[el];
 		}
-		fs.rm(this.tmpFile, (e) => {
-			if (e)
-				throw e;
-		});
 		return false;
 	}
 
 	urlencoded()
 	{
-		const stream = new readline(this.tmpFile);
-		let line;
-		while (line = stream.next())
+		for (const line of this.body)
 		{
-			line = line.toString('utf-8');
-			const split = line.split('&');
+			const split = line.trim().split('&');
 			for (const arg of split)
 			{
 				const _var = arg.split('=');
@@ -95,24 +86,24 @@ class bodyParseClass
 			fileBody: [],
 			fileCharset: String(''),
 			fileExtension: String(''),
-			fileBuffer: String(''),
 		};
 		const boundaryRegex = /^\s*boundary=([^\s]*)\s*$/gm;
 		const limit = '--' + boundaryRegex.exec(this.contentType[1])[1];
 		const end = limit + '--';
-		const stream = new readline(this.tmpFile);
-		let line;
-		while (line = stream.next())
+		let cursor = {
+			current: Number(0),
+			start: Number(0),
+			end: Number(0),
+		};
+		for (const line of this.body)
 		{
-			const lineTest = line.toString('utf-8');
-			if (lineTest.trim() === limit || lineTest.trim() === end)
+			if (line.trim() === limit || line.trim() === end)
 			{
 				if (info.filename !== undefined)
 				{
+					cursor.end -= 2;
 					const _path = path.join(`/tmp/${crypto.randomUUID()}${(info.fileExtension) ? `.${info.fileExtension}` : ''}`);
-					const buffer = new Buffer.from(info.fileBuffer);
-					const fd = fs.openSync(_path, 'w');
-					fs.writeSync(fd, buffer);
+					fs.writeFileSync(_path, Buffer.from(this.rawData.slice(cursor.start, cursor.end)));
 					let ext = mime.lookup(path.extname(info.filename));
 					if (ext === false)
 						ext = path.extname(info.filename);
@@ -122,7 +113,6 @@ class bodyParseClass
 						size: fs.statSync(_path).size,
 						tmp_name: _path,
 					};
-					info.fileBuffer = '';
 				}
 				else if (info.name !== undefined)
 				{
@@ -131,20 +121,21 @@ class bodyParseClass
 				}
 				info.isContent = true;
 				info.isBody = false;
-				if (lineTest.trim() === end)
+				if (line.trim() === end)
 					break;
 			}
 			else if (info.isContent === true && info.isBody === false)
 			{
-				const split = lineTest.trim().split(';');
+				const split = line.trim().split(';');
 				
 				info.name = undefined;
 				info.filename = undefined;
 				info.isBody = true;
 				info.fileBody = [];
-				info.fileBuffer = '';
 				info.fileCharset = 'utf-8';
 				info.separator = true;
+				cursor.start = 0;
+				cursor.end = 0;
 				for (const el of split)
 				{
 					const _var = el.split('=');
@@ -157,26 +148,34 @@ class bodyParseClass
 			else if (info.isContent === true && info.isBody === true && info.separator === false)
 			{
 				if (info.filename !== undefined)
-					info.fileBuffer += line;
+					cursor.end += line.length;
 				else
-					info.fileBody.push(lineTest);
+					info.fileBody.push(line);
 			}
 			else if (info.isContent === true && info.isBody === true && info.separator === true)
 			{
-				if (info.filename !== undefined && lineTest.length > 1)
+				cursor.start = cursor.current;
+				if (info.filename !== undefined)
 				{
-					const check = /^content-type:[ \t]*(.*)[ \t]*/gm.exec(lineTest.trim().toLowerCase());
-					if (check)
+					if (line !== '\r\n')
 					{
-						info.fileCharset =  mime.charset(check[1]);
-						if (info.fileCharset === false)
-							info.fileCharset = 'ansi';
-						info.fileExtension = mime.extension(check[1]);
+						const check = /^content-type:[ \t]*(.*)[ \t]/gm.exec(line.trim().toLowerCase());
+						if (check)
+						{
+							info.fileCharset =  mime.charset(check[1]);
+							if (info.fileCharset === false)
+								info.fileCharset = 'utf8';
+							info.fileExtension = mime.extension(check[1]);
+						}
+						cursor.current += line.length;
+						continue;
 					}
-					continue;
+					cursor.start += 2;
+					cursor.end = cursor.start;
 				}
 				info.separator = false;
 			}
+			cursor.current += line.length;
 		}
 	}
 }
@@ -202,13 +201,11 @@ const init = () =>
 		}
 		if (!ret)
 			break;
-		data += buf.toString('utf8', 0, ret);
+		data += buf.slice(0, ret);
 	}
 	const init = new bodyParseClass(process.env['CONTENT_TYPE'], data);
 	init.start();
-}; init();
-
-//console.error(env);
+};
 
 const echo = (str) => process.stdout.write(`${str}\n`);
 
@@ -252,5 +249,6 @@ const end = () =>
 	echo('</html>');
 }
 
+init();
 
 module.exports = { argv, env, echo, start, end };
