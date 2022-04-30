@@ -150,7 +150,7 @@ class bodyParseClass
 				if (info.filename !== undefined)
 					cursor.end += line.length;
 				else
-					info.fileBody.push(line);
+					info.fileBody.push(line.trim());
 			}
 			else if (info.isContent === true && info.isBody === true && info.separator === true)
 			{

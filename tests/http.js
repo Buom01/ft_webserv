@@ -308,8 +308,7 @@ if (option === undefined || option === 'php')
 	});
 if (option === undefined || option === 'node')
 	describe('has a working NodeJS CGI', function () {
-		/*
-		it('get NodeJs info', (done) => {
+		it('get NodeJS info', (done) => {
 			request.agent(endpoint(9200))
 				.get('/js/info.js')
 				.expect('Content-Type', "text/html; charset=UTF-8")
@@ -322,14 +321,13 @@ if (option === undefined || option === 'node')
 				.query({last_name: 'Doe'})
 				.expect(200, '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta http-equiv="Content-Security-Policy" content="default-src \'self\' \'unsafe-inline\' \'unsafe-eval\'">\n</head>\n<body>\n<h1>GET node</h1>\n<h3>Hello John Doe !</h3>\n<p><a href=\'index.js\'>Go to index</a></p>\n</body>\n</html>\n', done);
 		});
-		*/
 		it('send POST request', (done) => {
 			request.agent(endpoint(9200))
 				.post('/js/form_post.js')
 				.field('first_name', 'John')
 				.field('last_name', 'Doe')
-				.attach('file', path.join(__dirname, '../Makefile'), { contentType: 'text/plain'})
-				.expect(200, '<meta charset="UTF-8">POST form<h3>Hello John Doe !</h3>File is an text/plain, with an MD5 as : 39bea58f55a6c930aa0b2f8eca3d4512<p>Go to uploads/random.txt for get your file</p><p><a href=\'index.js\'>Go to index</a></p>', done);
+				.attach('file', path.join(__dirname, './files/static/random.txt'), { contentType: 'text/plain'})
+				.expect(200, '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta http-equiv="Content-Security-Policy" content="default-src \'self\' \'unsafe-inline\' \'unsafe-eval\'">\n</head>\n<body>\n<h1>POST node</h1>\n<h3>Hello John Doe !</h3>\nFile is an text/plain, with an MD5 as : 7121039cbcfe5c74af428d4ce882f3c7\n<p>Go to ./upload/random.txt for get your file</p>\n<p><a href=\'index.js\'>Go to index</a></p>\n</body>\n</html>\n', done);
 		});
 	});
 });
