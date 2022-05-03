@@ -45,7 +45,7 @@ describe('Program', function () {
 	describe('has a working Makefile', function () {
 		it('should compile', function () {
 			this.timeout(25000);
-			command("make", "..");
+			command("make -j", "..");
 			if (!exists("../webserv"))
 				throw "../webserv were not created";
 		});
@@ -59,13 +59,13 @@ describe('Program', function () {
 		});
 		it('should (re)compile', function () {
 			this.timeout(25000);
-			command("make re", "..");
+			command("make re -j", "..");
 			if (!exists("../webserv"))
 				throw "../webserv were not created";
 		});
 		it('should not relink', function () {
 			this.timeout(25000);
-			command("make", "..");
+			command("make -j", "..");
 			command("make -q", "..");
 		});
 	});
