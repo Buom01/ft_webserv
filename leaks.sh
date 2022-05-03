@@ -1,4 +1,4 @@
-#!bin/sh
+#!/bin/sh
 EXEC="webserv"
 ARGS=tests/http.conf
 
