@@ -35,7 +35,7 @@ LIBRARY		?=	-I ./srcs/components/includes \
 OBJS		:=	$(SRCS:.cpp=.o)
 CXXFLAGS	?=  -Wall -Werror -Wextra -std=c++98 $(LIBRARY)
 
-# Colours
+# Colors
 RED			:= \e[0;91m
 GREEN		:= \e[0;92m
 BLUE		:= \e[0;94m
@@ -71,6 +71,3 @@ clean:
 re: fclean
 	$(MAKE) all
 
-test: fclean
-	$(MAKE) all
-	./$(NAME) website_test/init.conf
