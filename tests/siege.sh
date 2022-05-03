@@ -5,6 +5,6 @@ server_pid=$!
 
 sleep 3
 
-siege -b -t 30S http://0.0.0.0:9001 > /dev/null
+./siege -b -t 30S http://0.0.0.0:9001
 
 kill $server_pid &
