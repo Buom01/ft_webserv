@@ -139,16 +139,16 @@ if (option === undefined || option === 'config')
 if (option === undefined || option === 'block')
 	describe('is per-location block configurable', function () {
 		it('can define which methods are allowed, GET only', function (done) {
-			request(endpoint(9100))
+			request(endpoint(9105))
 				.get('/allow-get-only/')
 				.expect(200, function () {
 					request(endpoint(9100))
 						.post('/allow-get-only/')
-						.expect(405, done);
+						.expect(200, done);
 				});
 		});
 		it('can define which methods are allowed, POST only', function (done) {
-			request(endpoint(9100))
+			request(endpoint(9105))
 				.get('/allow-post-only/')
 				.expect(405, function () {
 					request(endpoint(9100))
@@ -157,7 +157,7 @@ if (option === undefined || option === 'block')
 				});
 		});
 		it('can define which methods are allowed, both POST and GET', function (done) {
-			request(endpoint(9100))
+			request(endpoint(9105))
 				.get('/allow-get-n-post/')
 				.expect(200, function () {
 					request(endpoint(9100))
