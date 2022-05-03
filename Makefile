@@ -44,21 +44,21 @@ RESET		:= \e[0;0m
 PREFIX		:= $(MAGENTA)$(NAME)$(RESET) => 
 
 $(NAME): $(OBJS)
-	@echo -e "$(PREFIX)$(GREEN)Bundling $(RESET)$(NAME)$(GREEN) executable$(RESET)"
+	@echo "$(PREFIX)$(GREEN)Bundling $(RESET)$(NAME)$(GREEN) executable$(RESET)"
 	@$(CXX) $(CXXFLAGS) $(OBJS) $(LIBRARY) -o $@
 
 %.o: %.cpp
-	@echo -e "$(PREFIX)$(GREEN)Compiling file $(RESET)$< $(BLUE)to $(RESET)$@"
+	@echo "$(PREFIX)$(GREEN)Compiling file $(RESET)$< $(BLUE)to $(RESET)$@"
 	@$(CXX) $(CXXFLAGS) $(LIBRARY) -c $< -o $@
 
 all: help $(NAME)
 
 help:
 	@if command -v xxd > /dev/null; then \
-		echo -e "$(PREFIX)$(GREEN)xxd generate documentation$(RESET)"; \
+		echo "$(PREFIX)$(GREEN)xxd generate documentation$(RESET)"; \
 		xxd -i ./srcs/help/documentation > srcs/help/generateDocumentation.hpp; \
 	else \
-		echo -e "$(PREFIX)$(RED)xxd command is not present, skip this part$(RESET)"; \
+		echo "$(PREFIX)$(RED)xxd command is not present, skip this part$(RESET)"; \
 	fi
 
 fclean:
