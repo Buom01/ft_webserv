@@ -1,4 +1,4 @@
-# webserv
+# WebServ
 
 [![42 Project Score for WebServ](https://42-project-badge.glitch.me/users/badam/project/webserv)](https://projects.intra.42.fr/projects/webserv/projects_users/2505230)
 
